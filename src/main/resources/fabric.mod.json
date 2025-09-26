@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "odyssey",
+  "version": "${version}",
+  "name": "Odyssey",
+  "description": "No sign text. Pretty simple.",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/odyssey/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-datagen": [
+      "net.kronoz.odyssey.client.OdysseyDataGenerator"
+    ],
+    "client": [
+      "net.kronoz.odyssey.client.OdysseyClient"
+    ],
+    "main": [
+      "net.kronoz.odyssey.Odyssey"
+    ]
+  },
+  "mixins": [
+    "odyssey.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
