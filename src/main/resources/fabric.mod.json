@@ -7,22 +7,29 @@
   "authors": [],
   "contact": {},
   "license": "All-Rights-Reserved",
-  "icon": "assets/odyssey/icon.png",
   "environment": "*",
   "entrypoints": {
     "fabric-datagen": [
-      "net.kronoz.odyssey.client.OdysseyDataGenerator"
+      "net.kronoz.odyssey.OdysseyDataGenerator"
     ],
     "client": [
-      "net.kronoz.odyssey.client.OdysseyClient"
+      "net.kronoz.odyssey.OdysseyClient"
     ],
     "main": [
       "net.kronoz.odyssey.Odyssey"
+    ],
+    "cardinal-components-entity": [
+      "net.kronoz.odyssey.cca.ModComponents"
     ]
   },
   "mixins": [
     "odyssey.mixins.json"
   ],
+  "custom": {
+    "cardinal-components": [
+      "odyssey:body"
+    ]
+  },
   "depends": {
     "fabricloader": ">=${loader_version}",
     "fabric": "*",

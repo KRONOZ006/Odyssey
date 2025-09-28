@@ -1,0 +1,95 @@
+{
+  "credit": "Made with Blockbench",
+  "parent": "builtin/entity",
+  "texture_size": [
+    64,
+    64
+  ],
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [
+        -180,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        1,
+        2.5
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        0,
+        0,
+        180
+      ],
+      "translation": [
+        0,
+        1,
+        2.5
+      ]
+    },
+    "firstperson_righthand": {
+      "rotation": [
+        -91.82,
+        -32.59,
+        -174.8
+      ],
+      "translation": [
+        4,
+        -4,
+        -14
+      ],
+      "scale": [
+        1.1,
+        1.1,
+        1.1
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        91.79,
+        24.71,
+        5.46
+      ],
+      "translation": [
+        4,
+        -4,
+        -14
+      ],
+      "scale": [
+        1.1,
+        1.1,
+        1.1
+      ]
+    },
+    "ground": {
+      "rotation": [
+        180,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        15,
+        0
+      ]
+    },
+    "gui": {
+      "rotation": [
+        -21,
+        27.75,
+        -34.25
+      ],
+      "translation": [
+        -1.75,
+        -4.25,
+        0
+      ]
+    }
+  },
+  "textures": {
+    "particle": "odyssey:item/xaris"
+  }
+}

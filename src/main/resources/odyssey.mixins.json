@@ -4,8 +4,13 @@
   "package": "net.kronoz.odyssey.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "LevelPropertiesMixin"
   ],
   "client": [
+    "HeldItemRendererMixin",
+    "ItemRendererMixin",
+    "LivingEntityRendererMixin",
+    "ModelLoaderMixin"
   ],
   "injectors": {
     "defaultRequire": 1

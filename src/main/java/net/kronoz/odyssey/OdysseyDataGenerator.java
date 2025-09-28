@@ -1,4 +1,4 @@
-package net.kronoz.odyssey.client;
+package net.kronoz.odyssey;
 
 import net.fabricmc.fabric.api.datagen.v1.DataGeneratorEntrypoint;
 import net.fabricmc.fabric.api.datagen.v1.FabricDataGenerator;
