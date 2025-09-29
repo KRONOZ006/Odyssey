@@ -5,9 +5,8 @@ import foundry.veil.api.client.render.VeilRenderSystem;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry;
 import net.kronoz.odyssey.config.OdysseyConfig;
-import net.minecraft.client.MinecraftClient;
+import net.kronoz.odyssey.entity.ModEntityRenderers;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.dimension.DimensionTypes;
 
@@ -20,6 +19,7 @@ public class OdysseyClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        ModEntityRenderers.register();
         net.kronoz.odyssey.dialogue.client.DialogueClient.init();
         MidnightConfig.init("odyssey", OdysseyConfig.class);
 

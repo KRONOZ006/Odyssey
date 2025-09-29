@@ -5,6 +5,10 @@ import net.kronoz.odyssey.block.ModBlocks;
 import net.kronoz.odyssey.cca.ModComponents;
 import net.kronoz.odyssey.command.ModCommands;
 import net.kronoz.odyssey.data.BodyPartRegistry;
+import net.kronoz.odyssey.dialogue.Dialogue;
+import net.kronoz.odyssey.entity.ModBlockEntities;
+import net.kronoz.odyssey.entity.ModEntities;
+import net.kronoz.odyssey.entity.ModInteractions;
 import net.kronoz.odyssey.item.ModItemGroup;
 import net.kronoz.odyssey.item.ModItems;
 import net.kronoz.odyssey.net.ModNetworking;
@@ -20,9 +24,10 @@ public class Odyssey implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        // add
-        net.kronoz.odyssey.dialogue.Dialogue.init();
-
+        ModBlockEntities.register();
+        ModEntities.register();
+        ModInteractions.init();
+        Dialogue.init();
         ModBlocks.registerModBlocks();
         ModItems.registerModItems();
         ModItemGroup.registerItemGroups();

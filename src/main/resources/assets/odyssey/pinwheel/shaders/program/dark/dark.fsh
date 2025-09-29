@@ -9,7 +9,7 @@ uniform float GameTime;
 
 uniform float TrueDarkness;
 
-uniform vec3  VoidTint      = vec3(0.02, 0.02, 0.03);
+uniform vec3  VoidTint      = vec3(0.502, 0.0353, 0.239);
 uniform float Density       = 0.2;
 uniform float MaxDark       = 1.0;
 

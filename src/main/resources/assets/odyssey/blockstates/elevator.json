@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "powered=false": { "model": "odyssey:block/elevator" },
+    "powered=true":  { "model": "odyssey:block/elevator" }
+  }
+}

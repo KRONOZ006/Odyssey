@@ -15,11 +15,12 @@ public class ModItemGroup {
             Identifier.of(Odyssey.MODID, "odyssey"),
             ItemGroup.create(null, -1)
                     .displayName(Text.translatable("itemgroup.odyssey.odyssey"))
-                    .icon(() -> new ItemStack(ModItems.TOMAHAWK))
+                    .icon(() -> new ItemStack(ModItems.XARIS))
                     .entries((displayContext, entries) -> {
                         entries.add(ModItems.TOMAHAWK);
                         entries.add(ModBlocks.EXAMPLE_BLOCK);
                         entries.add(ModBlocks.FACILITY_PILLAR_BLOCK);
+
                     })
                     .build());
 
