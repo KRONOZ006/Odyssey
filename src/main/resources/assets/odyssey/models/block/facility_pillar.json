@@ -1,0 +1,33 @@
+{
+	"format_version": "1.21.6",
+	"credit": "Made with Blockbench",
+	"texture_size": [64, 64],
+	"textures": {
+		"0": "odyssey:block/facility_pillar",
+		"particle": "odyssey:block/facility_pillar"
+	},
+	"elements": [
+		{
+			"name": "collision_1",
+			"from": [4, 0, 4],
+			"to": [12, 16, 12],
+			"rotation": {"angle": 0, "axis": "z", "origin": [7, 0, 7]},
+			"faces": {
+				"north": {"uv": [0, 0, 2, 4], "texture": "#0"},
+				"east": {"uv": [2.25, 0, 4.25, 4], "texture": "#0"},
+				"south": {"uv": [0, 4.25, 2, 8.25], "texture": "#0"},
+				"west": {"uv": [2.25, 4.25, 4.25, 8.25], "texture": "#0"},
+				"up": {"uv": [6.5, 2, 4.5, 0], "texture": "#0"},
+				"down": {"uv": [6.5, 2.25, 4.5, 4.25], "texture": "#0"}
+			}
+		}
+	],
+	"groups": [
+		{
+			"name": "collide",
+			"origin": [8, 8, 8],
+			"color": 0,
+			"children": [0]
+		}
+	]
+}

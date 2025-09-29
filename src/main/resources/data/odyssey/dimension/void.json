@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:overworld",
+  "generator": {
+    "type": "noise",
+    "biome_source": {
+      "type": "fixed",
+      "biome": "odyssey:desolation"
+    },
+    "settings": "odyssey:settings"
+  }
+}

@@ -3,6 +3,7 @@ package net.kronoz.odyssey.block;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.kronoz.odyssey.Odyssey;
 import net.kronoz.odyssey.block.custom.ExampleBlock;
+import net.kronoz.odyssey.block.custom.FacilityPIllarBlock;
 import net.minecraft.block.*;
 import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.item.BlockItem;
@@ -16,6 +17,7 @@ import net.minecraft.util.Identifier;
 public class ModBlocks {
 
     public static final Block EXAMPLE_BLOCK  = registerBlock("example_block", new ExampleBlock(AbstractBlock.Settings.copy(Blocks.STONE)));
+    public static final Block FACILITY_PILLAR_BLOCK  = registerBlock("facility_pillar", new FacilityPIllarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
 
     private static Block registerBlock ( String name, Block block) {
         registerBlockItem(name, block);
