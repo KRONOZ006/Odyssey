@@ -9,7 +9,7 @@ import software.bernie.geckolib.model.GeoModel;
 public class XarisArmModel extends GeoModel<XarisArm> {
     @Override
     public Identifier getModelResource(XarisArm item) {
-        return  Identifier.of(Odyssey.MODID, "geo/item/xaris.geo.json");
+        return Identifier.of(Odyssey.MODID, "geo/item/xaris.geo.json");
     }
 
     @Override
@@ -19,6 +19,6 @@ public class XarisArmModel extends GeoModel<XarisArm> {
 
     @Override
     public Identifier getAnimationResource(XarisArm item) {
-        return null;
+        return Identifier.of(Odyssey.MODID, "animations/item/xaris.animation.json");
     }
 }

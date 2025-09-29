@@ -378,6 +378,11 @@
 							}
 						}
 					]
+				},
+				{
+					"name": "wrist_socket",
+					"parent": "arm",
+					"pivot": [0, -2, 0]
 				}
 			]
 		}

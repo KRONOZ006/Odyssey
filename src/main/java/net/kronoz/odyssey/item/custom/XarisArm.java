@@ -12,6 +12,9 @@ import software.bernie.geckolib.animatable.GeoItem;
 import software.bernie.geckolib.animatable.client.GeoRenderProvider;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animation.AnimationController;
+import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.function.Consumer;
@@ -19,6 +22,7 @@ import java.util.function.Consumer;
 public class XarisArm extends Item implements GeoItem {
     private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
+    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("xaris.idle");
 
     public XarisArm(@NotNull Settings settings) {
         super(settings);
@@ -35,7 +39,12 @@ public class XarisArm extends Item implements GeoItem {
             }
         });
     }
-
-    @Override public void registerControllers(AnimatableManager.ControllerRegistrar r) {}
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController<>(this, "ctrl", 0, state -> {
+            state.setAnimation(IDLE);
+            return PlayState.CONTINUE;
+        }));
+    }
     @Override public AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }
 }

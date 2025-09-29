@@ -1,6 +1,7 @@
 package net.kronoz.odyssey.item;
 
 import net.kronoz.odyssey.Odyssey;
+import net.kronoz.odyssey.block.ModBlocks;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
@@ -17,7 +18,7 @@ public class ModItemGroup {
                     .icon(() -> new ItemStack(ModItems.TOMAHAWK))
                     .entries((displayContext, entries) -> {
                         entries.add(ModItems.TOMAHAWK);
-                        entries.add(ModItems.XARIS);
+                        entries.add(ModBlocks.EXAMPLE_BLOCK);
                     })
                     .build());
 

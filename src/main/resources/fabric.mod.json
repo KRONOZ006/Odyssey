@@ -20,6 +20,9 @@
     ],
     "cardinal-components-entity": [
       "net.kronoz.odyssey.cca.ModComponents"
+    ],
+    "modmenu": [
+      "net.kronoz.odyssey.config.OdysseyModMenu"
     ]
   },
   "mixins": [

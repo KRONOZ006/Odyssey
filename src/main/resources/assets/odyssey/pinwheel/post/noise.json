@@ -1,0 +1,11 @@
+{
+  "stages": [
+    {
+      "type": "veil:blit",
+      "shader": "odyssey:void/void_darkness",
+      "in": "minecraft:main",
+      "out": "veil:post",
+      "clear": true
+    }
+  ]
+}

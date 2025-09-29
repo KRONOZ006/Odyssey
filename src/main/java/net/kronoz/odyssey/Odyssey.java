@@ -1,6 +1,7 @@
 package net.kronoz.odyssey;
 
 import net.fabricmc.api.ModInitializer;
+import net.kronoz.odyssey.block.ModBlocks;
 import net.kronoz.odyssey.cca.ModComponents;
 import net.kronoz.odyssey.command.ModCommands;
 import net.kronoz.odyssey.data.BodyPartRegistry;
@@ -19,6 +20,7 @@ public class Odyssey implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        ModBlocks.registerModBlocks();
         ModItems.registerModItems();
         ModItemGroup.registerItemGroups();
         BodyPresets.init();

@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "odyssey:block/example_block" }
+  }
+}
