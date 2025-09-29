@@ -20,6 +20,9 @@ public class Odyssey implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        // add
+        net.kronoz.odyssey.dialogue.Dialogue.init();
+
         ModBlocks.registerModBlocks();
         ModItems.registerModItems();
         ModItemGroup.registerItemGroups();

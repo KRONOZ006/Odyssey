@@ -30,7 +30,8 @@
   ],
   "custom": {
     "cardinal-components": [
-      "odyssey:body"
+      "odyssey:body",
+      "odyssey:dialogue"
     ]
   },
   "depends": {

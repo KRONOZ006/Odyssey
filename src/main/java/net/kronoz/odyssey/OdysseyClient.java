@@ -20,7 +20,7 @@ public class OdysseyClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-
+        net.kronoz.odyssey.dialogue.client.DialogueClient.init();
         MidnightConfig.init("odyssey", OdysseyConfig.class);
 
         // Always add noise on join

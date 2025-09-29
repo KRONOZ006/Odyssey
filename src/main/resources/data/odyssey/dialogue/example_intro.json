@@ -1,0 +1,29 @@
+{
+  "id": "odyssey:example_intro",
+  "start": "hello",
+  "nodes": {
+    "hello": {
+      "lines": [
+        { "caption": "Système actif. Bonjour, voyageur.", "sound": "odyssey:voice/ai_hello_1", "duration_ms": 2400, "weight": 2 },
+        { "caption": "Initialisation complète. Prêt à poursuivre.", "sound": "odyssey:voice/ai_hello_2", "duration_ms": 2200, "weight": 1 }
+      ],
+      "choices": [
+        { "id": "ask_mission", "text": "C'est quoi la mission ?", "goto": "mission" },
+        { "id": "ask_name", "text": "Qui es-tu ?", "goto": "who" }
+      ]
+    },
+    "mission": {
+      "lines": [
+        { "caption": "Récupérer le noyau. Pas d'erreur tolérée.", "sound": "odyssey:voice/ai_mission", "duration_ms": 2500, "weight": 1 }
+      ]
+    },
+    "who": {
+      "lines": [
+        { "caption": "Je suis l’Odyssey. Ta seule constante.", "sound": "odyssey:voice/ai_who", "duration_ms": 2300, "weight": 1 }
+      ],
+      "choices": [
+        { "id": "back_mission", "text": "Très bien. La mission ?", "goto": "mission" }
+      ]
+    }
+  }
+}

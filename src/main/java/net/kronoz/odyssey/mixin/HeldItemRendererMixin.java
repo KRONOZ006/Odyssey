@@ -43,7 +43,7 @@ public class HeldItemRendererMixin {
         final Identifier partItemId = SlotItemResolver.resolve(left ? "left_arm" : "right_arm", player);
         final boolean hasPart = partItemId != null && Registries.ITEM.containsId(partItemId);
 
-        if (!OdysseyConfig.enableFirstPersonOverride && !hasPart) return;
+        if (!hasPart) return;
 
         final float equip = 1.0f - equipProgress;
         final float swing = MathHelper.sin(MathHelper.sqrt(swingProgress) * (float) Math.PI);
@@ -57,7 +57,7 @@ public class HeldItemRendererMixin {
 
         boolean drewHeldViaSocket = false;
 
-        if (hasPart && OdysseyConfig.renderArmOverlay) {
+        if (OdysseyConfig.renderArmOverlay) {
             Item partItem = Registries.ITEM.get(partItemId);
             ItemStack partStack = new ItemStack(partItem);
 

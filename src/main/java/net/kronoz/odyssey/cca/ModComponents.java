@@ -11,9 +11,13 @@ public final class ModComponents implements EntityComponentInitializer {
     public static final ComponentKey<BodyModComponent> BODY = ComponentRegistry.getOrCreate(
             Odyssey.id("body"), BodyModComponent.class);
 
+    public static final ComponentKey<DialogueComponent> DIALOGUE = ComponentRegistry.getOrCreate(
+            Odyssey.id("dialogue"), DialogueComponent.class);
+
     public static void init() {}
 
     @Override public void registerEntityComponentFactories(EntityComponentFactoryRegistry registry) {
         registry.registerFor(PlayerEntity.class, BODY, BodyModComponentImpl::new);
+        registry.registerFor(PlayerEntity.class, DIALOGUE, DialogueComponentImpl::new);
     }
 }
