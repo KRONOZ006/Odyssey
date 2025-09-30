@@ -3,10 +3,15 @@ package net.kronoz.odyssey;
 import eu.midnightdust.lib.config.MidnightConfig;
 import foundry.veil.api.client.render.VeilRenderSystem;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.kronoz.odyssey.block.ModBlocks;
 import net.kronoz.odyssey.config.OdysseyConfig;
+import net.kronoz.odyssey.entity.MapBlockEntityRenderer;
 import net.kronoz.odyssey.entity.ModEntityRenderers;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
 import net.minecraft.util.Identifier;
 import net.minecraft.world.dimension.DimensionTypes;
 
@@ -19,6 +24,8 @@ public class OdysseyClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        BlockEntityRendererFactories.register(ModBlocks.MAP_BLOCK_ENTITY, MapBlockEntityRenderer::new);
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.MAP_BLOCK, RenderLayer.getCutout());
         ModEntityRenderers.register();
         net.kronoz.odyssey.dialogue.client.DialogueClient.init();
         MidnightConfig.init("odyssey", OdysseyConfig.class);

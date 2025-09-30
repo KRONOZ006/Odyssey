@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "odyssey:block/map_block" }
+  }
+}
