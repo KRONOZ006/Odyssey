@@ -3,10 +3,7 @@ package net.kronoz.odyssey.init;
 import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.object.builder.v1.block.FabricBlockSettings;
 import net.kronoz.odyssey.Odyssey;
-import net.kronoz.odyssey.block.custom.ElevatorBlock;
-import net.kronoz.odyssey.block.custom.ExampleBlock;
-import net.kronoz.odyssey.block.custom.FacilityPIllarBlock;
-import net.kronoz.odyssey.block.custom.MapBlock;
+import net.kronoz.odyssey.block.custom.*;
 import net.kronoz.odyssey.entity.MapBlockEntity;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
@@ -27,6 +24,7 @@ public class ModBlocks {
     public static final Block EXAMPLE_BLOCK  = registerBlock("example_block", new ExampleBlock(AbstractBlock.Settings.copy(Blocks.STONE)));
     public static final Block FACILITY_PILLAR_BLOCK  = registerBlock("facility_pillar", new FacilityPIllarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block ELEVATOR  = registerBlock("elevator", new ElevatorBlock(FabricBlockSettings.create().strength(2.0f)));
+    public static final Block LIGHT1  = registerBlock("light_1", new LightBlock(FabricBlockSettings.create().strength(2.0f)));
     public static final Block MAP_BLOCK = registerBlock(
             "map_block",
             new MapBlock(Block.Settings.create()

@@ -21,7 +21,7 @@ public final class LightDustPinger {
     private int tick = 0;
 
     public LightDustPinger() {
-        LIGHT_BLOCK = Registries.BLOCK.get(Identifier.of(Odyssey.MODID, "example_block"));// made it work on example block just caus me job pc don't have the lamp....  -Dark
+        LIGHT_BLOCK = Registries.BLOCK.get(Identifier.of(Odyssey.MODID, "light_1"));// made it work on example block just caus me job pc don't have the lamp....  -Dark
     }
 
     public void install() {

@@ -19,6 +19,7 @@ public class ModItemGroup {
                         entries.add(ModItems.TOMAHAWK);
                         entries.add(ModBlocks.EXAMPLE_BLOCK);
                         entries.add(ModBlocks.FACILITY_PILLAR_BLOCK);
+                        entries.add(ModBlocks.LIGHT1);
 
                     })
                     .build());

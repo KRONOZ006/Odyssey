@@ -37,7 +37,8 @@ public class MapBlockEntityRenderer implements BlockEntityRenderer<MapBlockEntit
         matrices.push();
         matrices.translate(dx, dy, dz);
 
-        RenderLayer layer = OdysseyRenderTypes.mapHeightmap(false);
+
+        RenderLayer layer = OdysseyRenderTypes.mapMirror();
         VertexConsumer vc = buffers.getBuffer(layer);
 
         MatrixStack.Entry entry = matrices.peek();

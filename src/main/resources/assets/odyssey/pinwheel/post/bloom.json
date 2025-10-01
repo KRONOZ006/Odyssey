@@ -1,0 +1,44 @@
+{
+  "stages": [
+    {
+      "type": "veil:blit",
+      "shader": "odyssey:bloom/highlights",
+      "in": "minecraft:main",
+      "out": "odyssey:highlights"
+    },
+    {
+      "type": "veil:blit",
+      "shader": "odyssey:bloom/blur/horizontal",
+      "in": "odyssey:highlights",
+      "out": "swap"
+    },
+    {
+      "type": "veil:blit",
+      "shader": "odyssey:bloom/blur/vertical",
+      "in": "swap",
+      "out": "odyssey:highlight_blur"
+    },
+    {
+      "type": "veil:blit",
+      "shader": "odyssey:bloom/bloom",
+      "in": "minecraft:main",
+      "out": "veil:post"
+    }
+  ],
+  "framebuffers": {
+    "swap": {
+      "depth": true,
+      "format": "R11F_G11F_B10F",
+      "autoClear": true,
+      "filter": {
+        "blur": true
+      }
+    }
+  },
+  "textures": {
+    "HighlightsSampler": {
+      "type": "framebuffer",
+      "name": "odyssey:highlight_blur"
+    }
+  }
+}

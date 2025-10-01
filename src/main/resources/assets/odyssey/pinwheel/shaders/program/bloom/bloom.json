@@ -1,0 +1,5 @@
+{
+  "vertex": "veil:blit_screen",
+  "fragment": "odyssey:bloom/bloom"
+
+}
