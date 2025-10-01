@@ -8,7 +8,6 @@ import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec3d;
@@ -20,8 +19,6 @@ import software.bernie.geckolib.cache.object.GeoCube;
 import software.bernie.geckolib.model.DefaultedItemGeoModel;
 import software.bernie.geckolib.renderer.specialty.DynamicGeoItemRenderer;
 import software.bernie.geckolib.util.Color;
-
-import java.util.UUID;
 
 public class TomahawkRenderer extends DynamicGeoItemRenderer<TomahawkItem> {
 

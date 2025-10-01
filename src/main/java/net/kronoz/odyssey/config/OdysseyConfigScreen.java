@@ -2,7 +2,6 @@ package net.kronoz.odyssey.config;
 
 import eu.midnightdust.lib.config.MidnightConfig;
 import net.kronoz.odyssey.Odyssey;
-import net.kronoz.odyssey.config.OdysseyConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;

@@ -2,7 +2,7 @@ package net.kronoz.odyssey.mixin;
 
 import com.llamalad7.mixinextras.sugar.Local;
 import net.kronoz.odyssey.Odyssey;
-import net.kronoz.odyssey.item.ModItems;
+import net.kronoz.odyssey.init.ModItems;
 import net.minecraft.client.render.item.ItemModels;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.render.model.BakedModel;

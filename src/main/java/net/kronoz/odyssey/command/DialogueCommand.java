@@ -1,11 +1,10 @@
 package net.kronoz.odyssey.command;
 
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.kronoz.odyssey.cca.DialogueComponent;
-import net.kronoz.odyssey.cca.ModComponents;
-import net.kronoz.odyssey.dialogue.server.DialogueManager;
+import net.kronoz.odyssey.init.ModComponents;
+import net.kronoz.odyssey.systems.dialogue.server.DialogueManager;
 import net.minecraft.command.argument.IdentifierArgumentType;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;

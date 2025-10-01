@@ -6,10 +6,12 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.kronoz.odyssey.block.ModBlocks;
+import net.kronoz.odyssey.init.ModBlocks;
 import net.kronoz.odyssey.config.OdysseyConfig;
 import net.kronoz.odyssey.entity.MapBlockEntityRenderer;
-import net.kronoz.odyssey.entity.ModEntityRenderers;
+import net.kronoz.odyssey.init.ModEntityRenderers;
+import net.kronoz.odyssey.systems.physics.DustManager;
+import net.kronoz.odyssey.systems.physics.LightDustPinger;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
 import net.minecraft.util.Identifier;
@@ -27,17 +29,17 @@ public class OdysseyClient implements ClientModInitializer {
         BlockEntityRendererFactories.register(ModBlocks.MAP_BLOCK_ENTITY, MapBlockEntityRenderer::new);
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.MAP_BLOCK, RenderLayer.getCutout());
         ModEntityRenderers.register();
-        net.kronoz.odyssey.dialogue.client.DialogueClient.init();
+        net.kronoz.odyssey.systems.dialogue.client.DialogueClient.init();
         MidnightConfig.init("odyssey", OdysseyConfig.class);
+        DustManager.INSTANCE.installHooks();
+        new LightDustPinger().install();
 
-        // Always add noise on join
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
             ppm.add(NOISE);
-            darkAdded = false; // reset when joining
+            darkAdded = false;
         });
 
-        // Check each tick what dimension we’re in
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client.player == null || client.world == null) return;
 

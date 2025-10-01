@@ -1,12 +1,8 @@
 package net.kronoz.odyssey.item.custom;
 
-import net.kronoz.odyssey.item.client.renderer.TomahawkRenderer;
 import net.kronoz.odyssey.item.client.renderer.XarisArmRenderer;
 import net.minecraft.client.render.item.BuiltinModelItemRenderer;
-import net.minecraft.item.AxeItem;
 import net.minecraft.item.Item;
-import net.minecraft.item.SwordItem;
-import net.minecraft.item.ToolMaterials;
 import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib.animatable.GeoItem;
 import software.bernie.geckolib.animatable.client.GeoRenderProvider;

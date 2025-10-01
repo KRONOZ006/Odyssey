@@ -1,7 +1,8 @@
 package net.kronoz.odyssey.mixin;
 
-import net.kronoz.odyssey.model._MountItem;
-import net.kronoz.odyssey.render.SlotItemResolver;
+import net.kronoz.odyssey.init.ModComponents;
+import net.kronoz.odyssey.systems.model._MountItem;
+import net.kronoz.odyssey.systems.render.SlotItemResolver;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.LivingEntityRenderer;
 import net.minecraft.client.render.entity.model.EntityModel;
@@ -29,7 +30,7 @@ public abstract class LivingEntityRendererMixin<T extends LivingEntity, M extend
     private void ody$hideHead(T entity, float f, float g, MatrixStack matrices, VertexConsumerProvider providers, int light, CallbackInfo ci) {
         if (!(entity instanceof PlayerEntity player) || !(this.model instanceof PlayerEntityModel<?> m)) return;
 
-        var eq = net.kronoz.odyssey.cca.ModComponents.BODY.get(player).getEquipped();
+        var eq = ModComponents.BODY.get(player).getEquipped();
         boolean hideHead     = eq.containsKey("head");
         boolean hideTorso    = eq.containsKey("torso") || eq.containsKey("body");
         boolean hideRightArm = eq.containsKey("right_arm");

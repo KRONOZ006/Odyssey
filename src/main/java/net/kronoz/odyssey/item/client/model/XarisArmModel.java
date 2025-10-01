@@ -1,7 +1,6 @@
 package net.kronoz.odyssey.item.client.model;
 
 import net.kronoz.odyssey.Odyssey;
-import net.kronoz.odyssey.item.custom.TomahawkItem;
 import net.kronoz.odyssey.item.custom.XarisArm;
 import net.minecraft.util.Identifier;
 import software.bernie.geckolib.model.GeoModel;

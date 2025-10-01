@@ -1,5 +1,6 @@
 package net.kronoz.odyssey.entity;
 
+import net.kronoz.odyssey.init.ModEntities;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;

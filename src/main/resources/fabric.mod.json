@@ -19,7 +19,7 @@
       "net.kronoz.odyssey.Odyssey"
     ],
     "cardinal-components-entity": [
-      "net.kronoz.odyssey.cca.ModComponents"
+      "net.kronoz.odyssey.init.ModComponents"
     ],
     "modmenu": [
       "net.kronoz.odyssey.config.OdysseyModMenu"

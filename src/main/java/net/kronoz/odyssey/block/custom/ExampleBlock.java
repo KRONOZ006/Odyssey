@@ -1,7 +1,7 @@
 package net.kronoz.odyssey.block.custom;
 
-import net.dark.spv_addon.init.helper.CollisionShapeHelper;
 import net.kronoz.odyssey.Odyssey;
+import net.kronoz.odyssey.block.CollisionShapeHelper;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.ShapeContext;

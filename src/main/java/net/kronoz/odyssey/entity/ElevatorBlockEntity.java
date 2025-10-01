@@ -1,6 +1,7 @@
 package net.kronoz.odyssey.entity;
 
-import net.kronoz.odyssey.entity.LiftPlatformEntity;
+import net.kronoz.odyssey.init.ModBlockEntities;
+import net.kronoz.odyssey.init.ModEntities;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;

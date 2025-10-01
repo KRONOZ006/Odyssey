@@ -1,6 +1,6 @@
 package net.kronoz.odyssey.mixin;
 
-import net.kronoz.odyssey.render.SlotItemResolver;
+import net.kronoz.odyssey.systems.render.SlotItemResolver;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.feature.HeldItemFeatureRenderer;
 import net.minecraft.client.util.math.MatrixStack;

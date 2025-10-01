@@ -1,7 +1,7 @@
 package net.kronoz.odyssey.mixin;
 
 import net.kronoz.odyssey.config.OdysseyConfig;
-import net.kronoz.odyssey.render.SlotItemResolver;
+import net.kronoz.odyssey.systems.render.SlotItemResolver;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.OverlayTexture;

@@ -2,7 +2,6 @@ package net.kronoz.odyssey.item.client.renderer;
 
 import net.kronoz.odyssey.Odyssey;
 import net.kronoz.odyssey.item.custom.XarisArm;
-
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.VertexConsumer;
@@ -13,7 +12,6 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.RotationAxis;
-
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.cache.object.GeoCube;
 import software.bernie.geckolib.model.DefaultedItemGeoModel;
