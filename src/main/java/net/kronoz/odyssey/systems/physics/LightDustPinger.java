@@ -15,7 +15,7 @@ public final class LightDustPinger {
 
     private static final int R=210, G=210, B=210;
     private static final int CAPACITY = 220;
-    private static final double EMIT = 40.0;
+    private static final double EMIT = 60.0;
 
     private final Block LIGHT_BLOCK;
     private int tick = 0;

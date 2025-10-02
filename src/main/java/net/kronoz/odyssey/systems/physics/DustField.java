@@ -17,16 +17,16 @@ public final class DustField {
 
     private static final double LIFE_MIN = 20.0;
     private static final double LIFE_MAX = 40.5;
-    private static final double SIZE_MIN = 0.02;
-    private static final double SIZE_MAX = 0.04;
+    private static final double SIZE_MIN = 0.01;
+    private static final double SIZE_MAX = 0.02;
 
     private static final Vec3d  BASE_DIR   = new Vec3d(0.0, -1.0, 0.0);
     private static final double BASE_SPEED = 0.075;
 
-    private static final double SPREAD_MAX = BASE_SPEED * 0.55;
+    private static final double SPREAD_MAX = BASE_SPEED * 0.8;
     private static final double SPREAD_GAMMA = 3.0;
-    private static final double SPEED_JITTER = 0.20;
-    private static final double SPREAD_JITTER = 0.30;
+    private static final double SPEED_JITTER = 0.40;
+    private static final double SPREAD_JITTER = 0.50;
 
     private static final double ROT_DRAG = 0.995;
 
