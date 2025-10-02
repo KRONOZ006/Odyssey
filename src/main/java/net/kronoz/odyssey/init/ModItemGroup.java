@@ -26,6 +26,7 @@ public class ModItemGroup {
                     })
                     .build());
 
+
     public static void registerItemGroups() {
         Odyssey.LOGGER.info("Registering Item Groups for " + Odyssey.MODID);
     }

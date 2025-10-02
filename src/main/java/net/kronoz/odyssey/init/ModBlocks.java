@@ -21,7 +21,7 @@ public class ModBlocks {
 
     public static final Block EXAMPLE_BLOCK  = registerBlock("example_block", new ExampleBlock(AbstractBlock.Settings.copy(Blocks.STONE)));
     public static final Block FACILITY_PILLAR_BLOCK  = registerBlock("facility_pillar", new FacilityPIllarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
-    public static final Block LARGE_FACILITY_PILLAR_BLOCK = registerBlock("large_facility_pillar", new PillarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
+    public static final Block LARGE_FACILITY_PILLAR_BLOCK = registerBlock("large_facility_pillar", new PillarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK).nonOpaque()));
     public static final Block ELEVATOR  = registerBlock("elevator", new ElevatorBlock(FabricBlockSettings.create().strength(2.0f)));
     public static final Block LIGHT1  = registerBlock("light_1", new LightBlock(FabricBlockSettings.create().strength(2.0f)));
     public static final Block PYROXENE  = registerBlock("pyroxene", new Block(AbstractBlock.Settings.copy(Blocks.TUFF)));
