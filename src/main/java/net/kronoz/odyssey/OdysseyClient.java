@@ -26,6 +26,7 @@ public class OdysseyClient implements ClientModInitializer {
     private static final Identifier NOISE = Identifier.of(Odyssey.MODID, "noise");
     private static final Identifier DARK  = Identifier.of(Odyssey.MODID, "dark");
 
+
     private boolean darkAdded = false;
 
     @Override
@@ -64,11 +65,14 @@ public class OdysseyClient implements ClientModInitializer {
 
             if (inEnd && !darkAdded) {
                 ppm.add(DARK);
+
                 darkAdded = true;
             } else if (!inEnd && darkAdded) {
                 ppm.remove(DARK);
                 darkAdded = false;
             }
         });
+
+
     }
 }

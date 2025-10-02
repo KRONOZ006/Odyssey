@@ -67,7 +67,7 @@
         "then_run": {
           "type": "block",
           "result_state": {
-            "Name": "minecraft:waxed_exposed_cut_copper"
+            "Name": "odyssey:pyroxene"
           }
         }
       },

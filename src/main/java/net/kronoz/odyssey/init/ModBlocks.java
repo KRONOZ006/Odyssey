@@ -4,11 +4,9 @@ import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
 import net.fabricmc.fabric.api.object.builder.v1.block.FabricBlockSettings;
 import net.kronoz.odyssey.Odyssey;
 import net.kronoz.odyssey.block.custom.*;
+import net.kronoz.odyssey.block.custom.LightBlock;
 import net.kronoz.odyssey.entity.MapBlockEntity;
-import net.minecraft.block.AbstractBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.MapColor;
+import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
@@ -23,8 +21,11 @@ public class ModBlocks {
 
     public static final Block EXAMPLE_BLOCK  = registerBlock("example_block", new ExampleBlock(AbstractBlock.Settings.copy(Blocks.STONE)));
     public static final Block FACILITY_PILLAR_BLOCK  = registerBlock("facility_pillar", new FacilityPIllarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
+    public static final Block LARGE_FACILITY_PILLAR_BLOCK = registerBlock("large_facility_pillar", new PillarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block ELEVATOR  = registerBlock("elevator", new ElevatorBlock(FabricBlockSettings.create().strength(2.0f)));
     public static final Block LIGHT1  = registerBlock("light_1", new LightBlock(FabricBlockSettings.create().strength(2.0f)));
+    public static final Block PYROXENE  = registerBlock("pyroxene", new Block(AbstractBlock.Settings.copy(Blocks.TUFF)));
+
     public static final Block MAP_BLOCK = registerBlock(
             "map_block",
             new MapBlock(Block.Settings.create()
@@ -55,6 +56,11 @@ public class ModBlocks {
         Odyssey.LOGGER.info("Registering Mod Blocks for " + Odyssey.MODID);
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(entries -> {
             entries.add(ModBlocks.EXAMPLE_BLOCK);
+
+
+        });
+        ItemGroupEvents.modifyEntriesEvent(ItemGroups.NATURAL).register(entries -> {
+            entries.add(ModBlocks.PYROXENE);
 
 
         });
