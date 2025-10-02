@@ -17,7 +17,6 @@ import net.kronoz.odyssey.systems.cinematics.CineClient;
 import net.kronoz.odyssey.systems.dialogue.client.DialogueClient;
 import net.kronoz.odyssey.systems.physics.DustManager;
 import net.kronoz.odyssey.systems.physics.LightDustPinger;
-import net.kronoz.odyssey.systems.physics.env_dust.EnvDustSystem;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
 import net.minecraft.util.Identifier;
@@ -33,7 +32,6 @@ public class OdysseyClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        EnvDustSystem.INSTANCE.install();
         ClientElevatorAssist.init();
         CineClient.init();
         CineCommand.register();
