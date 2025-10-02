@@ -1,10 +1,7 @@
 package net.kronoz.odyssey.init;
 
 import net.kronoz.odyssey.Odyssey;
-import net.kronoz.odyssey.cca.BodyModComponent;
-import net.kronoz.odyssey.cca.BodyModComponentImpl;
-import net.kronoz.odyssey.cca.DialogueComponent;
-import net.kronoz.odyssey.cca.DialogueComponentImpl;
+import net.kronoz.odyssey.cca.*;
 import net.minecraft.entity.player.PlayerEntity;
 import org.ladysnake.cca.api.v3.component.ComponentKey;
 import org.ladysnake.cca.api.v3.component.ComponentRegistry;
