@@ -1,0 +1,11 @@
+{
+  "stages": [
+    {
+      "type": "veil:blit",
+      "shader": "odyssey:fog/fog",
+      "in": "minecraft:main",
+      "out": "veil:post",
+      "clear": true
+    }
+  ]
+}

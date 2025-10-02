@@ -2,8 +2,8 @@ package net.kronoz.odyssey.init;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.kronoz.odyssey.net.BodyModPackets;
+import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.minecraft.entity.player.PlayerEntity;
 
 public final class ModNetworking {

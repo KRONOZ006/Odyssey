@@ -6,6 +6,8 @@ import net.minecraft.block.Blocks;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.data.DataTracker;
+import net.minecraft.entity.data.TrackedData;
+import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.decoration.DisplayEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
@@ -20,6 +22,14 @@ public class LiftPlatformEntity extends Entity {
 
     private static final net.minecraft.block.Block STOP_MARKER = Blocks.COPPER_BLOCK;
 
+    public static final TrackedData<Float> CX = DataTracker.registerData(LiftPlatformEntity.class, TrackedDataHandlerRegistry.FLOAT);
+    public static final TrackedData<Float> CY = DataTracker.registerData(LiftPlatformEntity.class, TrackedDataHandlerRegistry.FLOAT);
+    public static final TrackedData<Float> CZ = DataTracker.registerData(LiftPlatformEntity.class, TrackedDataHandlerRegistry.FLOAT);
+    public static final TrackedData<Float> VY = DataTracker.registerData(LiftPlatformEntity.class, TrackedDataHandlerRegistry.FLOAT);
+    public static final TrackedData<Integer> DW = DataTracker.registerData(LiftPlatformEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    public static final TrackedData<Integer> DL = DataTracker.registerData(LiftPlatformEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    public static final TrackedData<Integer> DH = DataTracker.registerData(LiftPlatformEntity.class, TrackedDataHandlerRegistry.INTEGER);
+
     private final List<Part> parts = new ArrayList<>();
     private final Map<BlockPos, UUID> displayIds = new HashMap<>();
     private final Map<BlockPos, UUID> colliderIds = new HashMap<>();
@@ -30,32 +40,41 @@ public class LiftPlatformEntity extends Entity {
     private Vec3d base = Vec3d.ZERO;
 
     public LiftPlatformEntity(EntityType<? extends Entity> type, World world){ super(type, world); this.noClip=true; }
-    @Override protected void initDataTracker(DataTracker.Builder builder){}
+
+    @Override protected void initDataTracker(DataTracker.Builder b){
+        b.add(CX, 0f); b.add(CY, 0f); b.add(CZ, 0f); b.add(VY, 0f);
+        b.add(DW, 1); b.add(DL, 1); b.add(DH, 1);
+    }
 
     public void configure(BlockPos originBlock, List<Part> p, double spd, int direction){
         origin = originBlock;
         base = new Vec3d(origin.getX(), origin.getY(), origin.getZ());
         setPos(base.x+0.5, base.y, base.z+0.5);
-        clearDisplays();
-        clearColliders();
-        parts.clear();
-        parts.addAll(p);
+        clearDisplays(); clearColliders();
+        parts.clear(); parts.addAll(p);
         speed = spd;
         dir = direction;
-        recalcAABB();
-        ensureDisplays();
-        ensureColliders();
-        updateVisualsAndColliders(true, 0.0);
+        recalcAABB(); ensureDisplays(); ensureColliders(); updateVisualsAndColliders(true, 0.0);
+        int[] d = dims();
+        if(!getWorld().isClient){
+            var dt = getDataTracker();
+            dt.set(CX, (float)(base.x+0.5));
+            dt.set(CY, (float)(base.y));
+            dt.set(CZ, (float)(base.z+0.5));
+            dt.set(VY, 0f);
+            dt.set(DW, d[0]); dt.set(DL, d[1]); dt.set(DH, d[2]);
+        }
         moving = true;
     }
 
     @Override public void tick(){
         super.tick();
         if(getWorld().isClient) return;
+
         Vec3d step = moving ? new Vec3d(0, dir*speed, 0) : Vec3d.ZERO;
         if(moving){
-            Box unionNext = getBoundingBox().offset(step);
-            if(getWorld().isSpaceEmpty(this, unionNext.expand(0.001))){
+            Box next = getBoundingBox().offset(step);
+            if(getWorld().isSpaceEmpty(this, next.expand(0.001))){
                 base = base.add(step);
                 setPos(base.x+0.5, base.y, base.z+0.5);
                 recalcAABB();
@@ -63,35 +82,99 @@ public class LiftPlatformEntity extends Entity {
                 if(detectStopMarker((ServerWorld)getWorld())) moving = false;
             } else {
                 reifyAndDiscard();
+                return;
             }
         } else {
             updateVisualsAndColliders(false, 0.0);
         }
+        if(moving){
+            Box unionNext = getBoundingBox().offset(step);
+            if(getWorld().isSpaceEmpty(this, unionNext.expand(0.001))){
+                base = base.add(step);
+                setPos(base.x+0.5, base.y, base.z+0.5);
+                recalcAABB();
+                updateVisualsAndColliders(false, step.y);
+
+                if(detectStopMarker((ServerWorld)getWorld())){ reifyAndDiscard(); return; }
+            } else {
+                reifyAndDiscard();
+                return;
+            }
+        } else {
+            updateVisualsAndColliders(false, 0.0);
+        }
+
+        int[] d = dims();
+        var dt = getDataTracker();
+        dt.set(CX, (float)(base.x+0.5));
+        dt.set(CY, (float)(base.y));
+        dt.set(CZ, (float)(base.z+0.5));
+        dt.set(VY, moving ? (float)(dir*speed) : 0f);
+        dt.set(DW, d[0]); dt.set(DL, d[1]); dt.set(DH, d[2]);
+    }
+
+    private int[] dims(){
+        if(parts.isEmpty()) return new int[]{1,1,1};
+        int minX=999999,minY=999999,minZ=999999,maxX=-999999,maxY=-999999,maxZ=-999999;
+        for(Part p: parts){
+            int x=p.off.getX(), y=p.off.getY(), z=p.off.getZ();
+            if(x<minX)minX=x; if(y<minY)minY=y; if(z<minZ)minZ=z;
+            if(x>maxX)maxX=x; if(y>maxY)maxY=y; if(z>maxZ)maxZ=z;
+        }
+        int w=(maxX-minX)+1, l=(maxZ-minZ)+1, h=(maxY-minY)+1;
+        if(w<1)w=1; if(l<1)l=1; if(h<1)h=1;
+        return new int[]{w,l,h};
     }
 
     private boolean detectStopMarker(ServerWorld sw){
-        int[][] dirs = new int[][]{{3,0},{-3,0},{0,3},{0,-3}};
+        int range = 20;
         for(Part p: parts){
             int bx = (int)Math.floor(base.x + p.off.getX());
             int by = (int)Math.floor(base.y + p.off.getY());
             int bz = (int)Math.floor(base.z + p.off.getZ());
             BlockPos here = new BlockPos(bx,by,bz);
-            for(int[] d: dirs){
-                int dx = d[0], dz = d[1];
-                BlockPos mpos = here.add(dx,0,dz);
+
+            // 4 directions sur la même Y
+            // vers +X
+            for(int dx=1; dx<=range; dx++){
+                BlockPos mpos = here.add(dx,0,0);
                 if(sw.getBlockState(mpos).isOf(STOP_MARKER)){
-                    boolean clear = true;
-                    int stepx = Integer.signum(dx), stepz = Integer.signum(dz);
-                    for(int i=1;i<Math.max(Math.abs(dx),Math.abs(dz));i++){
-                        BlockPos gap = here.add(stepx*i, 0, stepz*i);
-                        if(!sw.getBlockState(gap).isAir()){ clear=false; break; }
-                    }
+                    boolean clear=true;
+                    for(int i=1;i<dx;i++){ if(!sw.getBlockState(here.add(i,0,0)).isAir()){ clear=false; break; } }
+                    if(clear) return true;
+                }
+            }
+            // vers -X
+            for(int dx=1; dx<=range; dx++){
+                BlockPos mpos = here.add(-dx,0,0);
+                if(sw.getBlockState(mpos).isOf(STOP_MARKER)){
+                    boolean clear=true;
+                    for(int i=1;i<dx;i++){ if(!sw.getBlockState(here.add(-i,0,0)).isAir()){ clear=false; break; } }
+                    if(clear) return true;
+                }
+            }
+            // vers +Z
+            for(int dz=1; dz<=range; dz++){
+                BlockPos mpos = here.add(0,0,dz);
+                if(sw.getBlockState(mpos).isOf(STOP_MARKER)){
+                    boolean clear=true;
+                    for(int i=1;i<dz;i++){ if(!sw.getBlockState(here.add(0,0,i)).isAir()){ clear=false; break; } }
+                    if(clear) return true;
+                }
+            }
+            // vers -Z
+            for(int dz=1; dz<=range; dz++){
+                BlockPos mpos = here.add(0,0,-dz);
+                if(sw.getBlockState(mpos).isOf(STOP_MARKER)){
+                    boolean clear=true;
+                    for(int i=1;i<dz;i++){ if(!sw.getBlockState(here.add(0,0,-i)).isAir()){ clear=false; break; } }
                     if(clear) return true;
                 }
             }
         }
         return false;
     }
+
 
     private void ensureDisplays(){
         if(getWorld().isClient) return;
@@ -173,9 +256,7 @@ public class LiftPlatformEntity extends Entity {
             BlockPos at = new BlockPos((int)Math.floor(base.x + p.off.getX()), (int)Math.floor(base.y + p.off.getY()), (int)Math.floor(base.z + p.off.getZ()));
             sw.setBlockState(at, p.state==null?Blocks.IRON_BLOCK.getDefaultState():p.state, 3);
         }
-        clearDisplays();
-        clearColliders();
-        discard();
+        clearDisplays(); clearColliders(); discard();
     }
 
     private void clearDisplays(){
@@ -220,10 +301,7 @@ public class LiftPlatformEntity extends Entity {
         origin = new BlockPos(nbt.getInt("ox"), nbt.getInt("oy"), nbt.getInt("oz"));
         base = new Vec3d(nbt.getDouble("bx"), nbt.getDouble("by"), nbt.getDouble("bz"));
         setPos(base.x+0.5, base.y, base.z+0.5);
-        recalcAABB();
-        ensureDisplays();
-        ensureColliders();
-        updateVisualsAndColliders(true, 0.0);
+        recalcAABB(); ensureDisplays(); ensureColliders(); updateVisualsAndColliders(true, 0.0);
     }
 
     @Override protected void writeCustomDataToNbt(net.minecraft.nbt.NbtCompound nbt){

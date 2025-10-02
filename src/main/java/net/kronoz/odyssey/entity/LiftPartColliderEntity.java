@@ -22,60 +22,64 @@ public class LiftPartColliderEntity extends Entity {
     public void setParent(UUID id){ this.parentId = id; }
     public void setStepY(double dy){ this.stepY = dy; }
 
-    @Override public void tick(){
+    @Override
+    public void tick(){
         super.tick();
         if(getWorld().isClient) return;
+
         Box b = getBoundingBox();
-        Box search = b.expand(0.05, 1.6, 0.05);
-        List<Entity> list = getWorld().getOtherEntities(this, search);
-        double top = b.maxY;
-        for(Entity e: list){
-            if(!(e instanceof PlayerEntity)) continue;
+        double topY = b.maxY;
+
+        List<Entity> list = getWorld().getOtherEntities(this, b.expand(0.05, 1.8, 0.05));
+        for(Entity e : list){
+            if(!(e instanceof net.minecraft.entity.player.PlayerEntity)) continue;
+
             Box pb = e.getBoundingBox();
-            boolean horiz = pb.maxX > b.minX && pb.minX < b.maxX && pb.maxZ > b.minZ && pb.minZ < b.maxZ;
+            if(!pb.intersects(b)) continue;
+
             double feet = pb.minY;
-            boolean onTop = horiz && feet >= top - 0.7 && feet <= top + 0.25;
-            if(onTop){
-                double targetFeet = top + 0.002;
-                double adjust = targetFeet - feet;
-                double moveY = stepY + Math.max(adjust,0);
-                if(stepY < 0) moveY = Math.max(stepY + adjust, stepY);
-                double nx = e.getX(), ny = e.getY(), nz = e.getZ();
-                if(moveY != 0) ny += moveY;
-                if(e instanceof ServerPlayerEntity sp){
-                    sp.networkHandler.requestTeleport(nx, ny, nz, sp.getYaw(), sp.getPitch());
-                    sp.fallDistance = 0f;
-                    sp.setOnGround(true);
-                } else {
-                    e.requestTeleport(nx, ny, nz);
-                    e.fallDistance = 0f;
-                    ((PlayerEntity)e).setOnGround(true);
+
+            // 1) si le joueur est sur le dessus ou quasi → aucune poussée latérale
+            if(feet >= topY - 0.05){
+                // 2) filet anti-traverse: si légèrement en dessous du top, relève jusqu’à 0.2 max
+                double gap = topY - feet;
+                if(gap > 0 && gap <= 0.30){
+                    double nx = e.getX(), ny = e.getY() + Math.min(gap, 0.20), nz = e.getZ();
+                    if(e instanceof net.minecraft.server.network.ServerPlayerEntity sp)
+                        sp.networkHandler.requestTeleport(nx, ny, nz, sp.getYaw(), sp.getPitch());
+                    else
+                        e.requestTeleport(nx, ny, nz);
                 }
-                Vec3d v = e.getVelocity();
-                double newVy = stepY >= 0 ? Math.max(v.y, stepY) : Math.min(v.y, stepY);
-                e.setVelocity(v.x, newVy, v.z);
-                e.velocityModified = true;
                 continue;
             }
-            if(pb.intersects(b)){
-                double pushUp = top - feet;
-                if(pushUp > 0 && pushUp < 1.6){
-                    double nx=e.getX(), ny=e.getY()+pushUp+0.002, nz=e.getZ();
-                    if(e instanceof ServerPlayerEntity sp){
-                        sp.networkHandler.requestTeleport(nx, ny, nz, sp.getYaw(), sp.getPitch());
-                        sp.fallDistance=0f; sp.setOnGround(true);
-                    } else {
-                        e.requestTeleport(nx, ny, nz);
-                        e.fallDistance=0f; ((PlayerEntity)e).setOnGround(true);
-                    }
-                    Vec3d v = e.getVelocity();
-                    double newVy = stepY >= 0 ? Math.max(v.y, stepY) : Math.min(v.y, stepY);
-                    e.setVelocity(v.x, newVy, v.z);
-                    e.velocityModified = true;
-                }
+
+            // 3) résolution latérale neutre (sans biais est)
+            double overlapXPos = b.maxX - pb.minX;
+            double overlapXNeg = pb.maxX - b.minX;
+            double overlapZPos = b.maxZ - pb.minZ;
+            double overlapZNeg = pb.maxZ - b.minZ;
+
+            double overlapX = Math.min(overlapXPos, overlapXNeg);
+            double overlapZ = Math.min(overlapZPos, overlapZNeg);
+
+            double nx = e.getX(), ny = e.getY(), nz = e.getZ();
+            double PAD = 0.003;
+
+            if(overlapX < overlapZ){
+                if(overlapXPos < overlapXNeg) nx += overlapXPos + PAD;
+                else nx -= overlapXNeg + PAD;
+            }else{
+                if(overlapZPos < overlapZNeg) nz += overlapZPos + PAD;
+                else nz -= overlapZNeg + PAD;
             }
+
+            if(e instanceof net.minecraft.server.network.ServerPlayerEntity sp)
+                sp.networkHandler.requestTeleport(nx, ny, nz, sp.getYaw(), sp.getPitch());
+            else
+                e.requestTeleport(nx, ny, nz);
         }
     }
+
 
     @Override protected void readCustomDataFromNbt(net.minecraft.nbt.NbtCompound nbt){
         if(nbt.containsUuid("pid")) parentId = nbt.getUuid("pid");

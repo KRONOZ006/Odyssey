@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.kronoz.odyssey.block.custom.SimpleBlockLightManager;
+import net.kronoz.odyssey.client.ClientElevatorAssist;
 import net.kronoz.odyssey.command.CineCommand;
 import net.kronoz.odyssey.config.OdysseyConfig;
 import net.kronoz.odyssey.entity.MapBlockEntityRenderer;
@@ -16,6 +17,7 @@ import net.kronoz.odyssey.systems.cinematics.CineClient;
 import net.kronoz.odyssey.systems.dialogue.client.DialogueClient;
 import net.kronoz.odyssey.systems.physics.DustManager;
 import net.kronoz.odyssey.systems.physics.LightDustPinger;
+import net.kronoz.odyssey.systems.physics.env_dust.EnvDustSystem;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
 import net.minecraft.util.Identifier;
@@ -31,6 +33,8 @@ public class OdysseyClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        EnvDustSystem.INSTANCE.install();
+        ClientElevatorAssist.init();
         CineClient.init();
         CineCommand.register();
         SimpleBlockLightManager.initClient();
@@ -52,6 +56,9 @@ public class OdysseyClient implements ClientModInitializer {
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
+            ppm.add(Identifier.of(Odyssey.MODID, "clouds"));
+            ppm.add(Identifier.of(Odyssey.MODID, "fog"));
+            ppm.add(Identifier.of(Odyssey.MODID, "bloom"));
             ppm.add(NOISE);
             darkAdded = false;
         });
