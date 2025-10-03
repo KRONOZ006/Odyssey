@@ -26,5 +26,6 @@ public class Odyssey implements ModInitializer {
         BodyPartRegistry.init();
         ModNetworking.init();
         ModCommands.init();
+        ModSounds.registerSounds();
     }
 }

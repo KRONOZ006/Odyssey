@@ -1,0 +1,10 @@
+{
+  "desolation_ambient": {
+    "sounds": [
+      {
+        "name": "odyssey:desolation_ambient",
+        "stream": true
+      }
+    ]
+  }
+}

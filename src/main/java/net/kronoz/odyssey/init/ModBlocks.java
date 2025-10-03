@@ -20,11 +20,18 @@ import static net.kronoz.odyssey.Odyssey.id;
 public class ModBlocks {
 
     public static final Block EXAMPLE_BLOCK  = registerBlock("example_block", new ExampleBlock(AbstractBlock.Settings.copy(Blocks.STONE)));
+    public static final Block VERDIGRIS_BLOCK  = registerBlock("verdigris_block", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
+    public static final Block VERDIGRIS_PANNEL  = registerBlock("verdigris_pannel", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
+    public static final Block VERDIGRIS_PLATES  = registerBlock("verdigris_plates", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
+    public static final Block VERDIGRIS_SHEATHING  = registerBlock("verdigris_sheathing", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
+    public static final Block SCARRED_VERDIGRIS_SHEATHING  = registerBlock("scarred_verdigris_sheathing", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block FACILITY_PILLAR_BLOCK  = registerBlock("facility_pillar", new FacilityPIllarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block LARGE_FACILITY_PILLAR_BLOCK = registerBlock("large_facility_pillar", new PillarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK).nonOpaque()));
+    public static final Block FACILITY_REBAR_BLOCK = registerBlock("facility_rebar", new Block(AbstractBlock.Settings.copy(Blocks.WAXED_COPPER_GRATE)));
     public static final Block ELEVATOR  = registerBlock("elevator", new ElevatorBlock(FabricBlockSettings.create().strength(2.0f)));
     public static final Block LIGHT1  = registerBlock("light_1", new LightBlock(FabricBlockSettings.create().strength(2.0f)));
     public static final Block PYROXENE  = registerBlock("pyroxene", new Block(AbstractBlock.Settings.copy(Blocks.TUFF)));
+
 
     public static final Block MAP_BLOCK = registerBlock(
             "map_block",

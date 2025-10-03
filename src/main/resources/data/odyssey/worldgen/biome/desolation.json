@@ -4,7 +4,16 @@
   "temperature_modifier": "none",
   "downfall": 0,
   "effects": {
+
+    "particle": {
+      "options": {
+        "type": "minecraft:white_ash"
+      },
+      "probability": 0.118093334
+    },
     "sky_color": 726579,
+    "ambient_sound": "odyssey:desolation_ambient",
+    "stream": true,
     "fog_color": 726579,
     "water_color": 726579,
     "water_fog_color": 726579

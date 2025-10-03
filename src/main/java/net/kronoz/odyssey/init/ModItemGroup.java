@@ -22,6 +22,12 @@ public class ModItemGroup {
                         entries.add(ModBlocks.LIGHT1);
                         entries.add(ModBlocks.LARGE_FACILITY_PILLAR_BLOCK);
                         entries.add(ModBlocks.PYROXENE);
+                        entries.add(ModBlocks.FACILITY_REBAR_BLOCK);
+                        entries.add(ModBlocks.VERDIGRIS_BLOCK);
+                        entries.add(ModBlocks.VERDIGRIS_PANNEL);
+                        entries.add(ModBlocks.VERDIGRIS_PLATES);
+                        entries.add(ModBlocks.VERDIGRIS_SHEATHING);
+                        entries.add(ModBlocks.SCARRED_VERDIGRIS_SHEATHING);
 
                     })
                     .build());
