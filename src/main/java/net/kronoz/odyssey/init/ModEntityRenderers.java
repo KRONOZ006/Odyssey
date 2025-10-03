@@ -7,5 +7,8 @@ public class ModEntityRenderers {
     public static void register() {
         EntityRendererRegistry.register(ModEntities.LIFT_PLATFORM, EmptyEntityRenderer::new);
         EntityRendererRegistry.register(ModEntities.LIFT_PART_COLLIDER, EmptyEntityRenderer::new);
+        EntityRendererRegistry.register(ModEntities.SLIDE_PLATFORM, EmptyEntityRenderer::new);
+        EntityRendererRegistry.register(ModEntities.SLIDE_PART_COLLIDER, EmptyEntityRenderer::new);
+
     }
 }

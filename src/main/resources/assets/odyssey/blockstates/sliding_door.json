@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "powered=false,facing=north": { "model": "odyssey:block/sliding_door" },
+    "powered=true,facing=north":  { "model": "odyssey:block/sliding_door" },
+    "powered=false,facing=south": { "model": "odyssey:block/sliding_door" },
+    "powered=true,facing=south":  { "model": "odyssey:block/sliding_door" },
+    "powered=false,facing=west":  { "model": "odyssey:block/sliding_door" },
+    "powered=true,facing=west":   { "model": "odyssey:block/sliding_door" },
+    "powered=false,facing=east":  { "model": "odyssey:block/sliding_door" },
+    "powered=true,facing=east":   { "model": "odyssey:block/sliding_door" }
+  }
+}
