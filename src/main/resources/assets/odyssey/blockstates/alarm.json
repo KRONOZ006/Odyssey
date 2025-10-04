@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=north": { "model": "odyssey:block/alarm", "y": 180 },
+    "facing=east":  { "model": "odyssey:block/alarm", "y": 270 },
+    "facing=south": { "model": "odyssey:block/alarm", "y":   0 },
+    "facing=west":  { "model": "odyssey:block/alarm", "y":  90 },
+    "facing=up":    { "model": "odyssey:block/alarm", "x":  90 },
+    "facing=down":  { "model": "odyssey:block/alarm", "x": 270 }
+  }
+}

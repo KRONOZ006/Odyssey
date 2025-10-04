@@ -21,21 +21,17 @@ import java.util.*;
 public final class SimpleBlockLightManager {
     private SimpleBlockLightManager() {}
 
-    // ---- Area light tuning ----
     private static final float AL_BRIGHTNESS = 1.5f;
     private static final float AL_ANGLE = (float) Math.toRadians(40.0);
     private static final float AL_DISTANCE = 25.0f;
     private static final double AL_SIZE_X = 0.20;
     private static final double AL_SIZE_Y = 0.20;
 
-    // ---- Point light tuning ----
     private static final float PL_BRIGHTNESS = 3.0f;
     private static final float PL_RADIUS = 3.0f;
 
-    // shared color (same for both)
     private static final float CLR_R = 1f, CLR_G = 0.796f, CLR_B = 0.494f;
 
-    // Fixed orientation (point to -Y for area cone)
     private static final Quaternionf ORIENTATION = new Quaternionf().rotateX((float)(-Math.PI/2.0));
 
     // ---- State ----
@@ -53,7 +49,6 @@ public final class SimpleBlockLightManager {
         return st.getBlock() instanceof net.kronoz.odyssey.block.custom.LightBlock;
     }
 
-    /** Call once from ClientModInitializer. */
     public static void initClient() {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> resetForNewWorld());
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> resetForNewWorld());
@@ -89,7 +84,6 @@ public final class SimpleBlockLightManager {
                 PENDING_ADD.clear();
             }
 
-            // Auto-clean if block gone or not matching
             Iterator<Map.Entry<BlockPos, LightRenderHandle<AreaLightData>>> it = AREA_HANDLES.entrySet().iterator();
             while (it.hasNext()) {
                 Map.Entry<BlockPos, LightRenderHandle<AreaLightData>> e = it.next();
@@ -99,7 +93,6 @@ public final class SimpleBlockLightManager {
                     LightRenderHandle<AreaLightData> ah = e.getValue();
                     if (ah != null && ah.isValid()) ah.close();
                     AREA_DATA.remove(pos);
-                    // also point light
                     LightRenderHandle<PointLightData> ph = POINT_HANDLES.remove(pos);
                     if (ph != null && ph.isValid()) ph.close();
                     POINT_DATA.remove(pos);
@@ -133,7 +126,6 @@ public final class SimpleBlockLightManager {
         });
     }
 
-    // Hooks called by the block (client side)
     public static void requestAdd(BlockPos pos) {
         PENDING_REMOVE.remove(pos);
         PENDING_ADD.add(pos);
@@ -143,16 +135,13 @@ public final class SimpleBlockLightManager {
         PENDING_REMOVE.add(pos);
     }
 
-    // ---- internals ----
     private static void resetForNewWorld() {
-        // close all area
         for (LightRenderHandle<AreaLightData> h : AREA_HANDLES.values()) {
             if (h != null && h.isValid()) h.close();
         }
         AREA_HANDLES.clear();
         AREA_DATA.clear();
 
-        // close all point
         for (LightRenderHandle<PointLightData> h : POINT_HANDLES.values()) {
             if (h != null && h.isValid()) h.close();
         }
@@ -211,7 +200,6 @@ public final class SimpleBlockLightManager {
     private static void addNow(BlockPos pos) {
         if (AREA_HANDLES.containsKey(pos)) return;
 
-        // Area light
         AreaLightData al = new AreaLightData()
                 .setBrightness(AL_BRIGHTNESS)
                 .setColor(CLR_R, CLR_G, CLR_B)
@@ -223,7 +211,6 @@ public final class SimpleBlockLightManager {
         al.getPosition().set(c.x, c.y, c.z);
         al.getOrientation().set(ORIENTATION);
 
-        // Point light
         PointLightData pl = new PointLightData()
                 .setBrightness(PL_BRIGHTNESS)
                 .setColor(CLR_R, CLR_G, CLR_B)

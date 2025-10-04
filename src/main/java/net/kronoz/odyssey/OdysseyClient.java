@@ -13,22 +13,24 @@ import net.kronoz.odyssey.config.OdysseyConfig;
 import net.kronoz.odyssey.entity.MapBlockEntityRenderer;
 import net.kronoz.odyssey.init.ModBlocks;
 import net.kronoz.odyssey.init.ModEntityRenderers;
+import net.kronoz.odyssey.init.ModItems;
 import net.kronoz.odyssey.systems.cinematics.CineClient;
 import net.kronoz.odyssey.systems.dialogue.client.DialogueClient;
 import net.kronoz.odyssey.systems.physics.DustManager;
 import net.kronoz.odyssey.systems.physics.LightDustPinger;
+import net.kronoz.odyssey.systems.physics.jetpack.JetpackSystem;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
-import net.minecraft.world.dimension.DimensionTypes;
 
 public class OdysseyClient implements ClientModInitializer {
 
     private static final Identifier NOISE = Identifier.of(Odyssey.MODID, "noise");
-    private static final Identifier DARK  = Identifier.of(Odyssey.MODID, "dark");
-
-
-    private boolean darkAdded = false;
+    private static final Identifier FOG = Identifier.of(Odyssey.MODID, "fog");
+    private boolean fogadded = false;
 
     @Override
     public void onInitializeClient() {
@@ -39,8 +41,18 @@ public class OdysseyClient implements ClientModInitializer {
         ModEntityRenderers.register();
         DialogueClient.init();
         MidnightConfig.init("odyssey", OdysseyConfig.class);
+        JetpackSystem.INSTANCE.install(ModItems.JETPACK);
+        net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc ->
+                net.kronoz.odyssey.systems.physics.jetpack.JetpackExhaustManager.tick(mc));
 
-
+        net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(ctx -> {
+            MatrixStack ms = ctx.matrixStack();
+            VertexConsumerProvider vcp = ctx.consumers();
+            float td = MinecraftClient.getInstance().getRenderTickCounter().getTickDelta(false);
+            ms.push();
+            net.kronoz.odyssey.systems.physics.jetpack.JetpackExhaustManager.renderAll(ms, vcp, td);
+            ms.pop();
+        });
 
 
         DustManager.INSTANCE.installHooks();
@@ -49,17 +61,16 @@ public class OdysseyClient implements ClientModInitializer {
 
         BlockEntityRendererFactories.register(ModBlocks.MAP_BLOCK_ENTITY, MapBlockEntityRenderer::new);
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.MAP_BLOCK, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ALARM, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.LIGHT1, RenderLayer.getCutoutMipped());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.FACILITY_REBAR_BLOCK, RenderLayer.getCutout());
 
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
-            ppm.add(Identifier.of(Odyssey.MODID, "clouds"));
-            ppm.add(Identifier.of(Odyssey.MODID, "fog"));
             ppm.add(Identifier.of(Odyssey.MODID, "bloom"));
             ppm.add(NOISE);
-            darkAdded = false;
+            fogadded = false;
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -67,15 +78,13 @@ public class OdysseyClient implements ClientModInitializer {
 
             var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
 
-            boolean inEnd = client.world.getDimensionEntry().matchesId(DimensionTypes.THE_END_ID);
-
-            if (inEnd && !darkAdded) {
-                ppm.add(DARK);
-
-                darkAdded = true;
-            } else if (!inEnd && darkAdded) {
-                ppm.remove(DARK);
-                darkAdded = false;
+            boolean inVoid = client.world.getRegistryKey().getValue().equals(Identifier.of("odyssey:void"));
+            if (inVoid && !fogadded) {
+                ppm.add(FOG);
+                fogadded = true;
+            } else if (!inVoid && fogadded) {
+                ppm.remove(FOG);
+                fogadded = false;
             }
         });
 

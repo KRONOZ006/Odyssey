@@ -35,7 +35,7 @@ public class LiftPlatformEntity extends Entity {
     private final Map<BlockPos, UUID> colliderIds = new HashMap<>();
     private boolean moving = false;
     private int dir = 0;
-    private double speed = 0.006;
+    private double speed = 0.05;
     private BlockPos origin = BlockPos.ORIGIN;
     private Vec3d base = Vec3d.ZERO;
 

@@ -22,7 +22,7 @@ public class ElevatorBlockEntity extends BlockEntity {
 
     private final List<Part> parts = new ArrayList<>();
     private UUID platformId = null;
-    private double speed = 0.006;
+    private double speed = 0.003;
     private BlockPos origin = BlockPos.ORIGIN;
 
     public ElevatorBlockEntity(BlockPos pos, BlockState state){ super(ModBlockEntities.ELEVATOR_BE,pos,state); }

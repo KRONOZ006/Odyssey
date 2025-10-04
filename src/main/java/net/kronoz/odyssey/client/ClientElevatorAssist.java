@@ -64,9 +64,9 @@ public final class ClientElevatorAssist {
                     double targetFeet = top.maxY;
                     double gap = targetFeet - feet;
 
-                    final double SNAP_TOL = 0.045;   // snap if within ~1/20th block
-                    final double LIFT_CAP = 0.22;    // max up correction per tick
-                    final double DROP_CAP = 0.10;    // max down correction per tick
+                    final double SNAP_TOL = 0.001;   // snap if within ~1/20th block
+                    final double LIFT_CAP = 1.00;    // max up correction per tick
+                    final double DROP_CAP = 1.00;    // max down correction per tick
 
                     if(gap > 0){
                         if(gap <= SNAP_TOL){

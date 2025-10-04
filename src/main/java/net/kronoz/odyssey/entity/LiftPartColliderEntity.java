@@ -40,7 +40,7 @@ public class LiftPartColliderEntity extends Entity {
             double feet = pb.minY;
 
             // 1) si le joueur est sur le dessus ou quasi → aucune poussée latérale
-            if(feet >= topY - 0.05){
+            if(feet >= topY - 0.001){
                 // 2) filet anti-traverse: si légèrement en dessous du top, relève jusqu’à 0.2 max
                 double gap = topY - feet;
                 if(gap > 0 && gap <= 0.30){
@@ -63,7 +63,7 @@ public class LiftPartColliderEntity extends Entity {
             double overlapZ = Math.min(overlapZPos, overlapZNeg);
 
             double nx = e.getX(), ny = e.getY(), nz = e.getZ();
-            double PAD = 0.003;
+            double PAD = 0.001;
 
             if(overlapX < overlapZ){
                 if(overlapXPos < overlapXNeg) nx += overlapXPos + PAD;

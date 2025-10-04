@@ -19,6 +19,10 @@ public class ModItemGroup {
                         entries.add(ModItems.TOMAHAWK);
                         entries.add(ModBlocks.EXAMPLE_BLOCK);
                         entries.add(ModBlocks.FACILITY_PILLAR_BLOCK);
+                        entries.add(ModBlocks.ELEVATOR);
+                        entries.add(ModBlocks.SLIDING_DOOR);
+                        entries.add(ModItems.XARIS);
+                        entries.add(ModItems.JETPACK);
                         entries.add(ModBlocks.LIGHT1);
                         entries.add(ModBlocks.LARGE_FACILITY_PILLAR_BLOCK);
                         entries.add(ModBlocks.PYROXENE);
@@ -28,6 +32,7 @@ public class ModItemGroup {
                         entries.add(ModBlocks.VERDIGRIS_PLATES);
                         entries.add(ModBlocks.VERDIGRIS_SHEATHING);
                         entries.add(ModBlocks.SCARRED_VERDIGRIS_SHEATHING);
+                        entries.add(ModBlocks.ALARM);
 
                     })
                     .build());

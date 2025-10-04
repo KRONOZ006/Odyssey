@@ -8,7 +8,7 @@ import software.bernie.geckolib.model.GeoModel;
 public class TomahawkModel extends GeoModel<TomahawkItem> {
     @Override
     public Identifier getModelResource(TomahawkItem item) {
-        return  Identifier.of(Odyssey.MODID, "geo/item/tomahawk.geo.json");
+        return Identifier.of(Odyssey.MODID, "geo/item/tomahawk.geo.json");
     }
 
     @Override
