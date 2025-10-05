@@ -1,6 +1,7 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/cube_column",
   "textures": {
-    "all": "odyssey:block/verdigris_sheathing"
+    "end": "odyssey:block/verdigris_sheathing",
+    "side": "odyssey:block/verdigris_sheathing"
   }
 }

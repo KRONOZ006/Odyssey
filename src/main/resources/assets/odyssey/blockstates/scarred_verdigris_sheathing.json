@@ -1,5 +1,7 @@
 {
   "variants": {
-    "": { "model": "odyssey:block/scarred_verdigris_sheathing" }
+    "axis=x": { "model": "odyssey:block/scarred_verdigris_sheathing", "x": 90, "y": 90 },
+    "axis=y": { "model": "odyssey:block/scarred_verdigris_sheathing" },
+    "axis=z": { "model": "odyssey:block/scarred_verdigris_sheathing", "x": 90 }
   }
 }

@@ -24,8 +24,8 @@ public class ModBlocks {
     public static final Block VERDIGRIS_BLOCK  = registerBlock("verdigris_block", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block VERDIGRIS_PANNEL  = registerBlock("verdigris_pannel", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block VERDIGRIS_PLATES  = registerBlock("verdigris_plates", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
-    public static final Block VERDIGRIS_SHEATHING  = registerBlock("verdigris_sheathing", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
-    public static final Block SCARRED_VERDIGRIS_SHEATHING  = registerBlock("scarred_verdigris_sheathing", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
+    public static final Block VERDIGRIS_SHEATHING  = registerBlock("verdigris_sheathing", new PillarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
+    public static final Block SCARRED_VERDIGRIS_SHEATHING  = registerBlock("scarred_verdigris_sheathing", new PillarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block FACILITY_PILLAR_BLOCK  = registerBlock("facility_pillar", new FacilityPIllarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block LARGE_FACILITY_PILLAR_BLOCK = registerBlock("large_facility_pillar", new PillarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK).nonOpaque()));
     public static final Block FACILITY_REBAR_BLOCK = registerBlock("facility_rebar", new Block(AbstractBlock.Settings.copy(Blocks.WAXED_COPPER_GRATE)));

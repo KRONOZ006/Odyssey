@@ -31,6 +31,8 @@ public class OdysseyClient implements ClientModInitializer {
     private static final Identifier NOISE = Identifier.of(Odyssey.MODID, "noise");
     private static final Identifier FOG = Identifier.of(Odyssey.MODID, "fog");
     private boolean fogadded = false;
+    private boolean noiseadded = false;
+
 
     @Override
     public void onInitializeClient() {
@@ -69,7 +71,7 @@ public class OdysseyClient implements ClientModInitializer {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
             ppm.add(Identifier.of(Odyssey.MODID, "bloom"));
-            ppm.add(NOISE);
+            noiseadded = false;
             fogadded = false;
         });
 
@@ -79,12 +81,16 @@ public class OdysseyClient implements ClientModInitializer {
             var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
 
             boolean inVoid = client.world.getRegistryKey().getValue().equals(Identifier.of("odyssey:void"));
-            if (inVoid && !fogadded) {
+            if (inVoid && !fogadded && !noiseadded) {
                 ppm.add(FOG);
+                ppm.add(NOISE);
                 fogadded = true;
-            } else if (!inVoid && fogadded) {
+                fogadded = true;
+            } else if (!inVoid && fogadded && !noiseadded) {
                 ppm.remove(FOG);
+                ppm.remove(NOISE);
                 fogadded = false;
+                noiseadded = false;
             }
         });
 
