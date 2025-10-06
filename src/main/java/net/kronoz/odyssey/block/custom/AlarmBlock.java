@@ -44,7 +44,7 @@ public class AlarmBlock extends Block {
     private static final double AL_SIZE_Y = 0.20;
     private static final float  AL_ANGLE  = (float) Math.toRadians(40.0);
     private static final float  AL_DIST   = 25.0f;
-    private static final float  PL_RADIUS = 3.0f;
+    private static final float  PL_RADIUS = 5.0f;
     private static final float CLR_R = 1f, CLR_G = 0f, CLR_B = 0f;
     private static final Quaternionf ORIENTATION_DOWN = new Quaternionf().rotateX((float)(-Math.PI/2.0));
 
@@ -54,8 +54,8 @@ public class AlarmBlock extends Block {
     private static final Map<BlockPos, PointLightData> POINT_DATA = new HashMap<>();
 
     private static final Vec3d BONE_LIGHT_OFFSET = new Vec3d(0.5, 0.8, 0.5);
-    private static final float PULSE_HZ = 2.0f;
-    private static float pulseTime = 0f;
+    private static final float PULSE_HZ = 1.0f;
+    private static float pulseTime = 1.0f;
     private static boolean hooks = false;
     private static boolean rescanPending = false;
 
@@ -135,7 +135,7 @@ public class AlarmBlock extends Block {
         Vec3d c = new Vec3d(pos.getX(), pos.getY(), pos.getZ()).add(BONE_LIGHT_OFFSET);
 
         AreaLightData al = new AreaLightData()
-                .setBrightness(1.0f)
+                .setBrightness(3.0f)
                 .setColor(CLR_R, CLR_G, CLR_B)
                 .setSize(AL_SIZE_X, AL_SIZE_Y)
                 .setAngle(AL_ANGLE)
@@ -144,7 +144,7 @@ public class AlarmBlock extends Block {
         al.getOrientation().set(ORIENTATION_DOWN);
 
         PointLightData pl = new PointLightData()
-                .setBrightness(1.0f)
+                .setBrightness(3.0f)
                 .setColor(CLR_R, CLR_G, CLR_B)
                 .setRadius(PL_RADIUS);
         pl.setPosition((float) c.x, (float) c.y, (float) c.z);
@@ -220,8 +220,8 @@ public class AlarmBlock extends Block {
 
             float dt = client.getRenderTickCounter().getLastFrameDuration();
             pulseTime += dt;
-            float omega = (float)(2.0 * Math.PI * PULSE_HZ);
-            float b = 0.5f * (1.0f + (float)Math.cos(pulseTime * omega));
+            float omega = (float)(10.0 * Math.PI * PULSE_HZ);
+            float b = 0.5f * (3.0f + (float)Math.cos(pulseTime * omega));
 
             if (VeilRenderSystem.renderer() == null || VeilRenderSystem.renderer().getLightRenderer() == null) return;
 
