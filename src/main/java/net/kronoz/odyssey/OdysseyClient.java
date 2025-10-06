@@ -6,12 +6,15 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.kronoz.odyssey.block.custom.SimpleBlockLightManager;
 import net.kronoz.odyssey.client.ClientElevatorAssist;
 import net.kronoz.odyssey.command.CineCommand;
 import net.kronoz.odyssey.config.OdysseyConfig;
 import net.kronoz.odyssey.entity.MapBlockEntityRenderer;
+import net.kronoz.odyssey.entity.sentinel.SentinelRenderer;
 import net.kronoz.odyssey.init.ModBlocks;
+import net.kronoz.odyssey.init.ModEntities;
 import net.kronoz.odyssey.init.ModEntityRenderers;
 import net.kronoz.odyssey.init.ModItems;
 import net.kronoz.odyssey.systems.cinematics.CineClient;
@@ -58,6 +61,7 @@ public class OdysseyClient implements ClientModInitializer {
         DustManager.INSTANCE.installHooks();
         new LightDustPinger().install();
 
+        EntityRendererRegistry.register(ModEntities.SENTINEL, SentinelRenderer::new);
 
         BlockEntityRendererFactories.register(ModBlocks.MAP_BLOCK_ENTITY, MapBlockEntityRenderer::new);
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.MAP_BLOCK, RenderLayer.getCutout());

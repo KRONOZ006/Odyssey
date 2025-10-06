@@ -1,6 +1,8 @@
 package net.kronoz.odyssey;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
+import net.kronoz.odyssey.entity.sentinel.SentinelEntity;
 import net.kronoz.odyssey.init.*;
 import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.kronoz.odyssey.systems.dialogue.Dialogue;
@@ -15,6 +17,8 @@ public class Odyssey implements ModInitializer {
 
     @Override
     public void onInitialize() {
+
+        ModEntities.init();
         ModBlockEntities.register();
         ModEntities.register();
         ModInteractions.init();

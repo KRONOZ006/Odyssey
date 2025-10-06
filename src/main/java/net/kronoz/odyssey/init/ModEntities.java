@@ -1,10 +1,13 @@
 package net.kronoz.odyssey.init;
 
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.kronoz.odyssey.Odyssey;
 import net.kronoz.odyssey.entity.LiftPartColliderEntity;
 import net.kronoz.odyssey.entity.LiftPlatformEntity;
 import net.kronoz.odyssey.entity.SlidePartColliderEntity;
 import net.kronoz.odyssey.entity.SlidePlatformEntity;
+import net.kronoz.odyssey.entity.sentinel.SentinelEntity;
+import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
 import net.minecraft.registry.Registries;
@@ -16,7 +19,17 @@ public class ModEntities {
     public static EntityType<LiftPartColliderEntity> LIFT_PART_COLLIDER;
     public static EntityType<SlidePlatformEntity> SLIDE_PLATFORM;
     public static EntityType<SlidePartColliderEntity> SLIDE_PART_COLLIDER;
-
+    public static final EntityType<SentinelEntity> SENTINEL = Registry.register(
+            Registries.ENTITY_TYPE,
+            Identifier.of(Odyssey.MODID, "sentinel"),
+            EntityType.Builder.<SentinelEntity>create(SentinelEntity::new, SpawnGroup.MONSTER)
+                    .dimensions(0.8f, 0.8f)
+                    .eyeHeight(0.6f)
+                    .build()
+    );
+    public static void init() {
+        FabricDefaultAttributeRegistry.register(SENTINEL, SentinelEntity.createAttributes());
+    }
     public static void register() {
         LIFT_PLATFORM = Registry.register(
                 Registries.ENTITY_TYPE,
