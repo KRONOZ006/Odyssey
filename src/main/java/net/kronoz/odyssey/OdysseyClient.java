@@ -12,6 +12,7 @@ import net.kronoz.odyssey.client.ClientElevatorAssist;
 import net.kronoz.odyssey.command.CineCommand;
 import net.kronoz.odyssey.config.OdysseyConfig;
 import net.kronoz.odyssey.entity.MapBlockEntityRenderer;
+import net.kronoz.odyssey.entity.sentinel.SentinelLightClient;
 import net.kronoz.odyssey.entity.sentinel.SentinelRenderer;
 import net.kronoz.odyssey.init.ModBlocks;
 import net.kronoz.odyssey.init.ModEntities;
@@ -41,6 +42,7 @@ public class OdysseyClient implements ClientModInitializer {
         CineClient.init();
         CineCommand.register();
         SimpleBlockLightManager.initClient();
+        SentinelLightClient.initClient();
         ModEntityRenderers.register();
         DialogueClient.init();
         MidnightConfig.init("odyssey", OdysseyConfig.class);
