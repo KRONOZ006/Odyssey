@@ -31,10 +31,8 @@ import net.minecraft.util.Identifier;
 
 public class OdysseyClient implements ClientModInitializer {
 
-    private static final Identifier NOISE = Identifier.of(Odyssey.MODID, "noise");
     private static final Identifier FOG = Identifier.of(Odyssey.MODID, "fog");
     private boolean fogadded = false;
-    private boolean noiseadded = false;
 
 
     @Override
@@ -75,7 +73,6 @@ public class OdysseyClient implements ClientModInitializer {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
             ppm.add(Identifier.of(Odyssey.MODID, "bloom"));
-            noiseadded = false;
             fogadded = false;
         });
 
@@ -85,16 +82,12 @@ public class OdysseyClient implements ClientModInitializer {
             var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
 
             boolean inVoid = client.world.getRegistryKey().getValue().equals(Identifier.of("odyssey:void"));
-            if (inVoid && !fogadded && !noiseadded) {
+            if (inVoid && !fogadded) {
                 ppm.add(FOG);
-                ppm.add(NOISE);
                 fogadded = true;
-                fogadded = true;
-            } else if (!inVoid && fogadded && !noiseadded) {
+            } else if (!inVoid && fogadded) {
                 ppm.remove(FOG);
-                ppm.remove(NOISE);
                 fogadded = false;
-                noiseadded = false;
             }
         });
 
