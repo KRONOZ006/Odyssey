@@ -14,6 +14,7 @@ import net.kronoz.odyssey.config.OdysseyConfig;
 import net.kronoz.odyssey.entity.MapBlockEntityRenderer;
 import net.kronoz.odyssey.entity.sentinel.SentinelLightClient;
 import net.kronoz.odyssey.entity.sentinel.SentinelRenderer;
+import net.kronoz.odyssey.entity.sentry.SentryRenderer;
 import net.kronoz.odyssey.init.ModBlocks;
 import net.kronoz.odyssey.init.ModEntities;
 import net.kronoz.odyssey.init.ModEntityRenderers;
@@ -63,6 +64,7 @@ public class OdysseyClient implements ClientModInitializer {
         DustManager.INSTANCE.installHooks();
         new LightDustPinger().install();
 
+        EntityRendererRegistry.register(ModEntities.SENTRY, SentryRenderer::new);
         EntityRendererRegistry.register(ModEntities.SENTINEL, SentinelRenderer::new);
 
         BlockEntityRendererFactories.register(ModBlocks.MAP_BLOCK_ENTITY, MapBlockEntityRenderer::new);

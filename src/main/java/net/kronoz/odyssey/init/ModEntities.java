@@ -1,12 +1,14 @@
 package net.kronoz.odyssey.init;
 
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
+import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
 import net.kronoz.odyssey.Odyssey;
 import net.kronoz.odyssey.entity.LiftPartColliderEntity;
 import net.kronoz.odyssey.entity.LiftPlatformEntity;
 import net.kronoz.odyssey.entity.SlidePartColliderEntity;
 import net.kronoz.odyssey.entity.SlidePlatformEntity;
 import net.kronoz.odyssey.entity.sentinel.SentinelEntity;
+import net.kronoz.odyssey.entity.sentry.SentryEntity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
@@ -27,7 +29,16 @@ public class ModEntities {
                     .eyeHeight(0.6f)
                     .build()
     );
+    public static final EntityType<SentryEntity> SENTRY = Registry.register(
+            Registries.ENTITY_TYPE,
+            Identifier.of(Odyssey.MODID, "sentry"),
+            EntityType.Builder.<SentryEntity>create(SentryEntity::new, SpawnGroup.MONSTER)
+                    .dimensions(0.9f, 2.95f)
+                    .build()
+    );
+
     public static void init() {
+        FabricDefaultAttributeRegistry.register(SENTRY, SentryEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(SENTINEL, SentinelEntity.createAttributes());
     }
     public static void register() {

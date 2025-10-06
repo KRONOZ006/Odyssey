@@ -23,15 +23,15 @@ public final class SentinelLightClient {
     private SentinelLightClient() {}
 
     private static final float AL_BRIGHTNESS_VISIBLE = 5.0f;
-    private static final float AL_BRIGHTNESS_HIDDEN  = 1.0f;
+    private static final float AL_BRIGHTNESS_HIDDEN  = 2.5f;
     private static final float AL_ANGLE = (float)Math.toRadians(40.0);
     private static final float AL_DISTANCE = 80.0f;
     private static final float AL_SIZE_X = 0.20f;
     private static final float AL_SIZE_Y = 0.20f;
 
     private static final float PL_BRIGHTNESS_VISIBLE = 5.0f;
-    private static final float PL_BRIGHTNESS_HIDDEN  = 1.0f;
-    private static final float PL_RADIUS = 1.0f;
+    private static final float PL_BRIGHTNESS_HIDDEN  = 2.5f;
+    private static final float PL_RADIUS = 3.0f;
 
     private static final float CLR_R = 0.447f, CLR_G = 0.0f, CLR_B = 0.651f;
 
