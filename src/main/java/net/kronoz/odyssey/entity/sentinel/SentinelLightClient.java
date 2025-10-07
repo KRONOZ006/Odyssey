@@ -5,9 +5,8 @@ import foundry.veil.api.client.render.VeilRenderSystem;
 import foundry.veil.api.client.render.light.data.AreaLightData;
 import foundry.veil.api.client.render.light.data.PointLightData;
 import foundry.veil.api.client.render.light.renderer.LightRenderHandle;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.kronoz.odyssey.entity.sentinel.SentinelEntity;
@@ -16,24 +15,21 @@ import net.minecraft.client.world.ClientWorld;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Quaternionf;
 
-import java.util.Iterator;
-import java.util.Map;
-
 public final class SentinelLightClient {
     private SentinelLightClient() {}
 
-    private static final float AL_BRIGHTNESS_VISIBLE = 5.0f;
+    private static final float AL_BRIGHTNESS_VISIBLE = 7.5f;
     private static final float AL_BRIGHTNESS_HIDDEN  = 2.5f;
     private static final float AL_ANGLE = (float)Math.toRadians(40.0);
-    private static final float AL_DISTANCE = 80.0f;
+    private static final float AL_DISTANCE = 40.0f;
     private static final float AL_SIZE_X = 0.20f;
     private static final float AL_SIZE_Y = 0.20f;
 
-    private static final float PL_BRIGHTNESS_VISIBLE = 5.0f;
+    private static final float PL_BRIGHTNESS_VISIBLE = 7.5f;
     private static final float PL_BRIGHTNESS_HIDDEN  = 2.5f;
     private static final float PL_RADIUS = 3.0f;
 
-    private static final float CLR_R = 0.447f, CLR_G = 0.0f, CLR_B = 0.651f;
+    private static final float CLR_R = 0.658f, CLR_G = 0.0f, CLR_B = 1.0f;
 
     private static final float EYE_FORWARD_OFFSET = 0.35f;
     private static final float EYE_UP_OFFSET = 1.2f;
@@ -65,25 +61,22 @@ public final class SentinelLightClient {
                 if (!HANDLES.containsKey(id)) addFor(e);
             }
 
-            ObjectIterator<Int2ObjectMap.Entry<Pair>> it = HANDLES.int2ObjectEntrySet().iterator();
-            while (it.hasNext()) {
-                Map.Entry<Integer, Pair> en = it.next();
-                int id = en.getKey();
+            IntArrayList toRemove = new IntArrayList();
+            for (int id : HANDLES.keySet()) {
                 SentinelEntity e = (SentinelEntity) w.getEntityById(id);
-                if (e == null || e.isRemoved()) {
-                    removeFor(id);
-                    it.remove();
-                }
+                if (e == null || e.isRemoved()) toRemove.add(id);
             }
+            for (int i = 0; i < toRemove.size(); i++) removeFor(toRemove.getInt(i));
         });
 
         WorldRenderEvents.BEFORE_ENTITIES.register(ctx -> {
             MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc == null || mc.world == null) return;
+            if (mc == null) return;
             ClientWorld w = mc.world;
+            if (w == null) return;
+
             for (SentinelEntity e : w.getEntitiesByClass(SentinelEntity.class, mc.player != null ? mc.player.getBoundingBox().expand(256) : null, x -> true)) {
-                int id = e.getId();
-                Pair p = HANDLES.get(id);
+                Pair p = HANDLES.get(e.getId());
                 if (p == null) continue;
 
                 float bodyYawRad = (float)Math.toRadians(e.getYaw());

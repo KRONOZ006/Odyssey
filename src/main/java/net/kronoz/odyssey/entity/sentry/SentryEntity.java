@@ -28,6 +28,7 @@ import net.minecraft.particle.EntityEffectParticleEffect;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleType;
 import net.minecraft.particle.ParticleTypes;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.sound.SoundEvents;
@@ -84,70 +85,42 @@ public class SentryEntity extends PathAwareEntity implements GeoEntity {
 
     @Override
     public boolean damage(DamageSource source, float amount) {
-        if (shieldDown == false) {
-            if (shieldDown == false) {
-                hitCount++;
+        if (!shieldDown) {
+            boolean axeHit = false;
+            Entity attacker = source.getAttacker();
 
-
-                if (hitCount == 1) {
-                    this.getWorld().playSound(this, this.getBlockPos(), SoundEvents.ITEM_TOTEM_USE, SoundCategory.AMBIENT, 1.0f, 1.0f);
-
-
-                    wasHitRecently = true;
-                    ticksSinceHit = 0;
-
-                }
-                if (hitCount >= 4) {
-                    this.getWorld().playSound(this, this.getBlockPos(), SoundEvents.ENTITY_ELDER_GUARDIAN_CURSE, SoundCategory.AMBIENT, 1.0f, 1.0f);
-
-
-                    wasHitRecently = true;
-                    shieldDown = true;
-
-
-                }
-            }
-
-            if (source.getAttacker() instanceof PlayerEntity player) {
-                double x1 = this.getX();
-                double y1 = this.getY() + this.getHeight() / 2.0;
-                double z1 = this.getZ();
-
-                double x2 = player.getX();
-                double y2 = player.getY() + player.getHeight() / 2.0;
-                double z2 = player.getZ();
-
-                double midX = (x1 + x2) / 2.0;
-                double midY = (y1 + y2) / 2.0;
-                double midZ = (z1 + z2) / 2.0;
-
-                if (this.getWorld().isClient()) {
+            if (attacker instanceof PlayerEntity player) {
+                axeHit = player.getMainHandStack().isIn(ItemTags.AXES);
+                if (this.getWorld().isClient) {
+                    double x1 = this.getX();
+                    double y1 = this.getY() + this.getHeight() / 2.0;
+                    double z1 = this.getZ();
+                    double x2 = player.getX();
+                    double y2 = player.getY() + player.getHeight() / 2.0;
+                    double z2 = player.getZ();
+                    double midX = (x1 + x2) / 2.0;
+                    double midY = (y1 + y2) / 2.0;
+                    double midZ = (z1 + z2) / 2.0;
                     this.getWorld().addParticle(
-                            ModParticles.SENTRY_SHIELD_FULL_PARTICLE,
+                            net.kronoz.odyssey.init.ModParticles.SENTRY_SHIELD_FULL_PARTICLE,
                             midX, midY, midZ,
                             0.0, 0.0, 0.0
                     );
                 }
             }
 
-
-
-
-                this.playSound(SoundEvents.ITEM_SHIELD_BLOCK, 1.0f, 1.0f);
-
-
-
-
-
-
-
-
+            if (axeHit) {
+                wasHitRecently = true;
+                ticksSinceHit = 0;
+                hitCount++;
+                if (hitCount >= 4) {
+                    shieldDown = true;
+                }
+            }
 
             return false;
         } else {
-            boolean result = super.damage(source, amount);
-
-            return result;
+            return super.damage(source, amount);
         }
     }
 
@@ -242,17 +215,15 @@ public class SentryEntity extends PathAwareEntity implements GeoEntity {
 
         if (wasHitRecently) {
             ticksSinceHit++;
-
             if (ticksSinceHit > 40) {
                 wasHitRecently = false;
-                this.playSound(SoundEvents.ENTITY_WITHER_SHOOT);
                 hitCount = 0;
                 ticksSinceHit = 0;
-
                 NbtCompound nbt = new NbtCompound();
                 this.writeCustomDataToNbt(nbt);
             }
         }
+
 
     }
 

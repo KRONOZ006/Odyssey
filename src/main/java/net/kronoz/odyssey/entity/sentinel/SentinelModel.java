@@ -23,8 +23,8 @@ public class SentinelModel extends GeoModel<SentinelEntity> {
         GeoBone eye  = getAnimationProcessor().getBone("eye");
         if (head != null) head.setRotX(e.getHeadPitch());
         if (eye != null) {
-            eye.setRotY(e.getEyeYaw());
-            eye.setRotX(-e.getEyePitch());
+            eye.setRotY(-e.getEyeYaw());
+            eye.setRotX(e.getEyePitch());
         }
     }
 }
