@@ -8,6 +8,7 @@ import net.minecraft.util.Identifier;
 
 public class ModSounds {
     public static final SoundEvent DESOLATION_AMBIENT = registerSoundEvent("desolation_ambient");
+    public static final SoundEvent SENTRY_STEP = registerSoundEvent("sentry_step");
 
 
     private static SoundEvent registerSoundEvent(String name) {

@@ -25,11 +25,11 @@ import net.minecraft.world.World;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animatable.instance.SingletonAnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animation.*;
 import software.bernie.geckolib.constant.DefaultAnimations;
 
 public class SentinelEntity extends PathAwareEntity implements GeoEntity {
-    private final AnimatableInstanceCache geoCache = new SingletonAnimatableInstanceCache(this);
+    private final AnimatableInstanceCache cache = new SingletonAnimatableInstanceCache(this);
 
     private static final TrackedData<Float> TRACK_HEAD_PITCH = DataTracker.registerData(SentinelEntity.class, TrackedDataHandlerRegistry.FLOAT);
     private static final TrackedData<Float> TRACK_EYE_YAW    = DataTracker.registerData(SentinelEntity.class, TrackedDataHandlerRegistry.FLOAT);
@@ -152,11 +152,27 @@ public class SentinelEntity extends PathAwareEntity implements GeoEntity {
     @Override
     public boolean isPushable() { return false; }
 
-    @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar c) {
-        c.add(DefaultAnimations.genericIdleController(this));
-    }
 
     @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() { return geoCache; }
+    public void registerControllers(AnimatableManager.ControllerRegistrar reg) {
+        reg.add(new AnimationController<>(this, "controller", 0, this::predicate));
+    }
+
+    private PlayState predicate(software.bernie.geckolib.animation.AnimationState<SentinelEntity> s) {
+         s.getController().setAnimation(RawAnimation.begin().then("animation.sentinel.idle", Animation.LoopType.LOOP));
+
+        return PlayState.CONTINUE;
+    }
+
+//    @Override public AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }
+
+
+
+//    @Override
+//    public void registerControllers(AnimatableManager.ControllerRegistrar c) {
+//        c.add(DefaultAnimations.genericIdleController(this));
+//    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }
 }

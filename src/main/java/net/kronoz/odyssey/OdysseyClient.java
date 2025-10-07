@@ -6,6 +6,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.kronoz.odyssey.block.custom.SimpleBlockLightManager;
 import net.kronoz.odyssey.client.ClientElevatorAssist;
@@ -15,10 +16,8 @@ import net.kronoz.odyssey.entity.MapBlockEntityRenderer;
 import net.kronoz.odyssey.entity.sentinel.SentinelLightClient;
 import net.kronoz.odyssey.entity.sentinel.SentinelRenderer;
 import net.kronoz.odyssey.entity.sentry.SentryRenderer;
-import net.kronoz.odyssey.init.ModBlocks;
-import net.kronoz.odyssey.init.ModEntities;
-import net.kronoz.odyssey.init.ModEntityRenderers;
-import net.kronoz.odyssey.init.ModItems;
+import net.kronoz.odyssey.init.*;
+import net.kronoz.odyssey.particle.SentryShieldFullParticle;
 import net.kronoz.odyssey.systems.cinematics.CineClient;
 import net.kronoz.odyssey.systems.dialogue.client.DialogueClient;
 import net.kronoz.odyssey.systems.physics.DustManager;
@@ -72,6 +71,10 @@ public class OdysseyClient implements ClientModInitializer {
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ALARM, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.LIGHT1, RenderLayer.getCutoutMipped());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.FACILITY_REBAR_BLOCK, RenderLayer.getCutout());
+
+
+
+        ParticleFactoryRegistry.getInstance().register(ModParticles.SENTRY_SHIELD_FULL_PARTICLE, SentryShieldFullParticle.Factory::new);
 
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {

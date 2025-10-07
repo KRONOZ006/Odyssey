@@ -5,6 +5,14 @@
         "name": "odyssey:desolation_ambient",
         "stream": true
       }
+
+    ]
+  },
+  "sentry_step": {
+    "sounds": [
+      {
+        "name": "odyssey:sentry_step"
+      }
     ]
   }
 }
