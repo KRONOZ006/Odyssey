@@ -13,6 +13,7 @@ import net.kronoz.odyssey.client.ClientElevatorAssist;
 import net.kronoz.odyssey.command.CineCommand;
 import net.kronoz.odyssey.config.OdysseyConfig;
 import net.kronoz.odyssey.entity.MapBlockEntityRenderer;
+import net.kronoz.odyssey.entity.apostasy.ApostasyRenderer;
 import net.kronoz.odyssey.entity.sentinel.SentinelLightClient;
 import net.kronoz.odyssey.entity.sentinel.SentinelRenderer;
 import net.kronoz.odyssey.entity.sentry.SentryRenderer;
@@ -69,6 +70,7 @@ public class OdysseyClient implements ClientModInitializer {
         DustManager.INSTANCE.installHooks();
         new LightDustPinger().install();
 
+        EntityRendererRegistry.register(ModEntities.APOSTASY, ApostasyRenderer::new);
         EntityRendererRegistry.register(ModEntities.SENTRY, SentryRenderer::new);
         EntityRendererRegistry.register(ModEntities.SENTINEL, SentinelRenderer::new);
 

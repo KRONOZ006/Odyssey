@@ -7,6 +7,7 @@ import net.kronoz.odyssey.entity.LiftPartColliderEntity;
 import net.kronoz.odyssey.entity.LiftPlatformEntity;
 import net.kronoz.odyssey.entity.SlidePartColliderEntity;
 import net.kronoz.odyssey.entity.SlidePlatformEntity;
+import net.kronoz.odyssey.entity.apostasy.ApostasyEntity;
 import net.kronoz.odyssey.entity.sentinel.SentinelEntity;
 import net.kronoz.odyssey.entity.sentry.SentryEntity;
 import net.minecraft.entity.EntityDimensions;
@@ -36,8 +37,17 @@ public class ModEntities {
                     .dimensions(0.9f, 2.95f)
                     .build()
     );
+    public static final EntityType<ApostasyEntity> APOSTASY = Registry.register(
+            Registries.ENTITY_TYPE,
+            Identifier.of(Odyssey.MODID, "apostasy"),
+            EntityType.Builder.<ApostasyEntity>create(ApostasyEntity::new, SpawnGroup.MONSTER)
+                    .dimensions(1.0f, 8.0f)
+                    .build()
+    );
+
 
     public static void init() {
+        FabricDefaultAttributeRegistry.register(APOSTASY, ApostasyEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(SENTRY, SentryEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(SENTINEL, SentinelEntity.createAttributes());
     }
