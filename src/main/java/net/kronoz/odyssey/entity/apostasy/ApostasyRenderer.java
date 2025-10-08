@@ -31,37 +31,18 @@ public class ApostasyRenderer extends DynamicGeoEntityRenderer<ApostasyEntity> {
     }
 
     @Override
-    protected boolean boneRenderOverride(
-            MatrixStack poseStack,
-            GeoBone bone,
-            VertexConsumerProvider bufferSource,
-            VertexConsumer buffer,
-            float partialTick,
-            int packedLight,
-            int packedOverlay,
-            int colour
-    ) {
+    protected boolean boneRenderOverride(MatrixStack poseStack, GeoBone bone, VertexConsumerProvider bufferSource, VertexConsumer buffer, float partialTick, int packedLight, int packedOverlay, int colour) {
         String name = bone.getName();
-
         if ("eye".equals(name) || name.startsWith("glow")) {
-            VertexConsumer glowBuffer = bufferSource.getBuffer(
-                    RenderLayer.getEyes(Identifier.of(Odyssey.MODID, "textures/entity/apostasy.png"))
-            );
-
-            if (bone.isHidden())
-                return true;
-
+            VertexConsumer glow = bufferSource.getBuffer(RenderLayer.getEyes(Identifier.of(Odyssey.MODID, "textures/entity/apostasy.png")));
+            if (bone.isHidden()) return true;
             for (GeoCube cube : bone.getCubes()) {
                 poseStack.push();
-                renderCube(poseStack, cube, glowBuffer,
-                        15728640,
-                        OverlayTexture.DEFAULT_UV,
-                        Color.WHITE.getRGB());
+                renderCube(poseStack, cube, glow, 15728640, OverlayTexture.DEFAULT_UV, Color.WHITE.getRGB());
                 poseStack.pop();
             }
             return true;
         }
-
         return false;
     }
 }

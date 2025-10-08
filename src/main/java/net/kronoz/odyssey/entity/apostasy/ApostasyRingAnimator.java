@@ -20,7 +20,7 @@ public final class ApostasyRingAnimator {
     private static final class Track {
         Vec3 start = new Vec3();
         Vec3 target = new Vec3();
-        Vec3 lastOut = new Vec3();
+        Vec3 current = new Vec3();
         int startTick;
         int duration;
         int holdUntil;
@@ -35,32 +35,23 @@ public final class ApostasyRingAnimator {
         State(long seed){ this.rnd = Random.create(seed); }
     }
 
-    // smoother than linear: cosine-based easeInOut
+    // smooth sine-based ease
     private static float easeInOutSine(float t) { return 0.5f - 0.5f * (float)Math.cos(Math.PI * t); }
-    // per-tick angular speed limit (radians/tick) to prevent big jumps
-    private static final float MAX_RAD_STEP_R1 = (float)Math.toRadians(1.8);  // ~1.8°/tick
-    private static final float MAX_RAD_STEP_R2 = (float)Math.toRadians(2.2);  // ~2.2°/tick
-    private static final float MAX_RAD_STEP_R3 = (float)Math.toRadians(1.4);  // ~1.4°/tick
 
-    // tighter angle ranges (deg)
-    private static final float[] R1_RANGE = {-15f, 15f, -120f, 120f, -15f, 15f};
-    private static final float[] R2_RANGE = {-25f, 25f, -140f, 140f, -25f, 25f};
-    private static final float[] R3_RANGE = {-12f, 12f, -110f, 110f, -12f, 12f};
+    private static final float[] R1_RANGE = {-10f, 10f, -90f, 90f, -10f, 10f};
+    private static final float[] R2_RANGE = {-15f, 15f, -100f, 100f, -15f, 15f};
+    private static final float[] R3_RANGE = {-8f, 8f, -80f, 80f, -8f, 8f};
 
     private static float radRange(Random r, float minDeg, float maxDeg) {
         return (float)Math.toRadians(minDeg + r.nextFloat()*(maxDeg-minDeg));
     }
 
     private static void newSegment(State s, Track tr, int now, float[] rangeDeg, int durMin, int durMax, int holdMin, int holdMax) {
-        if (tr.target == null) tr.target = new Vec3();
         tr.start = new Vec3(tr.target.x, tr.target.y, tr.target.z);
-        if (Float.isNaN(tr.lastOut.x)) tr.lastOut = new Vec3(tr.start.x, tr.start.y, tr.start.z);
-
         tr.startTick = now + tr.phaseOffset;
         tr.duration = durMin + s.rnd.nextInt(durMax - durMin + 1);
         int hold = holdMin + s.rnd.nextInt(holdMax - holdMin + 1);
         tr.holdUntil = tr.startTick + tr.duration + hold;
-
         tr.target = new Vec3(
                 radRange(s.rnd, rangeDeg[0], rangeDeg[1]),
                 radRange(s.rnd, rangeDeg[2], rangeDeg[3]),
@@ -75,27 +66,25 @@ public final class ApostasyRingAnimator {
         return (now - start) / (float)dur;
     }
 
-    private static float stepLimit(float current, float desired, float maxStep) {
-        float delta = desired - current;
-        if (delta >  maxStep) delta =  maxStep;
-        if (delta < -maxStep) delta = -maxStep;
-        return current + delta;
-    }
-
     public static Result sample(int id, int age) {
         State st = STATES.computeIfAbsent(id, i -> {
             State ns = new State(0x9E3779B97F4A7C15L ^ i);
-            ns.r1.phaseOffset = ns.rnd.nextInt(10);
-            ns.r2.phaseOffset = 18 + ns.rnd.nextInt(14);
-            ns.r3.phaseOffset = 7 + ns.rnd.nextInt(18);
-            ns.r1.target = new Vec3(); ns.r2.target = new Vec3(); ns.r3.target = new Vec3();
-            ns.r1.lastOut = new Vec3(0,0,0); ns.r2.lastOut = new Vec3(0,0,0); ns.r3.lastOut = new Vec3(0,0,0);
+            ns.r1.phaseOffset = ns.rnd.nextInt(15);
+            ns.r2.phaseOffset = 20 + ns.rnd.nextInt(15);
+            ns.r3.phaseOffset = 10 + ns.rnd.nextInt(15);
+            ns.r1.target = new Vec3();
+            ns.r2.target = new Vec3();
+            ns.r3.target = new Vec3();
+            ns.r1.current = new Vec3(0,0,0);
+            ns.r2.current = new Vec3(0,0,0);
+            ns.r3.current = new Vec3(0,0,0);
             return ns;
         });
 
-        if (age > st.r1.holdUntil) newSegment(st, st.r1, age, R1_RANGE, 48, 60, 28, 40);
-        if (age > st.r2.holdUntil) newSegment(st, st.r2, age, R2_RANGE, 52, 66, 32, 44);
-        if (age > st.r3.holdUntil) newSegment(st, st.r3, age, R3_RANGE, 44, 58, 26, 38);
+        // slower durations, smoother changes
+        if (age > st.r1.holdUntil) newSegment(st, st.r1, age, R1_RANGE, 90, 130, 40, 70);
+        if (age > st.r2.holdUntil) newSegment(st, st.r2, age, R2_RANGE, 100, 140, 45, 75);
+        if (age > st.r3.holdUntil) newSegment(st, st.r3, age, R3_RANGE, 80, 120, 35, 65);
 
         float t1 = easeInOutSine(time01(age, st.r1.startTick, st.r1.duration));
         float t2 = easeInOutSine(time01(age, st.r2.startTick, st.r2.duration));
@@ -105,19 +94,21 @@ public final class ApostasyRingAnimator {
         Vec3 d2 = Vec3.lerp(st.r2.start, st.r2.target, t2);
         Vec3 d3 = Vec3.lerp(st.r3.start, st.r3.target, t3);
 
-        st.r1.lastOut.x = stepLimit(st.r1.lastOut.x, d1.x, MAX_RAD_STEP_R1);
-        st.r1.lastOut.y = stepLimit(st.r1.lastOut.y, d1.y, MAX_RAD_STEP_R1);
-        st.r1.lastOut.z = stepLimit(st.r1.lastOut.z, d1.z, MAX_RAD_STEP_R1);
+        // slow smoothing (lerp between previous and target for extra smoothness)
+        float smooth = 0.18f;
+        st.r1.current.x += (d1.x - st.r1.current.x) * smooth;
+        st.r1.current.y += (d1.y - st.r1.current.y) * smooth;
+        st.r1.current.z += (d1.z - st.r1.current.z) * smooth;
 
-        st.r2.lastOut.x = stepLimit(st.r2.lastOut.x, d2.x, MAX_RAD_STEP_R2);
-        st.r2.lastOut.y = stepLimit(st.r2.lastOut.y, d2.y, MAX_RAD_STEP_R2);
-        st.r2.lastOut.z = stepLimit(st.r2.lastOut.z, d2.z, MAX_RAD_STEP_R2);
+        st.r2.current.x += (d2.x - st.r2.current.x) * smooth;
+        st.r2.current.y += (d2.y - st.r2.current.y) * smooth;
+        st.r2.current.z += (d2.z - st.r2.current.z) * smooth;
 
-        st.r3.lastOut.x = stepLimit(st.r3.lastOut.x, d3.x, MAX_RAD_STEP_R3);
-        st.r3.lastOut.y = stepLimit(st.r3.lastOut.y, d3.y, MAX_RAD_STEP_R3);
-        st.r3.lastOut.z = stepLimit(st.r3.lastOut.z, d3.z, MAX_RAD_STEP_R3);
+        st.r3.current.x += (d3.x - st.r3.current.x) * smooth;
+        st.r3.current.y += (d3.y - st.r3.current.y) * smooth;
+        st.r3.current.z += (d3.z - st.r3.current.z) * smooth;
 
-        return new Result(st.r1.lastOut, st.r2.lastOut, st.r3.lastOut);
+        return new Result(st.r1.current, st.r2.current, st.r3.current);
     }
 
     public static final class Result {

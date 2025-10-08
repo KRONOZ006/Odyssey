@@ -2,6 +2,8 @@ package net.kronoz.odyssey.init;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.kronoz.odyssey.hud.death.DeathUICutscene;
 import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.minecraft.command.CommandSource;
 import net.minecraft.server.command.CommandManager;
@@ -39,6 +41,12 @@ public final class ModCommands {
                                     ModComponents.BODY.get(p).sync(p);
                                     return 1;
                                 })))
+        );
+        d.register(CommandManager.literal("deathui")
+              .executes(ctx -> {
+                      DeathUICutscene.start();
+                      return 1;
+             })
         );
     }
 }

@@ -6,8 +6,10 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.kronoz.odyssey.block.custom.SimpleBlockLightManager;
 import net.kronoz.odyssey.client.ClientElevatorAssist;
 import net.kronoz.odyssey.command.CineCommand;
@@ -19,6 +21,7 @@ import net.kronoz.odyssey.entity.projectile.LaserProjectileRenderer;
 import net.kronoz.odyssey.entity.sentinel.SentinelLightClient;
 import net.kronoz.odyssey.entity.sentinel.SentinelRenderer;
 import net.kronoz.odyssey.entity.sentry.SentryRenderer;
+import net.kronoz.odyssey.hud.death.DeathUICutscene;
 import net.kronoz.odyssey.init.*;
 import net.kronoz.odyssey.particle.SentryShieldFullParticle;
 import net.kronoz.odyssey.systems.cinematics.CineClient;
@@ -54,8 +57,6 @@ public class OdysseyClient implements ClientModInitializer {
         ModEntityRenderers.register();
         DialogueClient.init();
         MidnightConfig.init("odyssey", OdysseyConfig.class);
-
-
         
         JetpackSystem.INSTANCE.install(ModItems.JETPACK);
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc ->
@@ -69,6 +70,7 @@ public class OdysseyClient implements ClientModInitializer {
             ms.pop();
         });
 
+        DeathUICutscene.register();
 
         DustManager.INSTANCE.installHooks();
         new LightDustPinger().install();
@@ -114,7 +116,5 @@ public class OdysseyClient implements ClientModInitializer {
                 fogadded = false;
             }
         });
-
-
     }
 }
