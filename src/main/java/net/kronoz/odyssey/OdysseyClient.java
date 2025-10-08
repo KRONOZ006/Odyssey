@@ -23,6 +23,8 @@ import net.kronoz.odyssey.systems.dialogue.client.DialogueClient;
 import net.kronoz.odyssey.systems.physics.DustManager;
 import net.kronoz.odyssey.systems.physics.LightDustPinger;
 import net.kronoz.odyssey.systems.physics.jetpack.JetpackSystem;
+import net.kronoz.odyssey.systems.physics.wire.WireClientMirror;
+import net.kronoz.odyssey.systems.physics.wire.WireWorldRenderer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumerProvider;
@@ -40,16 +42,20 @@ public class OdysseyClient implements ClientModInitializer {
     public void onInitializeClient() {
         ClientElevatorAssist.init();
         CineClient.init();
+        WireWorldRenderer.init();
+        WireClientMirror.init();
         CineCommand.register();
         SimpleBlockLightManager.initClient();
         SentinelLightClient.initClient();
         ModEntityRenderers.register();
         DialogueClient.init();
         MidnightConfig.init("odyssey", OdysseyConfig.class);
+
+
+        
         JetpackSystem.INSTANCE.install(ModItems.JETPACK);
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc ->
                 net.kronoz.odyssey.systems.physics.jetpack.JetpackExhaustManager.tick(mc));
-
         net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AFTER_ENTITIES.register(ctx -> {
             MatrixStack ms = ctx.matrixStack();
             VertexConsumerProvider vcp = ctx.consumers();

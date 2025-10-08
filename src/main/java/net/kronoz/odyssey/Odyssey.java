@@ -1,8 +1,6 @@
 package net.kronoz.odyssey;
 
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
-import net.kronoz.odyssey.entity.sentinel.SentinelEntity;
 import net.kronoz.odyssey.init.*;
 import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.kronoz.odyssey.systems.dialogue.Dialogue;

@@ -19,7 +19,6 @@ import static net.kronoz.odyssey.Odyssey.id;
 
 public class ModBlocks {
 
-    public static final Block EXAMPLE_BLOCK  = registerBlock("example_block", new ExampleBlock(AbstractBlock.Settings.copy(Blocks.STONE)));
     public static final Block ALARM  = registerBlock("alarm", new AlarmBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block VERDIGRIS_BLOCK  = registerBlock("verdigris_block", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block VERDIGRIS_PANNEL  = registerBlock("verdigris_pannel", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
@@ -64,8 +63,11 @@ public class ModBlocks {
     public static void registerModBlocks() {
         Odyssey.LOGGER.info("Registering Mod Blocks for " + Odyssey.MODID);
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.BUILDING_BLOCKS).register(entries -> {
-            entries.add(ModBlocks.EXAMPLE_BLOCK);
-
+            entries.add(ModBlocks.ALARM);
+            entries.add(ModBlocks.FACILITY_PILLAR_BLOCK);
+            entries.add(ModBlocks.FACILITY_REBAR_BLOCK);
+            entries.add(ModBlocks.LARGE_FACILITY_PILLAR_BLOCK);
+            entries.add(ModBlocks.SLIDING_DOOR);
 
         });
         ItemGroupEvents.modifyEntriesEvent(ItemGroups.NATURAL).register(entries -> {

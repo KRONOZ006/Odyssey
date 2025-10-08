@@ -17,11 +17,11 @@ public class ModItemGroup {
                     .icon(() -> new ItemStack(ModItems.XARIS))
                     .entries((displayContext, entries) -> {
                         entries.add(ModItems.TOMAHAWK);
-                        entries.add(ModBlocks.EXAMPLE_BLOCK);
                         entries.add(ModBlocks.FACILITY_PILLAR_BLOCK);
                         entries.add(ModBlocks.ELEVATOR);
                         entries.add(ModBlocks.SLIDING_DOOR);
                         entries.add(ModItems.XARIS);
+                        entries.add(ModItems.WIRE_TOOL);
                         entries.add(ModItems.JETPACK);
                         entries.add(ModBlocks.LIGHT1);
                         entries.add(ModBlocks.LARGE_FACILITY_PILLAR_BLOCK);

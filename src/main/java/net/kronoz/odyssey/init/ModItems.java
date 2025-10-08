@@ -3,6 +3,7 @@ package net.kronoz.odyssey.init;
 import net.kronoz.odyssey.Odyssey;
 import net.kronoz.odyssey.item.custom.JetpackTorso;
 import net.kronoz.odyssey.item.custom.TomahawkItem;
+import net.kronoz.odyssey.item.custom.WireToolItem;
 import net.kronoz.odyssey.item.custom.XarisArm;
 import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
@@ -14,6 +15,9 @@ public class ModItems {
     public static final Item TOMAHAWK = registerItem("tomahawk", new TomahawkItem(new Item.Settings().maxCount(1).fireproof()));
     public static final Item XARIS = registerItem("xaris", new XarisArm(new Item.Settings().maxCount(1).fireproof()));
     public static final Item JETPACK = registerItem("jetpack", new JetpackTorso(new Item.Settings().maxCount(1).fireproof()));
+    public static final Item WIRE_TOOL = Registry.register(Registries.ITEM,
+            Identifier.of("odyssey","wire_tool"),
+            new WireToolItem(new Item.Settings().maxCount(1)));
 
     private static Item registerItem(String name, Item item) {
         return Registry.register(Registries.ITEM, Identifier.of(Odyssey.MODID, name), item);
