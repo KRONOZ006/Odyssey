@@ -8,13 +8,18 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import software.bernie.geckolib.animation.AnimationState;
 import software.bernie.geckolib.cache.object.GeoBone;
+import software.bernie.geckolib.cache.object.GeoCube;
 import software.bernie.geckolib.model.GeoModel;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 public class ApostasyModel extends GeoModel<ApostasyEntity> {
     @Override public Identifier getModelResource(ApostasyEntity e){ return Identifier.of(Odyssey.MODID,"geo/entity/apostasy.geo.json"); }
     @Override public Identifier getTextureResource(ApostasyEntity e){ return Identifier.of(Odyssey.MODID,"textures/entity/apostasy.png"); }
     @Override public Identifier getAnimationResource(ApostasyEntity e){ return Identifier.of(Odyssey.MODID,"animations/entity/apostasy.animation.json"); }
-
+    private final String[] aimBones = new String[] { "mainhead" };
     @Override
     public void setCustomAnimations(ApostasyEntity e, long id, AnimationState<ApostasyEntity> s) {
         GeoBone ring1 = getAnimationProcessor().getBone("ring_1");
@@ -29,6 +34,35 @@ public class ApostasyModel extends GeoModel<ApostasyEntity> {
         aimGunsAtPlayer(e, "ring1gun", 8);
         aimGunsAtPlayer(e, "ring2gun", 12);
         aimGunsAtPlayer(e, "ring3gun", 8);
+
+
+            var player = e.getWorld().getClosestPlayer(e, 64.0);
+            if (player == null || player.isSpectator()) return;
+
+            double ex = e.getX();
+            double ey = e.getY() + e.getStandingEyeHeight();
+            double ez = e.getZ();
+
+            double tx = player.getX();
+            double ty = player.getEyeY();
+            double tz = player.getZ();
+
+            double dx = tx - ex;
+            double dy = ty - ey;
+            double dz = tz - ez;
+
+            float yaw  = (float)(Math.atan2(dz, dx) + Math.toRadians(-90));
+            float pitch= (float)(-Math.atan2(dy, Math.sqrt(dx*dx + dz*dz)));
+
+            for (String name : aimBones) {
+                GeoBone b = getAnimationProcessor().getBone(name);
+                if (b == null) continue;
+
+                b.setRotY(-yaw);
+                b.setRotX(-pitch);
+            }
+
+
     }
 
     private void aimGunsAtPlayer(ApostasyEntity e, String prefix, int count) {
@@ -54,13 +88,13 @@ public class ApostasyModel extends GeoModel<ApostasyEntity> {
         float pitchRad     = (float)Math.atan2(dy, flat);
 
         float invYaw   = -yawRad;
-        float invPitch = -pitchRad;
+        float invPitch = pitchRad;
 
         for (int i = 1; i <= count; i++) {
             GeoBone b = getAnimationProcessor().getBone(prefix + i);
             if (b != null) {
                 b.setRotY(invYaw);
-                b.setRotX(invPitch);
+                b.setRotX(-invPitch);
             }
         }
     }

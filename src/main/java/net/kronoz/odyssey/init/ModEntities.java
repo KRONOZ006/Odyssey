@@ -8,6 +8,7 @@ import net.kronoz.odyssey.entity.LiftPlatformEntity;
 import net.kronoz.odyssey.entity.SlidePartColliderEntity;
 import net.kronoz.odyssey.entity.SlidePlatformEntity;
 import net.kronoz.odyssey.entity.apostasy.ApostasyEntity;
+import net.kronoz.odyssey.entity.projectile.LaserProjectileEntity;
 import net.kronoz.odyssey.entity.sentinel.SentinelEntity;
 import net.kronoz.odyssey.entity.sentry.SentryEntity;
 import net.minecraft.entity.EntityDimensions;
@@ -41,10 +42,19 @@ public class ModEntities {
             Registries.ENTITY_TYPE,
             Identifier.of(Odyssey.MODID, "apostasy"),
             EntityType.Builder.<ApostasyEntity>create(ApostasyEntity::new, SpawnGroup.MONSTER)
-                    .dimensions(1.0f, 8.0f)
+                    .dimensions(3.0f, 5.0f)
                     .build()
     );
-
+    public static final EntityType<LaserProjectileEntity> LASER_PROJECTILE =
+            Registry.register(
+                    Registries.ENTITY_TYPE,
+                    Identifier.of(Odyssey.MODID, "laser_projectile"),
+                    FabricEntityTypeBuilder.<LaserProjectileEntity>create(SpawnGroup.MISC, (type, world) -> new LaserProjectileEntity(type, world))
+                            .dimensions(EntityDimensions.fixed(0.1f, 0.1f))
+                            .trackRangeBlocks(96)
+                            .trackedUpdateRate(10)
+                            .build()
+            );
 
     public static void init() {
         FabricDefaultAttributeRegistry.register(APOSTASY, ApostasyEntity.createAttributes());
