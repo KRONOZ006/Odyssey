@@ -8,11 +8,8 @@ import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.tag.TagKey;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -21,28 +18,16 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
 public final class GrappleHookEntity extends ProjectileEntity {
-    private static final TagKey<net.minecraft.block.Block> GRAPPLE_TARGETS =
-            TagKey.of(RegistryKeys.BLOCK, Identifier.of("odyssey", "grapple_targets"));
-
-    /** Qui a tiré */
     public Entity ownerPlayer;
-
-    /** État d’ancrage */
     public boolean latched = false;
-    public Vec3d anchor = Vec3d.ZERO;          // ancre fixe (bloc) OU dernière position suivie si entité
-    public int latchedEntityId = -1;           // -1 si bloc, sinon id d’entité
-    public Vec3d entityAnchorOffset = Vec3d.ZERO; // offset relatif au centre entité lors de l’impact
+    public Vec3d anchor = Vec3d.ZERO;
+    public int latchedEntityId = -1;
+    public Vec3d entityAnchorOffset = Vec3d.ZERO;
+    public double ropeLength = 6.0;
 
-    /** Corde */
-    public double ropeLength = 6.0;            // longueur actuelle
-    public double minRopeLength = 1.5;         // longueur mini atteignable
-
-    /** Tunables physiques */
-    private static final double MAX_PULL_PER_TICK = 0.45; // traction max par tick
-    private static final double REEL_SPEED_HOLD   = 0.20; // “ré-enroulage” par tick en tenant clic
-    private static final double DAMPING           = 0.90; // amortissement
-    private static final double MAX_SPEED         = 1.30; // plafond de vitesse du joueur
-    private static final double DETACH_IF_ANCHOR_SPEED = 2.0; // si ancre-entity part trop vite → detach
+    private static final double DAMPING = 0.98;
+    private static final double MAX_PLAYER_SPEED = 1.7;
+    private static final double MAX_PULL_PER_TICK = 0.45;
 
     public GrappleHookEntity(EntityType<? extends ProjectileEntity> type, World world) { super(type, world); }
     public GrappleHookEntity(EntityType<? extends ProjectileEntity> type, World world, Entity ownerPlayer) {
@@ -90,36 +75,27 @@ public final class GrappleHookEntity extends ProjectileEntity {
         if (hit instanceof BlockHitResult bhr) {
             BlockPos pos = bhr.getBlockPos();
             BlockState state = getWorld().getBlockState(pos);
-            if (!state.isIn(GRAPPLE_TARGETS)) return;
+            if (state.isAir() || state.getCollisionShape(getWorld(), pos).isEmpty()) return;
 
             this.latched = true;
-            // Ancre légèrement “dans” la face touchée
             this.anchor = Vec3d.ofCenter(pos).add(Vec3d.of(bhr.getSide().getVector()).multiply(0.35));
             this.setVelocity(Vec3d.ZERO);
             this.noClip = true;
-
-            // Longueur de corde initiale = distance actuelle (cap à 6)
-            this.ropeLength = Math.min(6.0, ownerPlayer.getPos().distanceTo(anchor));
+            this.ropeLength = ownerPlayer.getPos().distanceTo(anchor);
             this.latchedEntityId = -1;
             this.entityAnchorOffset = Vec3d.ZERO;
-
             GrappleServerLogic.syncToClient(ownerPlayer, this);
         } else if (hit instanceof EntityHitResult ehr) {
             Entity e = ehr.getEntity();
             if (e == ownerPlayer) return;
-
             this.latched = true;
             this.latchedEntityId = e.getId();
-
-            // On fige un offset relatif au point d’impact (pour éviter d’accrocher le “centre”)
             Vec3d impact = ehr.getPos();
             this.entityAnchorOffset = impact.subtract(e.getPos());
             this.anchor = impact;
-
             this.setVelocity(Vec3d.ZERO);
             this.noClip = true;
-            this.ropeLength = Math.min(6.0, ownerPlayer.getPos().distanceTo(anchor));
-
+            this.ropeLength = ownerPlayer.getPos().distanceTo(anchor);
             GrappleServerLogic.syncToClient(ownerPlayer, this);
         }
     }
@@ -131,57 +107,35 @@ public final class GrappleHookEntity extends ProjectileEntity {
         if (!(getWorld() instanceof ServerWorld sw)) return;
         if (ownerPlayer == null) return;
 
-        // 1) Détermination de la position d’ancre
         Vec3d anchorNow = this.anchor;
         if (latchedEntityId != -1) {
             Entity ent = sw.getEntityById(latchedEntityId);
             if (ent == null || !ent.isAlive()) {
-                // entité morte/retirée → detach
                 if (ownerPlayer instanceof ServerPlayerEntity sp) GrappleServerLogic.detach(sp);
                 return;
             }
-            // ancre suit l’entité, mais si elle bouge trop vite on lâche (sinon “vols”)
-            Vec3d nextAnchor = ent.getPos().add(entityAnchorOffset);
-            if (nextAnchor.distanceTo(anchor) > DETACH_IF_ANCHOR_SPEED) {
-                if (ownerPlayer instanceof ServerPlayerEntity sp) GrappleServerLogic.detach(sp);
-                return;
-            }
-            anchorNow = nextAnchor;
-            this.anchor = nextAnchor; // on garde la trace
+            anchorNow = ent.getPos().add(entityAnchorOffset);
+            this.anchor = anchorNow;
         }
 
-        // 2) Ré-enroulage si joueur tient l’usage de l’item
-        boolean reeling = (ownerPlayer instanceof net.minecraft.entity.LivingEntity le) && le.isUsingItem();
-        if (reeling) {
-            ropeLength = Math.max(minRopeLength, ropeLength - REEL_SPEED_HOLD);
-        }
+        Vec3d p = ownerPlayer.getPos();
+        Vec3d d = p.subtract(anchorNow);
+        double dist = d.length();
 
-        // 3) Contrainte de corde (correction UNIQUEMENT radiale, pas de boost tangent → pas de “vol”)
-        Vec3d pPos = ownerPlayer.getPos();
-        Vec3d diff = pPos.subtract(anchorNow);
-        double dist = diff.length();
         if (dist > ropeLength) {
-            Vec3d dir = diff.normalize();
-            double excess = Math.min(dist - ropeLength, MAX_PULL_PER_TICK);
-
-            // Ajouter une vitesse vers l’ancre, plafonnée
-            Vec3d add = dir.multiply(-excess * 0.9); // 0.9 = rigidité
+            Vec3d dir = d.normalize();
+            double excess = dist - ropeLength;
+            Vec3d add = dir.multiply(-Math.min(excess, MAX_PULL_PER_TICK));
             ownerPlayer.addVelocity(add.x, add.y, add.z);
             ownerPlayer.velocityModified = true;
-
-            // Plafond de vitesse global
-            Vec3d vel = ownerPlayer.getVelocity();
-            double v = vel.length();
-            if (v > MAX_SPEED) {
-                ownerPlayer.setVelocity(vel.multiply(MAX_SPEED / v));
-            }
         }
 
-        // 4) Amortissement léger (stabilise énormément)
-        ownerPlayer.setVelocity(ownerPlayer.getVelocity().multiply(DAMPING));
+        Vec3d v = ownerPlayer.getVelocity().multiply(DAMPING);
+        double sp = v.length();
+        if (sp > MAX_PLAYER_SPEED) v = v.normalize().multiply(MAX_PLAYER_SPEED);
+        ownerPlayer.setVelocity(v);
         ownerPlayer.fallDistance = 0f;
 
-        // 5) Position visuelle du hook = ancre (pour la corde)
         this.setPos(anchorNow.x, anchorNow.y, anchorNow.z);
     }
 

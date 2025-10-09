@@ -8,11 +8,12 @@ import net.minecraft.util.math.Vec3d;
 public final class GrappleNetworking {
 
     public void registerServer() {
-        ServerPlayNetworking.registerGlobalReceiver(GrapplePayloads.ForcePullC2S.ID, (payload, ctx) ->
-                ctx.player().server.execute(() -> GrappleServerLogic.forcePull((ServerPlayerEntity) ctx.player())));
-
+        ServerPlayNetworking.registerGlobalReceiver(GrapplePayloads.FlingC2S.ID, (payload, ctx) ->
+                ctx.player().server.execute(() ->
+                        GrappleServerLogic.fling((ServerPlayerEntity) ctx.player())));
         ServerPlayNetworking.registerGlobalReceiver(GrapplePayloads.DetachC2S.ID, (payload, ctx) ->
-                ctx.player().server.execute(() -> GrappleServerLogic.detach((ServerPlayerEntity) ctx.player())));
+                ctx.player().server.execute(() ->
+                        GrappleServerLogic.detach((ServerPlayerEntity) ctx.player())));
     }
 
     public static void registerClient() {
@@ -27,23 +28,14 @@ public final class GrappleNetworking {
                 }));
     }
 
-    public static void send(GrapplePayloads.ClientToServer payload) {
-        ClientPlayNetworking.send(payload);
+    public static void sendFling() {
+        ClientPlayNetworking.send(GrapplePayloads.FlingC2S.INSTANCE);
+    }
+    public static void sendDetach() {
+        ClientPlayNetworking.send(GrapplePayloads.DetachC2S.INSTANCE);
     }
 
     public static void sendTo(ServerPlayerEntity player, GrapplePayloads.ServerToClient payload) {
         ServerPlayNetworking.send(player, payload);
     }
-    public static void sendDetach() {
-        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
-                net.kronoz.odyssey.systems.grapple.GrapplePayloads.DetachC2S.INSTANCE
-        );
-    }
-    public static void sendForcePull() {
-        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(
-                net.kronoz.odyssey.systems.grapple.GrapplePayloads.ForcePullC2S.INSTANCE
-        );
-    }
-
-
 }

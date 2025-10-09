@@ -18,6 +18,5 @@ public final class GrappleState {
     public static GrappleState get(PlayerEntity p) {
         return STATES.computeIfAbsent(p.getUuid(), k -> new GrappleState());
     }
-
     public static void clear(PlayerEntity p) { STATES.remove(p.getUuid()); }
 }

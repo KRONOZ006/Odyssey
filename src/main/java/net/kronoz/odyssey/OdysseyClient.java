@@ -6,6 +6,7 @@ import foundry.veil.api.client.render.VeilRenderSystem;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
@@ -31,16 +32,21 @@ import net.kronoz.odyssey.systems.grapple.GrappleState;
 import net.kronoz.odyssey.systems.physics.DustManager;
 import net.kronoz.odyssey.systems.physics.LightDustPinger;
 import net.kronoz.odyssey.systems.physics.jetpack.JetpackSystem;
-import net.kronoz.odyssey.systems.physics.wire.WireClientMirror;
-import net.kronoz.odyssey.systems.physics.wire.WireWorldRenderer;
+import net.kronoz.odyssey.systems.physics.wire.*;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.render.*;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
 import net.minecraft.client.render.entity.EntityRenderer;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec3d;
+import org.lwjgl.glfw.GLFW;
+
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 import static gg.moonflower.molangcompiler.core.MolangUtil.wrapDegrees;
 
@@ -50,8 +56,16 @@ public class OdysseyClient implements ClientModInitializer {
     private boolean fogadded = false;
 
 
-    private float lastYaw = 0f;
-    private long lastForceMillis = 0L;
+    private KeyBinding flingKey;
+    private static final WireBridge.Def ROPE = new WireBridge.Def(
+            14,     // segments
+            0.035f, // thickness
+            0.85f,  // stiffness
+            0.18f,  // damping
+            0.00f,  // gravity
+            0.02f,  // drag
+            1.08f   // maxStretch
+    );
 
     @Override
     public void onInitializeClient() {
@@ -82,7 +96,50 @@ public class OdysseyClient implements ClientModInitializer {
 
         DeathUICutscene.register();
 
-        DustManager.INSTANCE.installHooks();
+        GrappleHookRenderer.register();
+
+        WireBridge.initRenderer(); // initialise WireWorldRenderer si dispo
+
+        flingKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.odyssey.grapple_fling",
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_F,
+                "key.categories.gameplay"
+        ));
+
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (flingKey.wasPressed()) {
+                GrappleNetworking.sendFling();
+            }
+        });
+
+        WorldRenderEvents.AFTER_ENTITIES.register(ctx -> {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc.world == null || mc.player == null) return;
+
+            GrappleState st = GrappleState.get(mc.player);
+            if (!st.latched) return;
+
+            MatrixStack matrices = ctx.matrixStack();
+            VertexConsumerProvider.Immediate buffers = mc.getBufferBuilders().getEntityVertexConsumers();
+
+            Vec3d a = mc.player.getCameraPosVec(mc.getRenderTickCounter().getTickDelta(true));
+            Vec3d b = st.anchorPos;
+            if (st.latchedEntityId != -1 && mc.world.getEntityById(st.latchedEntityId) != null) {
+                var e = mc.world.getEntityById(st.latchedEntityId);
+                b = e.getPos().add(0, e.getStandingEyeHeight() * 0.5, 0);
+            }
+
+            UUID ropeId = UUID.nameUUIDFromBytes(("odyssey:grapple:" + mc.player.getUuid()).getBytes(StandardCharsets.UTF_8));
+
+            // Ensure/step via bridge (pinned B = true, pinned A = false)
+            WireBridge.ensure(ropeId, ROPE, a, b);
+            WireBridge.stepAndRender(ropeId, a, false, b, true, matrices, buffers);
+
+            buffers.draw();
+        });
+
+                DustManager.INSTANCE.installHooks();
         new LightDustPinger().install();
         EntityRendererRegistry.register(ModEntities.LASER_PROJECTILE, ctx -> new EntityRenderer<LaserProjectileEntity>(ctx) {
             @Override
@@ -129,5 +186,8 @@ public class OdysseyClient implements ClientModInitializer {
                 fogadded = false;
             }
         });
+    }
+    private static UUID nameId(String s) {
+        return UUID.nameUUIDFromBytes(s.getBytes(StandardCharsets.UTF_8));
     }
 }

@@ -10,16 +10,14 @@ import net.minecraft.util.Identifier;
 public final class GrapplePayloads {
     private static final String MODID = "odyssey";
 
-    public sealed interface ClientToServer extends CustomPayload permits ForcePullC2S, DetachC2S {}
-
-    public static final class ForcePullC2S implements ClientToServer {
-        public static final Id<ForcePullC2S> ID = new Id<>(Identifier.of(MODID, "grapple_force"));
-        public static final ForcePullC2S INSTANCE = new ForcePullC2S();
-        public static final PacketCodec<PacketByteBuf, ForcePullC2S> CODEC = PacketCodec.unit(INSTANCE);
-        private ForcePullC2S() {}
+    public sealed interface ClientToServer extends CustomPayload permits FlingC2S, DetachC2S {}
+    public static final class FlingC2S implements ClientToServer {
+        public static final Id<FlingC2S> ID = new Id<>(Identifier.of(MODID, "grapple_fling"));
+        public static final FlingC2S INSTANCE = new FlingC2S();
+        public static final PacketCodec<PacketByteBuf, FlingC2S> CODEC = PacketCodec.unit(INSTANCE);
+        private FlingC2S() {}
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
-
     public static final class DetachC2S implements ClientToServer {
         public static final Id<DetachC2S> ID = new Id<>(Identifier.of(MODID, "grapple_detach"));
         public static final DetachC2S INSTANCE = new DetachC2S();
@@ -28,8 +26,8 @@ public final class GrapplePayloads {
         @Override public Id<? extends CustomPayload> getId() { return ID; }
     }
 
-    public sealed interface ServerToClient extends CustomPayload permits SyncStateS2C {}
 
+    public sealed interface ServerToClient extends CustomPayload permits SyncStateS2C {}
     public record SyncStateS2C(boolean latched, int latchedEntityId, double ax, double ay, double az, double ropeLen)
             implements ServerToClient {
         public static final Id<SyncStateS2C> ID = new Id<>(Identifier.of(MODID, "grapple_state"));
@@ -46,7 +44,7 @@ public final class GrapplePayloads {
     }
 
     public static void registerPayloads() {
-        PayloadTypeRegistry.playC2S().register(ForcePullC2S.ID, ForcePullC2S.CODEC);
+        PayloadTypeRegistry.playC2S().register(FlingC2S.ID, FlingC2S.CODEC);
         PayloadTypeRegistry.playC2S().register(DetachC2S.ID, DetachC2S.CODEC);
         PayloadTypeRegistry.playS2C().register(SyncStateS2C.ID, SyncStateS2C.CODEC);
     }

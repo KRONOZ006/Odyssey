@@ -10,16 +10,10 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 
 public final class GrappleHookRenderer extends EntityRenderer<GrappleHookEntity> {
-
     public static void register() {
         EntityRendererRegistry.register(ModEntities.GRAPPLE_HOOK, GrappleHookRenderer::new);
     }
-
     public GrappleHookRenderer(EntityRendererFactory.Context ctx) { super(ctx); }
-
-    @Override
-    public void render(GrappleHookEntity entity, float yaw, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertices, int light) {
-    }
-
-    @Override public Identifier getTexture(GrappleHookEntity entity) { return null; }
+    @Override public void render(GrappleHookEntity e, float yaw, float tickDelta, MatrixStack m, VertexConsumerProvider v, int light) {}
+    @Override public Identifier getTexture(GrappleHookEntity e) { return null; }
 }
