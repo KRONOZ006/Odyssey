@@ -1,10 +1,7 @@
 package net.kronoz.odyssey.init;
 
 import net.kronoz.odyssey.Odyssey;
-import net.kronoz.odyssey.item.custom.JetpackTorso;
-import net.kronoz.odyssey.item.custom.TomahawkItem;
-import net.kronoz.odyssey.item.custom.WireToolItem;
-import net.kronoz.odyssey.item.custom.XarisArm;
+import net.kronoz.odyssey.item.custom.*;
 import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
@@ -18,6 +15,9 @@ public class ModItems {
     public static final Item WIRE_TOOL = Registry.register(Registries.ITEM,
             Identifier.of("odyssey","wire_tool"),
             new WireToolItem(new Item.Settings().maxCount(1)));
+public static final Item GRAPPLE = Registry.register(Registries.ITEM,
+            Identifier.of("odyssey","grapple"),
+            new GrappleItem(new Item.Settings().maxCount(1)));
 
     private static Item registerItem(String name, Item item) {
         return Registry.register(Registries.ITEM, Identifier.of(Odyssey.MODID, name), item);

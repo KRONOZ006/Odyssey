@@ -1,5 +1,6 @@
 package net.kronoz.odyssey;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import eu.midnightdust.lib.config.MidnightConfig;
 import foundry.veil.api.client.render.VeilRenderSystem;
 import net.fabricmc.api.ClientModInitializer;
@@ -8,6 +9,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.kronoz.odyssey.block.SequencerRegistry;
 import net.kronoz.odyssey.block.custom.SimpleBlockLightManager;
 import net.kronoz.odyssey.client.ClientElevatorAssist;
@@ -21,26 +23,35 @@ import net.kronoz.odyssey.entity.sentinel.SentinelRenderer;
 import net.kronoz.odyssey.entity.sentry.SentryRenderer;
 import net.kronoz.odyssey.hud.death.DeathUICutscene;
 import net.kronoz.odyssey.init.*;
+import net.kronoz.odyssey.item.client.renderer.GrappleHookRenderer;
 import net.kronoz.odyssey.particle.SentryShieldFullParticle;
 import net.kronoz.odyssey.systems.dialogue.client.DialogueClient;
+import net.kronoz.odyssey.systems.grapple.GrappleNetworking;
+import net.kronoz.odyssey.systems.grapple.GrappleState;
 import net.kronoz.odyssey.systems.physics.DustManager;
 import net.kronoz.odyssey.systems.physics.LightDustPinger;
 import net.kronoz.odyssey.systems.physics.jetpack.JetpackSystem;
 import net.kronoz.odyssey.systems.physics.wire.WireClientMirror;
 import net.kronoz.odyssey.systems.physics.wire.WireWorldRenderer;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.*;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
 import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.Vec3d;
+
+import static gg.moonflower.molangcompiler.core.MolangUtil.wrapDegrees;
 
 public class OdysseyClient implements ClientModInitializer {
 
     private static final Identifier FOG = Identifier.of(Odyssey.MODID, "fog");
     private boolean fogadded = false;
 
+
+    private float lastYaw = 0f;
+    private long lastForceMillis = 0L;
 
     @Override
     public void onInitializeClient() {
@@ -90,6 +101,9 @@ public class OdysseyClient implements ClientModInitializer {
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.LIGHT1, RenderLayer.getCutoutMipped());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.FACILITY_REBAR_BLOCK, RenderLayer.getCutout());
 
+        GrappleNetworking.registerClient();
+        GrappleHookRenderer.register();
+        GrappleNetworking.registerClient();
 
 
         ParticleFactoryRegistry.getInstance().register(ModParticles.SENTRY_SHIELD_FULL_PARTICLE, SentryShieldFullParticle.Factory::new);

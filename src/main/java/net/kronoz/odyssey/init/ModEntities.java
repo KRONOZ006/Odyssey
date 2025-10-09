@@ -3,10 +3,7 @@ package net.kronoz.odyssey.init;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
 import net.kronoz.odyssey.Odyssey;
-import net.kronoz.odyssey.entity.LiftPartColliderEntity;
-import net.kronoz.odyssey.entity.LiftPlatformEntity;
-import net.kronoz.odyssey.entity.SlidePartColliderEntity;
-import net.kronoz.odyssey.entity.SlidePlatformEntity;
+import net.kronoz.odyssey.entity.*;
 import net.kronoz.odyssey.entity.apostasy.ApostasyEntity;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileEntity;
 import net.kronoz.odyssey.entity.sentinel.SentinelEntity;
@@ -43,6 +40,15 @@ public class ModEntities {
             Identifier.of(Odyssey.MODID, "apostasy"),
             EntityType.Builder.<ApostasyEntity>create(ApostasyEntity::new, SpawnGroup.MONSTER)
                     .dimensions(3.0f, 5.0f)
+                    .build()
+    );
+    public static final net.minecraft.entity.EntityType<GrappleHookEntity> GRAPPLE_HOOK = Registry.register(
+            Registries.ENTITY_TYPE,
+            Identifier.of(Odyssey.MODID,"grapple_hook"),
+            FabricEntityTypeBuilder.<GrappleHookEntity>create(SpawnGroup.MISC, GrappleHookEntity::new)
+                    .dimensions(EntityDimensions.fixed(0.25f, 0.25f))
+                    .trackRangeChunks(8)
+                    .trackedUpdateRate(2)
                     .build()
     );
     public static final EntityType<LaserProjectileEntity> LASER_PROJECTILE =

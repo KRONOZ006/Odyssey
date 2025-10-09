@@ -8,6 +8,8 @@ import net.kronoz.odyssey.block.SequencerRegistry;
 import net.kronoz.odyssey.init.*;
 import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.kronoz.odyssey.systems.dialogue.Dialogue;
+import net.kronoz.odyssey.systems.grapple.GrappleNetworking;
+import net.kronoz.odyssey.systems.grapple.GrapplePayloads;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
@@ -21,10 +23,6 @@ public class Odyssey implements ModInitializer {
     public static final String MODID = "odyssey";
     public static Identifier id(String path){ return Identifier.of(MODID, path); }
     public static final Logger LOGGER = LoggerFactory.getLogger(MODID);
-
-    public static final Identifier DEATH_UI_START = Identifier.of(MODID, "death_ui_start");
-    public static final Identifier DEATH_UI_END   = Identifier.of(MODID, "death_ui_end"); // C2S
-
 
     @Override
     public void onInitialize() {
@@ -42,5 +40,9 @@ public class Odyssey implements ModInitializer {
         ModNetworking.init();
         ModCommands.init();
         ModSounds.registerSounds();
+
+
+        GrapplePayloads.registerPayloads();
+        new GrappleNetworking().registerServer();
     }
 }
