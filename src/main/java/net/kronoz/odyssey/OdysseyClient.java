@@ -6,13 +6,11 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.kronoz.odyssey.block.SequencerRegistry;
 import net.kronoz.odyssey.block.custom.SimpleBlockLightManager;
 import net.kronoz.odyssey.client.ClientElevatorAssist;
-import net.kronoz.odyssey.command.CineCommand;
 import net.kronoz.odyssey.config.OdysseyConfig;
 import net.kronoz.odyssey.entity.MapBlockEntityRenderer;
 import net.kronoz.odyssey.entity.apostasy.ApostasyRenderer;
@@ -24,7 +22,6 @@ import net.kronoz.odyssey.entity.sentry.SentryRenderer;
 import net.kronoz.odyssey.hud.death.DeathUICutscene;
 import net.kronoz.odyssey.init.*;
 import net.kronoz.odyssey.particle.SentryShieldFullParticle;
-import net.kronoz.odyssey.systems.cinematics.CineClient;
 import net.kronoz.odyssey.systems.dialogue.client.DialogueClient;
 import net.kronoz.odyssey.systems.physics.DustManager;
 import net.kronoz.odyssey.systems.physics.LightDustPinger;
@@ -48,16 +45,18 @@ public class OdysseyClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         ClientElevatorAssist.init();
-        CineClient.init();
         WireWorldRenderer.init();
         WireClientMirror.init();
-        CineCommand.register();
         SimpleBlockLightManager.initClient();
         SentinelLightClient.initClient();
         ModEntityRenderers.register();
         DialogueClient.init();
         MidnightConfig.init("odyssey", OdysseyConfig.class);
-        
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (net.kronoz.odyssey.client.cs.CutsceneRecorder.I.isPreviewActive()) {
+                net.kronoz.odyssey.client.cs.CutsceneRecorder.I.tickPreview();
+            }
+        });
         JetpackSystem.INSTANCE.install(ModItems.JETPACK);
         net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.END_CLIENT_TICK.register(mc ->
                 net.kronoz.odyssey.systems.physics.jetpack.JetpackExhaustManager.tick(mc));

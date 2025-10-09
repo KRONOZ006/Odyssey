@@ -32,6 +32,7 @@ public class ModBlocks {
     public static final Block SLIDING_DOOR  = registerBlock("sliding_door", new SlidingDoorBlock(FabricBlockSettings.create().strength(2.0f)));
     public static final Block LIGHT1  = registerBlock("light_1", new LightBlock(FabricBlockSettings.create().strength(2.0f)));
     public static final Block PYROXENE  = registerBlock("pyroxene", new Block(AbstractBlock.Settings.copy(Blocks.TUFF)));
+    public static final Block SEQUENCEB  = registerBlock("sequenceb", new SequencerBlock(AbstractBlock.Settings.copy(Blocks.TUFF)));
 
 
     public static final Block MAP_BLOCK = registerBlock(

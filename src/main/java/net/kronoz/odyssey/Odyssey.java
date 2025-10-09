@@ -4,6 +4,7 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.kronoz.odyssey.block.SequencerRegistry;
 import net.kronoz.odyssey.init.*;
 import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.kronoz.odyssey.systems.dialogue.Dialogue;
@@ -27,7 +28,7 @@ public class Odyssey implements ModInitializer {
 
     @Override
     public void onInitialize() {
-
+        SequencerRegistry.init();
         ModEntities.init();
         ModBlockEntities.register();
         ModEntities.register();

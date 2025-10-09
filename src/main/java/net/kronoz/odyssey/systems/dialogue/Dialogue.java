@@ -1,6 +1,5 @@
 package net.kronoz.odyssey.systems.dialogue;
 
-import net.kronoz.odyssey.command.PlayDialogueCommand;
 import net.kronoz.odyssey.systems.dialogue.data.DialogueLoader;
 import net.kronoz.odyssey.systems.dialogue.net.Packets;
 import net.kronoz.odyssey.systems.dialogue.server.DialogueScheduler;
@@ -11,6 +10,5 @@ public final class Dialogue {
         DialogueLoader.init();
         Packets.initCommon();
         DialogueScheduler.init();
-        PlayDialogueCommand.init();
     }
 }
