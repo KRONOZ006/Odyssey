@@ -4,6 +4,7 @@ import net.kronoz.odyssey.Odyssey;
 import net.kronoz.odyssey.item.custom.XarisArm;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.item.ItemRenderer;
@@ -16,6 +17,7 @@ import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.cache.object.GeoCube;
 import software.bernie.geckolib.model.DefaultedItemGeoModel;
 import software.bernie.geckolib.renderer.specialty.DynamicGeoItemRenderer;
+import software.bernie.geckolib.util.Color;
 
 import java.util.Objects;
 
@@ -109,6 +111,20 @@ public class XarisArmRenderer extends DynamicGeoItemRenderer<XarisArm> {
             }
             ms.pop();
         }
+        if (bone.getName().equals("glow")) {
+            VertexConsumer vertexConsumer = buffers.getBuffer(RenderLayer.getEyes(Identifier.of(Odyssey.MODID, "textures/item/xaris.png")));
+
+            if (bone.isHidden())
+                return false;
+
+            for (GeoCube cube : bone.getCubes()) {
+                ms.push();
+                renderCube(ms, cube, vertexConsumer, 15728640, OverlayTexture.DEFAULT_UV, Color.WHITE.getColor());
+                ms.pop();
+            }
+            return true;
+        }
+
 
         return false;
     }

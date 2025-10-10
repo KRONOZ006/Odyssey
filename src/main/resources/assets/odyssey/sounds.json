@@ -14,5 +14,19 @@
         "name": "odyssey:sentry_step"
       }
     ]
+  },
+  "energy_shield_break": {
+    "sounds": [
+      {
+        "name": "odyssey:energy_shield_break"
+      }
+    ]
+  },
+  "energy_shield_hit": {
+    "sounds": [
+      {
+        "name": "odyssey:energy_shield_hit"
+      }
+    ]
   }
 }

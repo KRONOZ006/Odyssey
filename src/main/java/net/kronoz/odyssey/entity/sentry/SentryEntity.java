@@ -73,6 +73,7 @@ public class SentryEntity extends PathAwareEntity implements GeoEntity {
         this.experiencePoints = 0;
     }
 
+
     public static DefaultAttributeContainer.Builder createAttributes() {
         return PathAwareEntity.createMobAttributes()
                 .add(EntityAttributes.GENERIC_MAX_HEALTH, 40.0)
@@ -88,6 +89,7 @@ public class SentryEntity extends PathAwareEntity implements GeoEntity {
         if (!shieldDown) {
             boolean axeHit = false;
             Entity attacker = source.getAttacker();
+            this.playSound(ModSounds.ENERGY_SHIELD_HIT, 0.7f, 1.0f);
 
             if (attacker instanceof PlayerEntity player) {
                 axeHit = player.getMainHandStack().isIn(ItemTags.AXES);
@@ -101,6 +103,7 @@ public class SentryEntity extends PathAwareEntity implements GeoEntity {
                     double midX = (x1 + x2) / 2.0;
                     double midY = (y1 + y2) / 2.0;
                     double midZ = (z1 + z2) / 2.0;
+
                     this.getWorld().addParticle(
                             net.kronoz.odyssey.init.ModParticles.SENTRY_SHIELD_FULL_PARTICLE,
                             midX, midY, midZ,
@@ -115,6 +118,7 @@ public class SentryEntity extends PathAwareEntity implements GeoEntity {
                 hitCount++;
                 if (hitCount >= 4) {
                     shieldDown = true;
+                    this.playSound(ModSounds.ENERGY_SHIELD_BREAK, 1.0f, 2.0f);
                 }
             }
 
@@ -250,9 +254,11 @@ public class SentryEntity extends PathAwareEntity implements GeoEntity {
         reg.add(new AnimationController<>(this, "controller", 2, this::predicate));
     }
 
+
     private PlayState predicate(AnimationState<SentryEntity> s) {
         if (s.isMoving()) s.getController().setAnimation(RawAnimation.begin().then("animation.sentry.walk", Animation.LoopType.LOOP));
-        else s.getController().setAnimation(RawAnimation.begin().then("animation.sentry.idle", Animation.LoopType.LOOP));
+            
+         else s.getController().setAnimation(RawAnimation.begin().then("animation.sentry.idle", Animation.LoopType.LOOP));
         return PlayState.CONTINUE;
 
     }
