@@ -55,13 +55,12 @@ import org.lwjgl.glfw.GLFW;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
-import static gg.moonflower.molangcompiler.core.MolangUtil.wrapDegrees;
 
 public class OdysseyClient implements ClientModInitializer {
 
-    private static boolean enabledDynamicBuffers = false;
 
     private static final Identifier FOG = Identifier.of(Odyssey.MODID, "fog");
+    private static final Identifier BLOOM = Identifier.of(Odyssey.MODID, "bloom");
     private boolean fogadded = false;
 
 
@@ -176,7 +175,7 @@ public class OdysseyClient implements ClientModInitializer {
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
-            ppm.add(Identifier.of(Odyssey.MODID, "bloom"));
+            ppm.add(1, BLOOM);
             fogadded = false;
 
 
@@ -184,18 +183,14 @@ public class OdysseyClient implements ClientModInitializer {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
 
-            if (!enabledDynamicBuffers) {
-                Identifier bufferId = Veil.veilPath("forced");
-                VeilRenderSystem.renderer().enableBuffers(bufferId, DynamicBufferType.ALBEDO, DynamicBufferType.NORMAL);
-                enabledDynamicBuffers = true;
-            }
+
             if (client.player == null || client.world == null) return;
 
             var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
 
             boolean inVoid = client.world.getRegistryKey().getValue().equals(Identifier.of("odyssey:void"));
             if (inVoid && !fogadded) {
-                ppm.add(FOG);
+                ppm.add(2,FOG);
                 fogadded = true;
             } else if (!inVoid && fogadded) {
                 ppm.remove(FOG);

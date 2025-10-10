@@ -18,6 +18,7 @@ fabricApi {
 }
 
 repositories {
+    mavenCentral()
     maven {
         name = 'BlameJared Maven (CrT / Bookshelf)'
         url = 'https://maven.blamejared.com'
@@ -37,20 +38,16 @@ repositories {
     maven {
         url = "https://api.modrinth.com/maven"
     }
-    maven { url "https://maven.terraformersmc.com/" } // ModMenu
+    maven { url "https://maven.terraformersmc.com/" }
 }
 
 dependencies {
-    // To change the versions see the gradle.properties file
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "software.bernie.geckolib:geckolib-fabric-${minecraft_version}:${geckolib_version}"
 
-    // Fabric API. This is technically optional, but you probably want it anyway.
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-    //Cardinal Components API
     modImplementation "org.ladysnake.cardinal-components-api:cardinal-components-base:${project.cca_version}"
     modImplementation "org.ladysnake.cardinal-components-api:cardinal-components-entity:${project.cca_version}"
     modImplementation "org.ladysnake.cardinal-components-api:cardinal-components-world:${project.cca_version}"
@@ -59,14 +56,25 @@ dependencies {
     include "org.ladysnake.cardinal-components-api:cardinal-components-entity:${project.cca_version}"
     include "org.ladysnake.cardinal-components-api:cardinal-components-world:${project.cca_version}"
 
-    modImplementation include ("maven.modrinth:midnightlib:${project.midnightlib_version}")
-    modImplementation "com.terraformersmc:modmenu:11.0.3"
-//VEIL
 
-    modImplementation("foundry.veil:veil-fabric-${project.minecraft_version}:${project.veil_version}") {
-        exclude group: "maven.modrinth"
-        exclude group: "me.fallenbreath"
+
+    modImplementation(api("gg.moonflower:molang-compiler:${molang_compiler_version}"))
+    modImplementation(api("io.github.ocelot:glsl-processor:${glsl_processor_version}"))
+
+    modImplementation(api("io.github.spair:imgui-java-binding:$imgui_version"))
+    modImplementation(api("io.github.spair:imgui-java-lwjgl3:$imgui_version")) {
+        exclude group: 'org.lwjgl'
+        exclude group: 'org.lwjgl.lwjgl'
     }
+
+    modImplementation(runtimeOnly("io.github.spair:imgui-java-natives-linux:$imgui_version"))
+    modImplementation(runtimeOnly("io.github.spair:imgui-java-natives-macos:$imgui_version"))
+    modImplementation(runtimeOnly("io.github.spair:imgui-java-natives-windows:$imgui_version"))
+
+    modImplementation(rootProject.files("src/main/resources/META-INF/jars/veil-fabric-1.21.1-2.3.2.jar"))
+    modImplementation(rootProject.files("src/main/resources/META-INF/jars/geckolib-fabric-1.21.1-4.8.2.jar"))
+    modImplementation(rootProject.files("src/main/resources/META-INF/jars/midnightlib-1.7.5-fabric+1.21.1.jar"))
+    modImplementation(rootProject.files("src/main/resources/META-INF/jars/modmenu-11.0.3.jar"))
 }
 
 processResources {
@@ -85,10 +93,6 @@ processResources {
 
 def targetJavaVersion = 21
 tasks.withType(JavaCompile).configureEach {
-    // ensure that the encoding is set to UTF-8, no matter what the system default is
-    // this fixes some edge cases with special characters not displaying correctly
-    // see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
-    // If Javadoc is generated, this must be specified in that task too.
     it.options.encoding = "UTF-8"
     if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
         it.options.release.set(targetJavaVersion)
@@ -100,9 +104,6 @@ java {
     if (JavaVersion.current() < javaVersion) {
         toolchain.languageVersion = JavaLanguageVersion.of(targetJavaVersion)
     }
-    // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-    // if it is present.
-    // If you remove this line, sources will not be generated.
     withSourcesJar()
 }
 
@@ -112,7 +113,6 @@ jar {
     }
 }
 
-// configure the maven publication
 publishing {
     publications {
         create("mavenJava", MavenPublication) {
@@ -121,11 +121,6 @@ publishing {
         }
     }
 
-    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
     repositories {
-        // Add repositories to publish to here.
-        // Notice: This block does NOT have the same function as the block in the top level.
-        // The repositories here will be used for publishing your artifact, not for
-        // retrieving dependencies.
     }
 }

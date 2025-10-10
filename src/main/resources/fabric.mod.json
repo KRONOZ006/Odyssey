@@ -39,5 +39,19 @@
     "fabricloader": ">=${loader_version}",
     "fabric": "*",
     "minecraft": "${minecraft_version}"
-  }
+  },
+  "jars": [
+    {
+      "file": "META-INF/jars/veil-fabric-1.21.1-2.3.2.jar"
+    },
+    {
+      "file": "META-INF/jars/geckolib-fabric-1.21.1-4.8.2.jar"
+    },
+    {
+      "file": "META-INF/jars/midnightlib-1.7.5-fabric+1.21.1.jar"
+    },
+    {
+      "file": "META-INF/jars/modmenu-11.0.3.jar"
+    }
+  ]
 }
