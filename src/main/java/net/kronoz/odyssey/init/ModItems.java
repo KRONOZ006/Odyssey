@@ -17,7 +17,7 @@ public class ModItems {
             new WireToolItem(new Item.Settings().maxCount(1)));
 public static final Item GRAPPLE = Registry.register(Registries.ITEM,
             Identifier.of("odyssey","grapple"),
-            new GrappleItem(new Item.Settings().maxCount(1)));
+            new LoyalGrappleItem(new Item.Settings().maxCount(1)));
 
     private static Item registerItem(String name, Item item) {
         return Registry.register(Registries.ITEM, Identifier.of(Odyssey.MODID, name), item);

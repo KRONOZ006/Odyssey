@@ -12,8 +12,8 @@
     "HeldItemFeatureRendererMixin",
     "HeldItemRendererMixin",
     "ItemRendererMixin",
-    "LivingEntityRendererMixin",
-    "ModelLoaderMixin"
+    "ModelLoaderMixin",
+    "PlayerEntityModelMixin"
   ],
   "injectors": {
     "defaultRequire": 1

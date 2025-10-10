@@ -10,6 +10,7 @@ import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.kronoz.odyssey.systems.dialogue.Dialogue;
 import net.kronoz.odyssey.systems.grapple.GrappleNetworking;
 import net.kronoz.odyssey.systems.grapple.GrapplePayloads;
+import net.kronoz.odyssey.systems.slide.SlideServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
@@ -26,6 +27,7 @@ public class Odyssey implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        SlideServer.init();
         SequencerRegistry.init();
         ModEntities.init();
         ModBlockEntities.register();
