@@ -13,6 +13,7 @@ public final class WireSim {
         public float invM;
         Node(Vec3d v, float inv){ p=v; prev=v; invM=inv; }
     }
+    private final double halfWidth;
 
     private final WireDef def;
     private final Node[] nodes;
@@ -21,7 +22,7 @@ public final class WireSim {
 
     private static final double CONTACT_SLOP=0.0015, BAUMGARTE=0.34, DYN_FRICTION=0.30;
 
-    public WireSim(WireDef def, Vec3d a, Vec3d b) {
+    public WireSim(WireDef def, Vec3d a, Vec3d b, double halfWidth) {
         this.def = def;
         this.nodes = new Node[def.segments + 1];
         for (int i=0;i<nodes.length;i++){
@@ -29,6 +30,9 @@ public final class WireSim {
             nodes[i] = new Node(a.lerp(b, t), 1f);
         }
         setEndpoints(a,b);
+        final double MIN_SCALE = 0.65;
+        double scale = MIN_SCALE + (1.0 - MIN_SCALE) * Math.random();
+        this.halfWidth = Math.max(1e-6, def.halfWidth * scale);
     }
 
     public void setPinned(boolean startPinned, boolean endPinned){
@@ -37,7 +41,9 @@ public final class WireSim {
         nodes[0].invM = startPinned ? 0f : 1f;
         nodes[nodes.length-1].invM = endPinned ? 0f : 1f;
     }
-
+    public double getHalfWidth() {
+        return halfWidth;
+    }
     public void setEndpoints(Vec3d a, Vec3d b){
         double base = Math.max(1e-5, a.distanceTo(b));
         double slack = def.baseSlack + def.sagPerMeter * base;

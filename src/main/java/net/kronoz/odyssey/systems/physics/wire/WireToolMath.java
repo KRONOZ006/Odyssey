@@ -10,6 +10,13 @@ public final class WireToolMath {
     public static Vec3d anchorCenter(WireAnchor a){
         return anchorCenter(a.pos, a.face).add(a.offsetWorld);
     }
+    public static WireAnchor ghostAt(Vec3d worldPos){
+        var base = net.minecraft.util.math.BlockPos.ofFloored(worldPos);
+        var face = net.minecraft.util.math.Direction.UP;
+        Vec3d center = anchorCenter(base, face);
+        Vec3d off = worldPos.subtract(center);
+        return new WireAnchor(base, face, off);
+    }
 
     public static Vec3d anchorCenter(BlockPos pos, Direction face){
         double cx = pos.getX() + 0.5;

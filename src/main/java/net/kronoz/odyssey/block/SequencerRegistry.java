@@ -1,30 +1,45 @@
 package net.kronoz.odyssey.block;
 
-import net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder;
-import net.kronoz.odyssey.block.custom.SequencerBlock;
-import net.kronoz.odyssey.entity.SequencerBlockEntity;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockEntityProvider;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.util.Identifier;
+import net.minecraft.particle.ParticleTypes;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.math.BlockPos;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class SequencerRegistry {
-    public static final SequencerBlock SEQUENCER_BLOCK = new SequencerBlock(Block.Settings.create().strength(1.0f).nonOpaque());
-    public static BlockEntityType<SequencerBlockEntity> SEQUENCER_BE;
+    @FunctionalInterface
+    public interface SequencerAction {
+        void run(ServerWorld world, BlockPos pos);
+    }
 
+    private static final Map<String, SequencerAction> ACTIONS = new ConcurrentHashMap<>();
+
+    private SequencerRegistry() {}
+
+    public static void register(String key, SequencerAction action) {
+        ACTIONS.put(key, action);
+    }
+
+    public static boolean fire(String key, ServerWorld world, BlockPos pos) {
+        SequencerAction a = ACTIONS.get(key);
+        if (a == null) return false;
+        a.run(world, pos);
+        return true;
+    }
+
+    public static void bootstrapDefaults() {
+        register("beep", (w, p) -> {
+            w.playSound(null, p, net.minecraft.sound.SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(),
+                    net.minecraft.sound.SoundCategory.BLOCKS, 1.0f, 1.0f);
+        });
+        register("flash", (w, p) -> w.syncWorldEvent(2001, p, net.minecraft.block.Block.getRawIdFromState(w.getBlockState(p))));
+        register("particles", (w, p) -> w.spawnParticles(ParticleTypes.END_ROD,
+                p.getX() + 0.5, p.getY() + 1.0, p.getZ() + 0.5, 12, 0.25, 0.25, 0.25, 0.0));
+    }
+
+    // alias for your Odyssey.init() call
     public static void init() {
-        Registry.register(Registries.BLOCK, Identifier.of("odyssey","sequencer"), SEQUENCER_BLOCK);
-        Registry.register(Registries.ITEM, Identifier.of("odyssey","sequencer"), new BlockItem(SEQUENCER_BLOCK, new Item.Settings()));
-        SEQUENCER_BE = Registry.register(
-                Registries.BLOCK_ENTITY_TYPE,
-                Identifier.of("odyssey","sequencer"),
-                FabricBlockEntityTypeBuilder.create(SequencerBlockEntity::new, SEQUENCER_BLOCK).build()
-        );
+        bootstrapDefaults();
     }
 }

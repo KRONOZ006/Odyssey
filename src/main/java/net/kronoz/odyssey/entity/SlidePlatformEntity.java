@@ -19,7 +19,6 @@ import java.util.*;
 
 public class SlidePlatformEntity extends Entity {
     public static class Part { public BlockPos off; public BlockState state; public Part(BlockPos o, BlockState s){ off=o; state=s; } }
-    private double movedAccum = 0.0;
 
     public static final TrackedData<Float> CX = DataTracker.registerData(SlidePlatformEntity.class, TrackedDataHandlerRegistry.FLOAT);
     public static final TrackedData<Float> CY = DataTracker.registerData(SlidePlatformEntity.class, TrackedDataHandlerRegistry.FLOAT);
@@ -34,35 +33,45 @@ public class SlidePlatformEntity extends Entity {
     private final Map<BlockPos, UUID> displayIds = new HashMap<>();
     private final Map<BlockPos, UUID> colliderIds = new HashMap<>();
 
-    private boolean moving=false;
-    private Vec3d base=Vec3d.ZERO;
-    private BlockPos origin = BlockPos.ORIGIN;
+    private Vec3d base = Vec3d.ZERO;
     private double speed = 0.03;
     private int stepX=1, stepZ=0;
-    private int remaining=0;
+
+    // modes
+    private boolean infinite = false;   // run until collision
+    private BlockPos target = null;     // if non-null, stop when we reach/past this world cell
+    private double movedAccum = 0.0;    // for HUD syncing (not strictly needed here)
 
     public SlidePlatformEntity(EntityType<? extends Entity> type, World world){ super(type, world); this.noClip=true; }
     @Override protected void initDataTracker(DataTracker.Builder b){
         b.add(CX,0f); b.add(CY,0f); b.add(CZ,0f); b.add(VX,0f); b.add(VZ,0f); b.add(DW,1); b.add(DL,1); b.add(DH,1);
     }
 
-    public void configureHorizontal(BlockPos originBlock, List<Part> p, double spd, int dx, int dz, int dist){
-        origin = originBlock;
-        base = new Vec3d(origin.getX(), origin.getY(), origin.getZ());
+    // ==== configure variants ====
+    public void configureHorizontalInfinite(BlockPos originBlock, List<Part> p, double spd, int dx, int dz){
+        initCommon(originBlock, p, spd, dx, dz);
+        infinite = true;
+        target = null;
+    }
+    public void configureHorizontalToTarget(BlockPos originBlock, List<Part> p, double spd, int dx, int dz, BlockPos targetCell){
+        initCommon(originBlock, p, spd, dx, dz);
+        infinite = false;
+        target = targetCell;
+    }
+    private void initCommon(BlockPos originBlock, List<Part> p, double spd, int dx, int dz){
+        base = new Vec3d(originBlock.getX(), originBlock.getY(), originBlock.getZ());
         setPos(base.x+0.5, base.y, base.z+0.5);
-        clearDisplays();
-        clearColliders();
+        clearDisplays(); clearColliders();
         parts.clear(); parts.addAll(p);
-        speed = spd;
+        speed = Math.abs(spd);
         stepX = Integer.signum(dx); stepZ = Integer.signum(dz);
-        remaining = Math.abs(dist);
-        moving = remaining>0;
+        movedAccum = 0.0;
         recalcAABB(); ensureDisplays(); ensureColliders(); updateAll(true, 0.0, 0.0);
         if(!getWorld().isClient){
             int[] d = dims();
             var dt = getDataTracker();
             dt.set(CX,(float)(base.x+0.5)); dt.set(CY,(float)base.y); dt.set(CZ,(float)(base.z+0.5));
-            dt.set(VX,0f); dt.set(VZ,0f);
+            dt.set(VX,(float)(stepX*speed)); dt.set(VZ,(float)(stepZ*speed));
             dt.set(DW,d[0]); dt.set(DL,d[1]); dt.set(DH,d[2]);
         }
     }
@@ -71,46 +80,42 @@ public class SlidePlatformEntity extends Entity {
         super.tick();
         if(getWorld().isClient) return;
 
-        if(moving && remaining > 0){
-            double mvx = stepX * speed;
-            double mvz = stepZ * speed;
+        double mvx = stepX * speed;
+        double mvz = stepZ * speed;
 
-            if(willHitSolidAhead(mvx, mvz)){
-                reifyAndDiscard();
-                return;
-            }
-
-            Vec3d step = new Vec3d(mvx, 0.0, mvz);
-
-            Box next = getBoundingBox().offset(step).expand(-0.01, 0.0, -0.01);
-
-            boolean blocked = getWorld().getBlockCollisions(this, next).iterator().hasNext();
-            if(!blocked){
-                base = base.add(step);
-                setPos(base.x+0.5, base.y, base.z+0.5);
-                recalcAABB();
-                updateAll(false, mvx, mvz);
-
-                movedAccum += Math.abs(mvx) + Math.abs(mvz);
-                while(movedAccum >= 1.0 && remaining > 0){
-                    movedAccum -= 1.0;
-                    remaining--;
-                }
-            } else {
-                reifyAndDiscard();
-                return;
-            }
-
-            if(remaining <= 0){
-                reifyAndDiscard();
-                return;
-            }
-        } else {
-            updateAll(false, 0.0, 0.0);
+        // forward probe: if any part would enter a solid block next step => stop/reify
+        if(willHitSolidAhead(mvx, mvz)){
             reifyAndDiscard();
             return;
         }
 
+        Vec3d step = new Vec3d(mvx, 0.0, mvz);
+        Box nextBB = getBoundingBox().offset(step).expand(-0.01, 0.0, -0.01); // less “touchy” at edges
+        boolean blocked = getWorld().getBlockCollisions(this, nextBB).iterator().hasNext();
+        if(blocked){
+            reifyAndDiscard();
+            return;
+        }
+
+        base = base.add(step);
+        setPos(base.x+0.5, base.y, base.z+0.5);
+        recalcAABB();
+        updateAll(false, mvx, mvz);
+
+        movedAccum += Math.abs(mvx) + Math.abs(mvz);
+
+        // target mode: stop exactly when we reach/past the target cell on motion axis
+        if(target != null){
+            if(stepX != 0){
+                if(stepX > 0 && base.x >= target.getX()) { reifyAndDiscard(); return; }
+                if(stepX < 0 && base.x <= target.getX()) { reifyAndDiscard(); return; }
+            } else if(stepZ != 0){
+                if(stepZ > 0 && base.z >= target.getZ()) { reifyAndDiscard(); return; }
+                if(stepZ < 0 && base.z <= target.getZ()) { reifyAndDiscard(); return; }
+            }
+        }
+
+        // infinite mode: just keep going; reify happens only on collision
         int[] d = dims();
         var dt = getDataTracker();
         dt.set(CX,(float)(base.x+0.5)); dt.set(CY,(float)base.y); dt.set(CZ,(float)(base.z+0.5));
@@ -133,7 +138,6 @@ public class SlidePlatformEntity extends Entity {
         }
         return false;
     }
-
 
     private int[] dims(){
         if(parts.isEmpty()) return new int[]{1,1,1};
@@ -161,7 +165,6 @@ public class SlidePlatformEntity extends Entity {
             }
         }
     }
-
     private void ensureColliders(){
         if(getWorld().isClient) return;
         for(Part p: parts){
@@ -170,14 +173,13 @@ public class SlidePlatformEntity extends Entity {
                 if(col==null) continue;
                 double x=base.x+p.off.getX(), y=base.y+p.off.getY(), z=base.z+p.off.getZ();
                 col.refreshPositionAndAngles(x+0.5,y+0.5,z+0.5,0,0);
-                double eps=0.025;
-                col.setBoundingBox(new Box(x+eps, y, z+eps, x+1-eps, y+1, z+1-eps));
+                double eps=0.025; // 0.95 wide
+                col.setBoundingBox(new Box(x+eps,y,z+eps,x+1-eps,y+1,z+1-eps));
                 ((ServerWorld)getWorld()).spawnEntity(col);
                 colliderIds.put(p.off, col.getUuid());
             }
         }
     }
-
     private void updateAll(boolean snap, double vx, double vz){
         if(getWorld().isClient) return;
         for(Part p: parts){
@@ -195,7 +197,7 @@ public class SlidePlatformEntity extends Entity {
                 if(e instanceof SlidePartColliderEntity c){
                     double x=base.x+p.off.getX(), y=base.y+p.off.getY(), z=base.z+p.off.getZ();
                     c.setPos(x+0.5,y+0.5,z+0.5);
-                    double eps=0.01;
+                    double eps=0.025; // 0.95 wide
                     c.setBoundingBox(new Box(x+eps,y,z+eps,x+1-eps,y+1,z+1-eps));
                     c.setStep(vx, vz);
                 }
@@ -203,7 +205,6 @@ public class SlidePlatformEntity extends Entity {
         }
         prune(parts, displayIds); prune(parts, colliderIds);
     }
-
     private static void prune(List<Part> parts, Map<BlockPos,UUID> map){
         HashSet<BlockPos> keep=new HashSet<>(); for(Part p: parts) keep.add(p.off);
         map.entrySet().removeIf(e->!keep.contains(e.getKey()));
@@ -217,7 +218,6 @@ public class SlidePlatformEntity extends Entity {
         }
         displayIds.clear();
     }
-
     private void clearColliders(){
         if(getWorld().isClient) return;
         for(UUID id: colliderIds.values()){
@@ -250,21 +250,18 @@ public class SlidePlatformEntity extends Entity {
             BlockPos at = new BlockPos((int)Math.floor(base.x+p.off.getX()), (int)Math.floor(base.y+p.off.getY()), (int)Math.floor(base.z+p.off.getZ()));
             sw.setBlockState(at, p.state==null?Blocks.IRON_BLOCK.getDefaultState():p.state, 3);
         }
-        clearDisplays();
-        clearColliders();
+        clearDisplays(); clearColliders();
         discard();
     }
 
     @Override protected void readCustomDataFromNbt(net.minecraft.nbt.NbtCompound nbt){
-        origin=new BlockPos(nbt.getInt("ox"),nbt.getInt("oy"),nbt.getInt("oz"));
         base=new Vec3d(nbt.getDouble("bx"), nbt.getDouble("by"), nbt.getDouble("bz"));
-        speed=nbt.getDouble("spd"); stepX=nbt.getInt("sx"); stepZ=nbt.getInt("sz"); remaining=nbt.getInt("rem");
+        speed=nbt.getDouble("spd"); stepX=nbt.getInt("sx"); stepZ=nbt.getInt("sz");
         setPos(base.x+0.5, base.y, base.z+0.5);
         ensureDisplays(); ensureColliders(); updateAll(true,0,0);
     }
     @Override protected void writeCustomDataToNbt(net.minecraft.nbt.NbtCompound nbt){
-        nbt.putInt("ox",origin.getX()); nbt.putInt("oy",origin.getY()); nbt.putInt("oz",origin.getZ());
         nbt.putDouble("bx",base.x); nbt.putDouble("by",base.y); nbt.putDouble("bz",base.z);
-        nbt.putDouble("spd",speed); nbt.putInt("sx",stepX); nbt.putInt("sz",stepZ); nbt.putInt("rem",remaining);
+        nbt.putDouble("spd",speed); nbt.putInt("sx",stepX); nbt.putInt("sz",stepZ);
     }
 }

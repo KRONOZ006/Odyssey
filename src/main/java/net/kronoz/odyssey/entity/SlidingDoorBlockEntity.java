@@ -22,13 +22,14 @@ public class SlidingDoorBlockEntity extends BlockEntity {
     public static class Part { public BlockPos off; public BlockState state; public Part(BlockPos o, BlockState s){ off=o; state=s; } }
 
     private final List<Part> parts = new ArrayList<>();
-    private UUID platformId=null;
+    private UUID platformId = null;
 
-    private BlockPos origin = BlockPos.ORIGIN;
+    private BlockPos home = BlockPos.ORIGIN;
+    private BlockPos lastOrigin = BlockPos.ORIGIN;
     private Direction axis = Direction.EAST;
-    private int distance = 3;
+    private int sideSign = +1;
     private double speed = 0.03;
-    private boolean openTarget = false;
+    private boolean isOpen = false;
 
     public SlidingDoorBlockEntity(BlockPos pos, BlockState state){ super(ModBlockEntities.SLIDING_DOOR_BE,pos,state); }
     public static void serverTick(World w, BlockPos p, BlockState s, SlidingDoorBlockEntity be){}
@@ -36,18 +37,31 @@ public class SlidingDoorBlockEntity extends BlockEntity {
     private World w(){ return Objects.requireNonNull(getWorld()); }
 
     public void toggle(ServerWorld sw, Direction facing){
-        origin = this.pos;
+        if(home.equals(BlockPos.ORIGIN)) home = this.pos;
         scan(sw);
         if(parts.isEmpty()) return;
+
         axis = facing.rotateYClockwise();
+
         removeBlocks(sw);
+
         SlidePlatformEntity e = ensure(sw);
-        if(e==null) return;
-        int dirSign = openTarget ? -1 : +1;
-        int dx = axis.getAxis()==Direction.Axis.X ? axis.getOffsetX() * dirSign : 0;
-        int dz = axis.getAxis()==Direction.Axis.Z ? axis.getOffsetZ() * dirSign : 0;
-        e.configureHorizontal(origin, copy(), speed, dx, dz, distance);
-        openTarget = !openTarget;
+        if(e == null) return;
+
+        int dx = axis.getAxis()==Direction.Axis.X ? axis.getOffsetX() * (isOpen ? -sideSign : sideSign) : 0;
+        int dz = axis.getAxis()==Direction.Axis.Z ? axis.getOffsetZ() * (isOpen ? -sideSign : sideSign) : 0;
+
+        BlockPos runOrigin = isOpen ? lastOrigin : this.pos;
+
+        if(!isOpen){
+            e.configureHorizontalInfinite(runOrigin, copy(), speed, dx, dz);
+        }else{
+            e.configureHorizontalToTarget(runOrigin, copy(), speed, dx, dz, home);
+        }
+
+        isOpen = !isOpen;
+        lastOrigin = runOrigin;
+
         markDirty();
     }
 
@@ -77,7 +91,7 @@ public class SlidingDoorBlockEntity extends BlockEntity {
     private void removeBlocks(ServerWorld sw){
         Block self=w().getBlockState(this.pos).getBlock();
         for(Part p: parts){
-            BlockPos at=origin.add(p.off);
+            BlockPos at=this.pos.add(p.off);
             if(sw.getBlockState(at).getBlock()==self) sw.setBlockState(at, net.minecraft.block.Blocks.AIR.getDefaultState(), Block.NOTIFY_ALL);
         }
     }
@@ -86,7 +100,7 @@ public class SlidingDoorBlockEntity extends BlockEntity {
         if(platformId==null || !(sw.getEntity(platformId) instanceof SlidePlatformEntity)){
             SlidePlatformEntity e = ModEntities.SLIDE_PLATFORM.create(sw);
             if(e==null) return null;
-            e.refreshPositionAndAngles(origin.getX()+0.5, origin.getY(), origin.getZ()+0.5, 0, 0);
+            e.refreshPositionAndAngles(this.pos.getX()+0.5, this.pos.getY(), this.pos.getZ()+0.5, 0, 0);
             sw.spawnEntity(e);
             platformId=e.getUuid();
             return e;
@@ -104,11 +118,13 @@ public class SlidingDoorBlockEntity extends BlockEntity {
         }
         nbt.put("parts",list);
         if(platformId!=null) nbt.putUuid("pid",platformId);
-        nbt.putInt("ox",origin.getX()); nbt.putInt("oy",origin.getY()); nbt.putInt("oz",origin.getZ());
-        nbt.putInt("axis", axis.getHorizontal());
-        nbt.putInt("distance", distance);
+
+        nbt.putInt("homeX",home.getX()); nbt.putInt("homeY",home.getY()); nbt.putInt("homeZ",home.getZ());
+        nbt.putInt("lastX",lastOrigin.getX()); nbt.putInt("lastY",lastOrigin.getY()); nbt.putInt("lastZ",lastOrigin.getZ());
+        nbt.putInt("axisH", axis.getHorizontal());
+        nbt.putInt("sideSign", sideSign);
         nbt.putDouble("speed", speed);
-        nbt.putBoolean("openTarget", openTarget);
+        nbt.putBoolean("isOpen", isOpen);
     }
 
     @Override protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup l){
@@ -123,11 +139,12 @@ public class SlidingDoorBlockEntity extends BlockEntity {
             }
         }
         platformId = nbt.containsUuid("pid") ? nbt.getUuid("pid") : null;
-        origin=new BlockPos(nbt.getInt("ox"), nbt.getInt("oy"), nbt.getInt("oz"));
-        int ah = nbt.contains("axis") ? nbt.getInt("axis") : Direction.EAST.getHorizontal();
-        axis = Direction.fromHorizontal(ah);
-        distance = nbt.contains("distance") ? nbt.getInt("distance") : 3;
-        speed = nbt.contains("speed") ? nbt.getDouble("speed") : 0.04;
-        openTarget = nbt.getBoolean("openTarget");
+
+        home = new BlockPos(nbt.getInt("homeX"), nbt.getInt("homeY"), nbt.getInt("homeZ"));
+        lastOrigin = new BlockPos(nbt.getInt("lastX"), nbt.getInt("lastY"), nbt.getInt("lastZ"));
+        axis = Direction.fromHorizontal(nbt.getInt("axisH"));
+        sideSign = nbt.contains("sideSign") ? nbt.getInt("sideSign") : +1;
+        speed = nbt.contains("speed") ? nbt.getDouble("speed") : 0.03;
+        isOpen = nbt.getBoolean("isOpen");
     }
 }

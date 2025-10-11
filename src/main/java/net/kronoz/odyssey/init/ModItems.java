@@ -12,9 +12,8 @@ public class ModItems {
     public static final Item TOMAHAWK = registerItem("tomahawk", new TomahawkItem(new Item.Settings().maxCount(1).fireproof()));
     public static final Item XARIS = registerItem("xaris", new XarisArm(new Item.Settings().maxCount(1).fireproof()));
     public static final Item JETPACK = registerItem("jetpack", new JetpackTorso(new Item.Settings().maxCount(1).fireproof()));
-    public static final Item WIRE_TOOL = Registry.register(Registries.ITEM,
-            Identifier.of("odyssey","wire_tool"),
-            new WireToolItem(new Item.Settings().maxCount(1)));
+    public static final Item WIRE_TOOL = Registry.register(Registries.ITEM, Identifier.of("odyssey","wire_tool"), new WireToolItem(new Item.Settings().maxCount(1)));
+    public static final Item WIRE_CUTTER_TOOL = Registry.register(Registries.ITEM, Identifier.of("odyssey","wire_cutter_tool"), new WireCutterItem(new Item.Settings().maxCount(1)));
 public static final Item GRAPPLE = Registry.register(Registries.ITEM,
             Identifier.of("odyssey","grapple"),
             new LoyalGrappleItem(new Item.Settings().maxCount(1)));

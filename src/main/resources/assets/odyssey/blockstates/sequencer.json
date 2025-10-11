@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=north": { "model": "odyssey:block/sequencer", "y": 180},
+    "facing=east":  { "model": "odyssey:block/sequencer", "y": 270},
+    "facing=south": { "model": "odyssey:block/sequencer", "y":   0},
+    "facing=west":  { "model": "odyssey:block/sequencer", "y":  90},
+    "facing=up":    { "model": "odyssey:block/sequencer", "x":  90},
+    "facing=down":  { "model": "odyssey:block/sequencer", "x": 270}
+  }
+}

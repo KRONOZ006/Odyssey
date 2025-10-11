@@ -21,7 +21,7 @@ import java.util.*;
 public final class SimpleBlockLightManager {
     private SimpleBlockLightManager() {}
 
-    private static final float AL_BRIGHTNESS = 1.5f;
+    private static final float AL_BRIGHTNESS = 1.0f;
     private static final float AL_ANGLE = (float) Math.toRadians(40.0);
     private static final float AL_DISTANCE = 25.0f;
     private static final double AL_SIZE_X = 0.20;

@@ -18,8 +18,6 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.util.BlockMirror;
-import net.minecraft.util.BlockRotation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Direction;
@@ -37,18 +35,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AlarmBlock extends Block {
+public class SpedLigtBlock extends Block {
     public static final DirectionProperty FACING = Properties.FACING;
 
     private static final Map<Direction, VoxelShape> DIR_SHAPES =
-            CollisionShapeHelper.loadDirectionalCollisionFromModelJson(Odyssey.MODID, "alarm");
+            CollisionShapeHelper.loadDirectionalCollisionFromModelJson(Odyssey.MODID, "static_beacon");
 
-    private static final double AL_SIZE_X = 0.20;
-    private static final double AL_SIZE_Y = 0.20;
-    private static final float  AL_ANGLE  = (float) Math.toRadians(40.0);
-    private static final float  AL_DIST   = 25.0f;
-    private static final float  PL_RADIUS = 5.0f;
-    private static final float CLR_R = 1f, CLR_G = 0f, CLR_B = 0f;
+    private static final float  AL_BRIGHTNESS = 4.0f;
+    private static final float  AL_DISTANCE   = 96.0f;
+    private static final float  AL_ANGLE      = (float) Math.toRadians(35.0);
+    private static final double AL_SIZE_X     = 0.28;
+    private static final double AL_SIZE_Y     = 0.28;
+
+    private static final float  PL_BRIGHTNESS = 2.0f;
+    private static final float  PL_RADIUS     = 18.0f;
+
+    private static final float CLR_R = 1f, CLR_G = 1f, CLR_B = 1f;
+
     private static final Quaternionf ORIENTATION_DOWN = new Quaternionf().rotateX((float)(-Math.PI/2.0));
 
     private static final Map<BlockPos, LightRenderHandle<AreaLightData>>  AREA_HANDLES = new HashMap<>();
@@ -56,17 +59,13 @@ public class AlarmBlock extends Block {
     private static final Map<BlockPos, AreaLightData>  AREA_DATA  = new HashMap<>();
     private static final Map<BlockPos, PointLightData> POINT_DATA = new HashMap<>();
 
-    private static final Vec3d BONE_LIGHT_OFFSET = new Vec3d(0.5, 0.8, 0.5);
-
-    // 2s down (5->0), 2s up (0->5): total 4s period. omega = π / HALF_PERIOD.
-    private static final float HALF_PERIOD_SECONDS = 2.0f;
-    private static float pulseTime = 0f;
+    private static final Vec3d LIGHT_OFFSET = new Vec3d(0.5, 0.8, 0.5);
 
     private static boolean hooks = false;
     private static boolean rescanPending = false;
     private static boolean rendererWasReady = false;
 
-    public AlarmBlock(Settings settings) {
+    public SpedLigtBlock(Settings settings) {
         super(settings);
         setDefaultState(getStateManager().getDefaultState().with(FACING, Direction.NORTH));
         ensureHooks();
@@ -98,7 +97,7 @@ public class AlarmBlock extends Block {
     @Override
     public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
         super.onStateReplaced(state, world, pos, newState, moved);
-        if (world.isClient && (!newState.isOf(this))) removeLightsIfAny(pos);
+        if (world.isClient && !newState.isOf(this)) removeLightsIfAny(pos);
     }
 
     @Override
@@ -108,25 +107,25 @@ public class AlarmBlock extends Block {
     }
 
     @Override
-    public BlockState rotate(BlockState state, BlockRotation rotation) {
+    public BlockState rotate(BlockState state, net.minecraft.util.BlockRotation rotation) {
         return state.with(FACING, rotation.rotate(state.get(FACING)));
     }
 
     @Override
-    public BlockState mirror(BlockState state, BlockMirror mirror) {
+    public BlockState mirror(BlockState state, net.minecraft.util.BlockMirror mirror) {
         return state.rotate(mirror.getRotation(state.get(FACING)));
     }
 
     @Override
     public VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         VoxelShape s = DIR_SHAPES.get(state.get(FACING));
-        return s != null ? s : VoxelShapes.empty();
+        return (s == null || s.isEmpty()) ? VoxelShapes.fullCube() : s;
     }
 
     @Override
     public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         VoxelShape s = DIR_SHAPES.get(state.get(FACING));
-        return s != null ? s : VoxelShapes.empty();
+        return (s == null || s.isEmpty()) ? VoxelShapes.fullCube() : s;
     }
 
     @Override
@@ -139,19 +138,19 @@ public class AlarmBlock extends Block {
         if (AREA_HANDLES.containsKey(pos) || POINT_HANDLES.containsKey(pos)) return;
         if (VeilRenderSystem.renderer() == null || VeilRenderSystem.renderer().getLightRenderer() == null) return;
 
-        Vec3d c = new Vec3d(pos.getX(), pos.getY(), pos.getZ()).add(BONE_LIGHT_OFFSET);
+        Vec3d c = new Vec3d(pos.getX(), pos.getY(), pos.getZ()).add(LIGHT_OFFSET);
 
         AreaLightData al = new AreaLightData()
-                .setBrightness(5.0f)
+                .setBrightness(AL_BRIGHTNESS)
                 .setColor(CLR_R, CLR_G, CLR_B)
                 .setSize(AL_SIZE_X, AL_SIZE_Y)
                 .setAngle(AL_ANGLE)
-                .setDistance(AL_DIST);
+                .setDistance(AL_DISTANCE);
         al.getPosition().set(c.x, c.y, c.z);
         al.getOrientation().set(ORIENTATION_DOWN);
 
         PointLightData pl = new PointLightData()
-                .setBrightness(5.0f)
+                .setBrightness(PL_BRIGHTNESS)
                 .setColor(CLR_R, CLR_G, CLR_B)
                 .setRadius(PL_RADIUS);
         pl.setPosition((float) c.x, (float) c.y, (float) c.z);
@@ -182,7 +181,6 @@ public class AlarmBlock extends Block {
         hooks = true;
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            pulseTime = 0f;
             rescanPending = true;
             rendererWasReady = false;
         });
@@ -194,7 +192,6 @@ public class AlarmBlock extends Block {
             POINT_HANDLES.clear();
             AREA_DATA.clear();
             POINT_DATA.clear();
-            pulseTime = 0f;
             rescanPending = false;
             rendererWasReady = false;
         });
@@ -212,7 +209,7 @@ public class AlarmBlock extends Block {
                     for (int z = 0; z < 16; z++) {
                         BlockPos bp = new BlockPos(sx + x, y, sz + z);
                         BlockState st = world.getBlockState(bp);
-                        if (st.getBlock() instanceof AlarmBlock) spawnLightsIfNeeded(world, bp);
+                        if (st.getBlock() instanceof SpedLigtBlock) spawnLightsIfNeeded(world, bp);
                     }
                 }
             }
@@ -231,7 +228,9 @@ public class AlarmBlock extends Block {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client == null || client.isPaused()) return;
 
-            boolean rendererReady = VeilRenderSystem.renderer() != null && VeilRenderSystem.renderer().getLightRenderer() != null;
+            boolean rendererReady = VeilRenderSystem.renderer() != null
+                    && VeilRenderSystem.renderer().getLightRenderer() != null;
+
             if (rendererReady && !rendererWasReady) rescanPending = true;
             rendererWasReady = rendererReady;
 
@@ -252,35 +251,13 @@ public class AlarmBlock extends Block {
                                 for (int z = 0; z < 16; z++) {
                                     BlockPos bp = new BlockPos(sx + x, y, sz + z);
                                     BlockState st = w.getBlockState(bp);
-                                    if (st.getBlock() instanceof AlarmBlock) spawnLightsIfNeeded(w, bp);
+                                    if (st.getBlock() instanceof SpedLigtBlock) spawnLightsIfNeeded(w, bp);
                                 }
                             }
                         }
                     }
                 }
                 rescanPending = false;
-            }
-
-            float dt = client.getRenderTickCounter().getLastFrameDuration();
-            pulseTime += dt;
-            float omega = (float)(Math.PI / HALF_PERIOD_SECONDS); // π/2 rad/s -> 4s total period
-            float b = 2.5f * (1.0f + (float)Math.cos(omega * pulseTime)); // [0..5], smooth
-
-            if (!rendererReady) return;
-
-            for (Map.Entry<BlockPos, AreaLightData> e : AREA_DATA.entrySet()) {
-                AreaLightData al = e.getValue();
-                if (al == null) continue;
-                al.setBrightness(b);
-                LightRenderHandle<AreaLightData> h = AREA_HANDLES.get(e.getKey());
-                if (h != null && h.isValid()) h.markDirty();
-            }
-            for (Map.Entry<BlockPos, PointLightData> e : POINT_DATA.entrySet()) {
-                PointLightData pl = e.getValue();
-                if (pl == null) continue;
-                pl.setBrightness(b);
-                LightRenderHandle<PointLightData> h = POINT_HANDLES.get(e.getKey());
-                if (h != null && h.isValid()) h.markDirty();
             }
         });
     }

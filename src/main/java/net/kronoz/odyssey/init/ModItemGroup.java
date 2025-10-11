@@ -22,6 +22,8 @@ public class ModItemGroup {
                         entries.add(ModBlocks.SLIDING_DOOR);
                         entries.add(ModItems.XARIS);
                         entries.add(ModItems.WIRE_TOOL);
+                        entries.add(ModItems.WIRE_CUTTER_TOOL);
+                        entries.add(ModItems.GRAPPLE);
                         entries.add(ModItems.JETPACK);
                         entries.add(ModBlocks.LIGHT1);
                         entries.add(ModBlocks.LARGE_FACILITY_PILLAR_BLOCK);

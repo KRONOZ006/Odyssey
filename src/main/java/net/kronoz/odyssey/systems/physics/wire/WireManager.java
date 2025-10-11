@@ -20,7 +20,7 @@ public final class WireManager {
 
     public static void ensure(UUID id, WireDef def, Vec3d a, Vec3d b){
         if (!SIMS.containsKey(id)) {
-            SIMS.put(id, new WireSim(def, a, b));
+            SIMS.put(id, new WireSim(def, a, b, def.halfWidth));
             DEFS.put(id, def);
         }
     }

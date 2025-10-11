@@ -1,52 +1,81 @@
 package net.kronoz.odyssey.block.custom;
 
-import com.mojang.serialization.MapCodec;
-import net.kronoz.odyssey.block.SequencerRegistry;
+import net.kronoz.odyssey.Odyssey;
+import net.kronoz.odyssey.block.CollisionShapeHelper;
 import net.kronoz.odyssey.entity.SequencerBlockEntity;
-import net.minecraft.block.Block;
+import net.kronoz.odyssey.init.ModBlockEntities;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
+import net.minecraft.block.ShapeContext;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityTicker;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
+import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.state.StateManager;
-import net.minecraft.state.property.BooleanProperty;
-import net.minecraft.state.property.IntProperty;
+import net.minecraft.state.property.DirectionProperty;
+import net.minecraft.state.property.Properties;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
 import net.minecraft.util.ItemActionResult;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.shape.VoxelShape;
+import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
+
+import com.mojang.serialization.MapCodec;
+
+import java.util.List;
+import java.util.Map;
 
 public class SequencerBlock extends BlockWithEntity {
-    public static final BooleanProperty RUNNING = BooleanProperty.of("running");
-    public static final IntProperty POWER = IntProperty.of("power", 0, 15);
+
+    public static final MapCodec<SequencerBlock> CODEC = createCodec(SequencerBlock::new);
+    @Override
+    public MapCodec<? extends BlockWithEntity> getCodec() {
+        return CODEC;
+    }
+
+    public static final DirectionProperty FACING = Properties.FACING;
+
+    private static final Map<Direction, VoxelShape> DIR_SHAPES =
+            CollisionShapeHelper.loadDirectionalCollisionFromModelJson(Odyssey.MODID, "sequencer");
 
     public SequencerBlock(Settings settings) {
         super(settings);
-        this.setDefaultState(this.getDefaultState().with(RUNNING, false).with(POWER, 0));
-    }
-
-    // 1.21.1 requirement
-    @Override
-    protected MapCodec<? extends BlockWithEntity> getCodec() {
-        return createCodec(SequencerBlock::new);
+        setDefaultState(getStateManager().getDefaultState().with(FACING, Direction.NORTH));
     }
 
     @Override
-    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        builder.add(RUNNING, POWER);
+    protected void appendProperties(StateManager.Builder<net.minecraft.block.Block, BlockState> builder) {
+        builder.add(FACING);
+    }
+
+    @Nullable
+    @Override
+    public BlockState getPlacementState(ItemPlacementContext ctx) {
+        return getDefaultState().with(FACING, ctx.getSide());
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
-        return new SequencerBlockEntity(pos, state);
+    public VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+        VoxelShape s = DIR_SHAPES.get(state.get(FACING));
+        if (s == null || s.isEmpty()) return VoxelShapes.fullCube();
+        return s;
+    }
+
+    @Override
+    public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
+        VoxelShape s = DIR_SHAPES.get(state.get(FACING));
+        if (s == null || s.isEmpty()) return VoxelShapes.fullCube();
+        return s;
     }
 
     @Override
@@ -54,48 +83,32 @@ public class SequencerBlock extends BlockWithEntity {
         return BlockRenderType.MODEL;
     }
 
+    @Nullable
+    @Override
+    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+        return ModBlockEntities.SEQUENCER.instantiate(pos, state);
+    }
+
+    @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
         if (world.isClient) return null;
-        return type == SequencerRegistry.SEQUENCER_BE
-                ? (w, p, s, be) -> ((SequencerBlockEntity) be).serverTick()
-                : null;
+        return validateTicker(type, ModBlockEntities.SEQUENCER, SequencerBlockEntity::tick);
     }
 
-    // 1.21.1: non-item interaction
     @Override
-    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
-        if (world.isClient) return ActionResult.SUCCESS;
+    protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos,
+                                             PlayerEntity player, net.minecraft.util.Hand hand, BlockHitResult hit) {
+        return ItemActionResult.SKIP_DEFAULT_BLOCK_INTERACTION;
+    }
 
-        BlockEntity be = world.getBlockEntity(pos);
-        if (be instanceof SequencerBlockEntity seq) {
-            Direction face = hit.getSide();
-            seq.spawnVeilLight(face);
-            return ActionResult.CONSUME;
-
+    @Override
+    public ActionResult onUse(BlockState state, World world, BlockPos pos,
+                              PlayerEntity player, BlockHitResult hit) {
+        if (world.isClient) {
+            net.kronoz.odyssey.client.ExpandingVeilLight.trigger(pos);
+            return ActionResult.SUCCESS;
         }
         return ActionResult.CONSUME;
-    }
-
-    // 1.21.1: item-in-hand interaction (we just pass-through to the same behavior)
-    @Override
-    public ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos,
-                                          PlayerEntity player, Hand hand, BlockHitResult hit) {
-        ActionResult r = onUse(state, world, pos, player, hit);
-        return r.isAccepted() ? ItemActionResult.SUCCESS : ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-    }
-
-    @Override
-    public boolean emitsRedstonePower(BlockState state) {
-        return true;
-    }
-
-    // leave these WITHOUT @Override (mappings/API differ)
-    public int getStrongRedstonePower(BlockState state, BlockView world, BlockPos pos, Direction dir) {
-        return state.get(POWER);
-    }
-
-    public int getWeakRedstonePower(BlockState state, BlockView world, BlockPos pos, Direction dir) {
-        return state.get(POWER);
     }
 }
