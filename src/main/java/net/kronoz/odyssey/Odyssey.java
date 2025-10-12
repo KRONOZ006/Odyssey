@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.kronoz.odyssey.block.SequencerRegistry;
 import net.kronoz.odyssey.init.*;
+import net.kronoz.odyssey.net.CineNetworking;
 import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.kronoz.odyssey.systems.dialogue.Dialogue;
 import net.kronoz.odyssey.systems.grapple.GrappleNetworking;
@@ -27,6 +28,7 @@ public class Odyssey implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        CineNetworking.registerCommon();
         SlideServer.init();
         SequencerRegistry.init();
         ModEntities.init();

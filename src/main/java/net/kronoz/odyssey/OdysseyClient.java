@@ -10,10 +10,12 @@ import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.kronoz.odyssey.block.SequencerRegistry;
 import net.kronoz.odyssey.block.custom.SimpleBlockLightManager;
 import net.kronoz.odyssey.client.ClientElevatorAssist;
@@ -25,10 +27,17 @@ import net.kronoz.odyssey.entity.projectile.LaserProjectileRenderer;
 import net.kronoz.odyssey.entity.sentinel.SentinelLightClient;
 import net.kronoz.odyssey.entity.sentinel.SentinelRenderer;
 import net.kronoz.odyssey.entity.sentry.SentryRenderer;
+import net.kronoz.odyssey.hud.bosshud.BossHudClient;
 import net.kronoz.odyssey.hud.death.DeathUICutscene;
 import net.kronoz.odyssey.init.*;
 import net.kronoz.odyssey.item.client.renderer.GrappleHookRenderer;
+import net.kronoz.odyssey.net.BossHudClearPayload;
+import net.kronoz.odyssey.net.BossHudPackets;
+import net.kronoz.odyssey.net.BossHudUpdatePayload;
+import net.kronoz.odyssey.net.CineNetworking;
 import net.kronoz.odyssey.particle.SentryShieldFullParticle;
+import net.kronoz.odyssey.systems.cinematics.runtime.BootstrapScenes;
+import net.kronoz.odyssey.systems.cinematics.runtime.CutsceneManager;
 import net.kronoz.odyssey.systems.dialogue.client.DialogueClient;
 import net.kronoz.odyssey.systems.grapple.GrappleNetworking;
 import net.kronoz.odyssey.systems.grapple.GrappleState;
@@ -108,45 +117,8 @@ public class OdysseyClient implements ClientModInitializer {
 
         WireBridge.initRenderer(); // initialise WireWorldRenderer si dispo
 
-        flingKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.odyssey.grapple_fling",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_F,
-                "key.categories.gameplay"
-        ));
 
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (flingKey.wasPressed()) {
-                GrappleNetworking.sendFling();
-            }
-        });
-
-        WorldRenderEvents.AFTER_ENTITIES.register(ctx -> {
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc.world == null || mc.player == null) return;
-
-            GrappleState st = GrappleState.get(mc.player);
-            if (!st.latched) return;
-
-            MatrixStack matrices = ctx.matrixStack();
-            VertexConsumerProvider.Immediate buffers = mc.getBufferBuilders().getEntityVertexConsumers();
-
-            Vec3d a = mc.player.getCameraPosVec(mc.getRenderTickCounter().getTickDelta(true));
-            Vec3d b = st.anchorPos;
-            if (st.latchedEntityId != -1 && mc.world.getEntityById(st.latchedEntityId) != null) {
-                var e = mc.world.getEntityById(st.latchedEntityId);
-                b = e.getPos().add(0, e.getStandingEyeHeight() * 0.5, 0);
-            }
-
-            UUID ropeId = UUID.nameUUIDFromBytes(("odyssey:grapple:" + mc.player.getUuid()).getBytes(StandardCharsets.UTF_8));
-
-            // Ensure/step via bridge (pinned B = true, pinned A = false)
-
-
-            buffers.draw();
-        });
-
-                DustManager.INSTANCE.installHooks();
+        DustManager.INSTANCE.installHooks();
         new LightDustPinger().install();
         EntityRendererRegistry.register(ModEntities.LASER_PROJECTILE, ctx -> new EntityRenderer<LaserProjectileEntity>(ctx) {
             @Override
@@ -170,10 +142,19 @@ public class OdysseyClient implements ClientModInitializer {
         GrappleHookRenderer.register();
         GrappleNetworking.registerClient();
 
+        PayloadTypeRegistry.playS2C().register(BossHudUpdatePayload.ID, BossHudUpdatePayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(BossHudClearPayload.ID,  BossHudClearPayload.CODEC);
 
+        ClientPlayNetworking.registerGlobalReceiver(BossHudUpdatePayload.ID, (payload, ctx) -> {
+            var c = ctx.client();
+            c.execute(() -> BossHudClient.put(payload.entityId(), payload.title(), payload.hp(), payload.maxHp()));
+        });
+        ClientPlayNetworking.registerGlobalReceiver(BossHudClearPayload.ID, (payload, ctx) -> {
+            var c = ctx.client();
+            c.execute(BossHudClient::clear);
+        });
+        BossHudClient.register();
         ParticleFactoryRegistry.getInstance().register(ModParticles.SENTRY_SHIELD_FULL_PARTICLE, SentryShieldFullParticle.Factory::new);
-
-
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
             ppm.add(1, BLOOM);
@@ -181,6 +162,10 @@ public class OdysseyClient implements ClientModInitializer {
 
 
         });
+        BootstrapScenes.registerAll();
+        CineNetworking.registerClient();
+        ClientTickEvents.END_CLIENT_TICK.register(client -> CutsceneManager.I.clientTick());
+
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
 
@@ -203,7 +188,6 @@ public class OdysseyClient implements ClientModInitializer {
 
         LivingEntityFeatureRendererRegistrationCallback.EVENT.register((type, renderer, helper, ctx) -> {
             if (type == EntityType.PLAYER && renderer instanceof PlayerEntityRenderer per) {
-                @SuppressWarnings("unchecked")
                 FeatureRendererContext<PlayerEntity, PlayerEntityModel<PlayerEntity>> castCtx =
                         (FeatureRendererContext<PlayerEntity, PlayerEntityModel<PlayerEntity>>) (FeatureRendererContext<?, ?>) per;
 

@@ -52,15 +52,10 @@ public class ModEntities {
                     .build()
     );
     public static final EntityType<LaserProjectileEntity> LASER_PROJECTILE =
-            Registry.register(
-                    Registries.ENTITY_TYPE,
-                    Identifier.of(Odyssey.MODID, "laser_projectile"),
-                    FabricEntityTypeBuilder.<LaserProjectileEntity>create(SpawnGroup.MISC, (type, world) -> new LaserProjectileEntity(type, world))
-                            .dimensions(EntityDimensions.fixed(0.1f, 0.1f))
-                            .trackRangeBlocks(96)
-                            .trackedUpdateRate(10)
-                            .build()
-            );
+            Registry.register(Registries.ENTITY_TYPE, Identifier.of("odyssey","laser_projectile"),
+                    FabricEntityTypeBuilder.<LaserProjectileEntity>create(SpawnGroup.MISC, LaserProjectileEntity::new)
+                            .dimensions(EntityDimensions.fixed(0.2f, 0.2f)).trackRangeBlocks(96).trackedUpdateRate(10).build());
+
 
     public static void init() {
         FabricDefaultAttributeRegistry.register(APOSTASY, ApostasyEntity.createAttributes());
