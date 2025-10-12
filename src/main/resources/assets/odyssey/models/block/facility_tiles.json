@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_column",
+  "textures": {
+    "end": "odyssey:block/facility_tiles",
+    "side": "odyssey:block/facility_tiles"
+  }
+}

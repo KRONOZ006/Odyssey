@@ -1,0 +1,15 @@
+{
+  "variants": {
+    "light_level=5":  { "model": "odyssey:block/energy_barrier_5" },
+    "light_level=6":  { "model": "odyssey:block/energy_barrier_6" },
+    "light_level=7":  { "model": "odyssey:block/energy_barrier_7" },
+    "light_level=8":  { "model": "odyssey:block/energy_barrier_8" },
+    "light_level=9":  { "model": "odyssey:block/energy_barrier_9" },
+    "light_level=10": { "model": "odyssey:block/energy_barrier_10" },
+    "light_level=11": { "model": "odyssey:block/energy_barrier_11" },
+    "light_level=12": { "model": "odyssey:block/energy_barrier_12" },
+    "light_level=13": { "model": "odyssey:block/energy_barrier_13" },
+    "light_level=14": { "model": "odyssey:block/energy_barrier_14" },
+    "light_level=15": { "model": "odyssey:block/energy_barrier_15" }
+  }
+}

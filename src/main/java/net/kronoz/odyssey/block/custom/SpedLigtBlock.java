@@ -44,11 +44,11 @@ public class SpedLigtBlock extends Block {
     private static final float  AL_BRIGHTNESS = 4.0f;
     private static final float  AL_DISTANCE   = 96.0f;
     private static final float  AL_ANGLE      = (float) Math.toRadians(35.0);
-    private static final double AL_SIZE_X     = 0.28;
-    private static final double AL_SIZE_Y     = 0.28;
+    private static final double AL_SIZE_X     = 0.1;
+    private static final double AL_SIZE_Y     = 0.1;
 
     private static final float  PL_BRIGHTNESS = 2.0f;
-    private static final float  PL_RADIUS     = 18.0f;
+    private static final float  PL_RADIUS     = 3.0f;
 
     private static final float CLR_R = 1f, CLR_G = 1f, CLR_B = 1f;
 

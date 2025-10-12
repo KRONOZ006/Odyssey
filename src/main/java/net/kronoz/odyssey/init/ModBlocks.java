@@ -8,6 +8,7 @@ import net.kronoz.odyssey.block.custom.LightBlock;
 import net.kronoz.odyssey.entity.MapBlockEntity;
 import net.minecraft.block.*;
 import net.minecraft.block.entity.BlockEntityType;
+import net.minecraft.block.piston.PistonBehavior;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroups;
@@ -27,6 +28,7 @@ public class ModBlocks {
     public static final Block SCARRED_VERDIGRIS_SHEATHING  = registerBlock("scarred_verdigris_sheathing", new PillarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block FACILITY_PILLAR_BLOCK  = registerBlock("facility_pillar", new FacilityPIllarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block LARGE_FACILITY_PILLAR_BLOCK = registerBlock("large_facility_pillar", new PillarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK).nonOpaque()));
+    public static final Block FACILITY_TILES = registerBlock("facility_tiles", new PillarBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block FACILITY_REBAR_BLOCK = registerBlock("facility_rebar", new Block(AbstractBlock.Settings.copy(Blocks.WAXED_COPPER_GRATE)));
     public static final Block ELEVATOR  = registerBlock("elevator", new ElevatorBlock(FabricBlockSettings.create().strength(2.0f)));
     public static final Block SLIDING_DOOR  = registerBlock("sliding_door", new SlidingDoorBlock(FabricBlockSettings.create().strength(2.0f)));
@@ -34,6 +36,9 @@ public class ModBlocks {
     public static final Block PYROXENE  = registerBlock("pyroxene", new Block(AbstractBlock.Settings.copy(Blocks.TUFF)));
     public static final Block SEQUENCEB  = registerBlock("sequencer", new SequencerBlock(AbstractBlock.Settings.copy(Blocks.TUFF)));
     public static final Block SPEDBLOCK  = registerBlock("spedblock", new SpedLigtBlock(AbstractBlock.Settings.copy(Blocks.TUFF)));
+    public static final Block ENERGY_EMITTER  = registerBlock("energy_emitter", new EnergyEmitterBlock(AbstractBlock.Settings.copy(Blocks.TUFF)));
+    public static final Block ENERGY_BARRIER  = registerBlock("energy_barrier", new EnergyBarrierBlock(AbstractBlock.Settings.create().nonOpaque().strength(-1.0f, 3600000f).pistonBehavior(PistonBehavior.BLOCK).emissiveLighting((state, world, pos) -> true)
+            .strength(-1.0f).luminance(state -> state.get(EnergyBarrierBlock.LIGHT_LEVEL))));
 
 
     public static final Block MAP_BLOCK = registerBlock(
