@@ -71,7 +71,7 @@ public final class BossHudClient implements HudRenderCallback {
         int dh = Math.round(fullH * scale);
 
         int baseX = (sw - dw) / 2;
-        int baseY = -10;
+        int baseY = 0;
 
         int sx = 0, sy = 0;
         long now = Util.getMeasuringTimeMs();

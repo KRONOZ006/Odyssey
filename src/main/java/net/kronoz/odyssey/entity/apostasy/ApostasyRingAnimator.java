@@ -42,8 +42,8 @@ public final class ApostasyRingAnimator {
         State st = STATES.computeIfAbsent(id, i->{
             State ns=new State(0x9E3779B97F4A7C15L ^ i);
             ns.r1.phaseOffset = ns.rnd.nextInt(15);
-            ns.r2.phaseOffset = 20 + ns.rnd.nextInt(15);
-            ns.r3.phaseOffset = 10 + ns.rnd.nextInt(15);
+            ns.r2.phaseOffset = 10 + ns.rnd.nextInt(15);
+            ns.r3.phaseOffset = 5 + ns.rnd.nextInt(15);
             ns.r1.target=new Vec3(); ns.r2.target=new Vec3(); ns.r3.target=new Vec3();
             ns.r1.current=new Vec3(0,0,0); ns.r2.current=new Vec3(0,0,0); ns.r3.current=new Vec3(0,0,0);
             return ns;

@@ -51,7 +51,6 @@ public class ApostasyEntity extends PathAwareEntity implements GeoEntity {
 
     @Override
     protected void initGoals() {
-        // FIX: do not reassign goalSelector; just add your goal
         this.goalSelector.add(1, new BossBrain());
     }
 
@@ -108,7 +107,7 @@ public class ApostasyEntity extends PathAwareEntity implements GeoEntity {
 
     private void hoverAt4() {
         double g = sampleGroundYPlus(getX(), getY(), getZ());
-        double ty = g + 4.0;
+        double ty = g + 8.0;
         double dy = ty - getY();
         double vy = MathHelper.clamp(dy * 0.25, -0.35, 0.35);
         setVelocity(getVelocity().x * 0.9, vy, getVelocity().z * 0.9);
@@ -188,7 +187,7 @@ public class ApostasyEntity extends PathAwareEntity implements GeoEntity {
             e.setOwner(this);
             e.refreshPositionAndAngles(spawn.x, spawn.y, spawn.z, 0f, 0f);
             e.setVelocity(dir.x, dir.y, dir.z, 2.8f, 0.0f);
-            e.setDamage(6.0f);
+            e.setDamage(10.0f);
             e.setLifetime(60);
             this.getWorld().spawnEntity(e);
             this.getWorld().playSound(null, getBlockPos(), net.minecraft.sound.SoundEvents.BLOCK_BEACON_ACTIVATE,
@@ -201,7 +200,7 @@ public class ApostasyEntity extends PathAwareEntity implements GeoEntity {
         var s = sw();
         if (s == null) return;
 
-        double rad = 12.0;
+        double rad = 20.0;
         for (var p : s.getPlayers(pl -> !pl.isSpectator() && pl.squaredDistanceTo(this) <= rad*rad)) {
             var n = p.getPos().subtract(this.getPos());
             n = (n.lengthSquared() < 1e-6) ? new net.minecraft.util.math.Vec3d(0,0,0) : n.normalize();
