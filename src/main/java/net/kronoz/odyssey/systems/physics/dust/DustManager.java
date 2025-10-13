@@ -1,4 +1,4 @@
-package net.kronoz.odyssey.systems.physics;
+package net.kronoz.odyssey.systems.physics.dust;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;

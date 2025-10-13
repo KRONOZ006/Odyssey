@@ -75,6 +75,7 @@ dependencies {
     modImplementation(rootProject.files("src/main/resources/META-INF/jars/geckolib-fabric-1.21.1-4.8.2.jar"))
     modImplementation(rootProject.files("src/main/resources/META-INF/jars/midnightlib-1.7.5-fabric+1.21.1.jar"))
     modImplementation(rootProject.files("src/main/resources/META-INF/jars/modmenu-11.0.3.jar"))
+    modImplementation(rootProject.files("src/main/resources/META-INF/jars/sound-physics-remastered-fabric-1.21.1-1.5.1.jar"))
 }
 
 processResources {

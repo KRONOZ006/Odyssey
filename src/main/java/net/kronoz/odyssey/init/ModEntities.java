@@ -55,6 +55,16 @@ public class ModEntities {
             Registry.register(Registries.ENTITY_TYPE, Identifier.of("odyssey","laser_projectile"),
                     FabricEntityTypeBuilder.<LaserProjectileEntity>create(SpawnGroup.MISC, LaserProjectileEntity::new)
                             .dimensions(EntityDimensions.fixed(0.2f, 0.2f)).trackRangeBlocks(96).trackedUpdateRate(10).build());
+    public static final EntityType<GroundDecalEntity> GROUND_DECAL = Registry.register(
+    Registries.ENTITY_TYPE,
+            Identifier.of("odyssey","ground_marker"),
+    EntityType.Builder.<GroundDecalEntity>create(GroundDecalEntity::new, SpawnGroup.MISC)
+        .dimensions(0.0f, 0.0f)
+        .maxTrackingRange(128)
+        .trackingTickInterval(1)
+        .build()
+);
+
 
 
     public static void init() {

@@ -8,10 +8,13 @@
   ],
   "client": [
     "CameraMixin",
+    "CameraShakeMixin",
     "GameRendererMixin",
+    "GameRendererShakeMixin",
     "HeldItemFeatureRendererMixin",
     "HeldItemRendererMixin",
     "ItemRendererMixin",
+    "LightningEntityRendererMixin",
     "ModelLoaderMixin",
     "PlayerEntityModelMixin"
   ],

@@ -3435,7 +3435,7 @@
 				},
 				{
 					"name": "cornerarmortopright",
-					"parent": "body",
+					"parent": "mainhead",
 					"pivot": [-25.75, 55.75, -8],
 					"cubes": [
 						{
@@ -3491,7 +3491,7 @@
 				},
 				{
 					"name": "cornerarmorbottomright",
-					"parent": "body",
+					"parent": "mainhead",
 					"pivot": [25.75, 4.25, -8],
 					"cubes": [
 						{
@@ -3547,7 +3547,7 @@
 				},
 				{
 					"name": "cornerarmortopleft",
-					"parent": "body",
+					"parent": "mainhead",
 					"pivot": [25.75, 55.75, -8],
 					"cubes": [
 						{
@@ -3603,7 +3603,7 @@
 				},
 				{
 					"name": "cornerarmorbottomleft",
-					"parent": "body",
+					"parent": "mainhead",
 					"pivot": [25.75, 4.25, -8],
 					"cubes": [
 						{

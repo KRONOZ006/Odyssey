@@ -1,4 +1,4 @@
-package net.kronoz.odyssey.systems.physics;
+package net.kronoz.odyssey.systems.physics.dust;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.kronoz.odyssey.Odyssey;

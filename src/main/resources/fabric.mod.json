@@ -52,6 +52,9 @@
     },
     {
       "file": "META-INF/jars/modmenu-11.0.3.jar"
+    },
+    {
+      "file": "META-INF/jars/sound-physics-remastered-fabric-1.21.1-1.5.1.jar"
     }
   ]
 }

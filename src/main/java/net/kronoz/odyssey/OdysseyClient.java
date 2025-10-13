@@ -1,25 +1,20 @@
 package net.kronoz.odyssey;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import eu.midnightdust.lib.config.MidnightConfig;
-import foundry.veil.Veil;
 import foundry.veil.api.client.render.VeilRenderSystem;
-import foundry.veil.api.client.render.dynamicbuffer.DynamicBufferType;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.kronoz.odyssey.block.SequencerRegistry;
 import net.kronoz.odyssey.block.custom.SimpleBlockLightManager;
 import net.kronoz.odyssey.client.ClientElevatorAssist;
 import net.kronoz.odyssey.config.OdysseyConfig;
+import net.kronoz.odyssey.entity.GroundDecalRenderer;
 import net.kronoz.odyssey.entity.MapBlockEntityRenderer;
 import net.kronoz.odyssey.entity.apostasy.ApostasyRenderer;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileEntity;
@@ -32,17 +27,16 @@ import net.kronoz.odyssey.hud.death.DeathUICutscene;
 import net.kronoz.odyssey.init.*;
 import net.kronoz.odyssey.item.client.renderer.GrappleHookRenderer;
 import net.kronoz.odyssey.net.BossHudClearPayload;
-import net.kronoz.odyssey.net.BossHudPackets;
 import net.kronoz.odyssey.net.BossHudUpdatePayload;
 import net.kronoz.odyssey.net.CineNetworking;
 import net.kronoz.odyssey.particle.SentryShieldFullParticle;
+import net.kronoz.odyssey.systems.cam.ShakeEvents;
 import net.kronoz.odyssey.systems.cinematics.runtime.BootstrapScenes;
 import net.kronoz.odyssey.systems.cinematics.runtime.CutsceneManager;
 import net.kronoz.odyssey.systems.dialogue.client.DialogueClient;
 import net.kronoz.odyssey.systems.grapple.GrappleNetworking;
-import net.kronoz.odyssey.systems.grapple.GrappleState;
-import net.kronoz.odyssey.systems.physics.DustManager;
-import net.kronoz.odyssey.systems.physics.LightDustPinger;
+import net.kronoz.odyssey.systems.physics.dust.DustManager;
+import net.kronoz.odyssey.systems.physics.dust.LightDustPinger;
 import net.kronoz.odyssey.systems.physics.jetpack.JetpackSystem;
 import net.kronoz.odyssey.systems.physics.wire.*;
 import net.minecraft.client.MinecraftClient;
@@ -53,13 +47,10 @@ import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.PlayerEntityRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
-import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
-import org.lwjgl.glfw.GLFW;
 
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -86,6 +77,7 @@ public class OdysseyClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        ShakeEvents.registerClient();
         ClientElevatorAssist.init();
         WireWorldRenderer.init();
         WireClientMirror.init();
@@ -110,6 +102,7 @@ public class OdysseyClient implements ClientModInitializer {
             net.kronoz.odyssey.systems.physics.jetpack.JetpackExhaustManager.renderAll(ms, vcp, td);
             ms.pop();
         });
+        EntityRendererRegistry.register(ModEntities.GROUND_DECAL, GroundDecalRenderer::new);
 
         DeathUICutscene.register();
 

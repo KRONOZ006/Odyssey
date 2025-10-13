@@ -1,4 +1,4 @@
-package net.kronoz.odyssey.systems.physics;
+package net.kronoz.odyssey.systems.physics.dust;
 
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.VertexConsumer;
