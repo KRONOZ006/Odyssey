@@ -1,6 +1,5 @@
 package net.kronoz.odyssey.entity;
 
-import net.kronoz.odyssey.block.custom.DecalLightClient;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
@@ -22,7 +21,17 @@ public class GroundDecalRenderer extends EntityRenderer<GroundDecalEntity> {
                        VertexConsumerProvider buffers, int packedLight) {
         int duration = e.getDuration();
         float t = (e.age + tickDelta) / Math.max(1f, duration);
-        if (t >= 1f) { DecalLightClient.remove(e.getId()); return; }
+        if (t >= 1f || e.isRemoved()) { VeilLightCompat.remove(e.getId(), "decal-finished"); return; }
+
+        int remaining = Math.max(1, duration - e.age);
+        VeilLightCompat.updateWithLifetime(
+                e.getId(),
+                e.getX(), e.getY() + 0.2, e.getZ(),
+                1.0f, 0.0f, 0.0f,
+                1.2f * (1.0f - t),
+                4.0f + 6.0f * t,
+                remaining
+        );
 
         float alpha = 1.0f - t;
         float scale = 1.0f + t;
@@ -41,21 +50,17 @@ public class GroundDecalRenderer extends EntityRenderer<GroundDecalEntity> {
         VertexConsumer vc = buffers.getBuffer(RenderLayer.getEntityTranslucent(TEX));
         float u0=0f,v0=0f,u1=1f,v1=1f;
 
-        vc.vertex(pose, -r, -r, 0).color(1f,1f,1f,alpha).texture(u0,v0)
-                .overlay(OverlayTexture.DEFAULT_UV).light(0x00F000F0).normal(entry, 0,0,1);
-        vc.vertex(pose, -r,  r, 0).color(1f,1f,1f,alpha).texture(u0,v1)
-                .overlay(OverlayTexture.DEFAULT_UV).light(0x00F000F0).normal(entry, 0,0,1);
-        vc.vertex(pose,  r,  r, 0).color(1f,1f,1f,alpha).texture(u1,v1)
-                .overlay(OverlayTexture.DEFAULT_UV).light(0x00F000F0).normal(entry, 0,0,1);
-        vc.vertex(pose,  r, -r, 0).color(1f,1f,1f,alpha).texture(u1,v0)
-                .overlay(OverlayTexture.DEFAULT_UV).light(0x00F000F0).normal(entry, 0,0,1);
+        vc.vertex(pose, -r, -r, 0).color(1f,1f,1f,alpha).texture(u0,v0).overlay(OverlayTexture.DEFAULT_UV).light(0x00F000F0).normal(entry, 0,0,1);
+        vc.vertex(pose, -r,  r, 0).color(1f,1f,1f,alpha).texture(u0,v1).overlay(OverlayTexture.DEFAULT_UV).light(0x00F000F0).normal(entry, 0,0,1);
+        vc.vertex(pose,  r,  r, 0).color(1f,1f,1f,alpha).texture(u1,v1).overlay(OverlayTexture.DEFAULT_UV).light(0x00F000F0).normal(entry, 0,0,1);
+        vc.vertex(pose,  r, -r, 0).color(1f,1f,1f,alpha).texture(u1,v0).overlay(OverlayTexture.DEFAULT_UV).light(0x00F000F0).normal(entry, 0,0,1);
 
         matrices.pop();
 
         float Lr = 1.0f, Lg = 0.0f, Lb = 0.0f;
-        float brightness = 1.2f * (1.0f - t);
+        float brightness = 0.2f * (1.0f - t);
         float radius = 4.0f + 6.0f * t;
-        DecalLightClient.update(e.getId(), e.getX(), e.getY() + 0.2, e.getZ(), Lr, Lg, Lb, brightness, radius);
+        VeilLightCompat.update(e.getId(), e.getX(), e.getY() + 0.2, e.getZ(), Lr, Lg, Lb, brightness, radius);
 
         super.render(e, yaw, tickDelta, matrices, buffers, packedLight);
     }

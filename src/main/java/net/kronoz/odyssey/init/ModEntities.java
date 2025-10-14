@@ -63,7 +63,16 @@ public class ModEntities {
         .maxTrackingRange(128)
         .trackingTickInterval(1)
         .build()
-);
+    );
+    public static final EntityType<DebrisBlockEntity> DEBRIS_BLOCK = Registry.register(
+            Registries.ENTITY_TYPE,
+            Identifier.of("odyssey","debris_block"),
+            EntityType.Builder.<DebrisBlockEntity>create(DebrisBlockEntity::new, SpawnGroup.MISC)
+                    .dimensions(0.98f, 0.98f) // roughly a block
+                    .maxTrackingRange(128)
+                    .trackingTickInterval(1)
+                    .build()
+    );
 
 
 

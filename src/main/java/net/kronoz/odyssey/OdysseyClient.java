@@ -14,8 +14,10 @@ import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.kronoz.odyssey.block.custom.SimpleBlockLightManager;
 import net.kronoz.odyssey.client.ClientElevatorAssist;
 import net.kronoz.odyssey.config.OdysseyConfig;
+import net.kronoz.odyssey.entity.DebrisBlockRenderer;
 import net.kronoz.odyssey.entity.GroundDecalRenderer;
 import net.kronoz.odyssey.entity.MapBlockEntityRenderer;
+import net.kronoz.odyssey.entity.VeilLightCompat;
 import net.kronoz.odyssey.entity.apostasy.ApostasyRenderer;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileEntity;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileRenderer;
@@ -63,18 +65,6 @@ public class OdysseyClient implements ClientModInitializer {
     private static final Identifier BLOOM = Identifier.of(Odyssey.MODID, "bloom");
     private boolean fogadded = false;
 
-
-    private KeyBinding flingKey;
-    private static final WireBridge.Def ROPE = new WireBridge.Def(
-            14,     // segments
-            0.035f, // thickness
-            0.85f,  // stiffness
-            0.18f,  // damping
-            0.00f,  // gravity
-            0.02f,  // drag
-            1.08f   // maxStretch
-    );
-
     @Override
     public void onInitializeClient() {
         ShakeEvents.registerClient();
@@ -105,10 +95,9 @@ public class OdysseyClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.GROUND_DECAL, GroundDecalRenderer::new);
 
         DeathUICutscene.register();
-
         GrappleHookRenderer.register();
-
-        WireBridge.initRenderer(); // initialise WireWorldRenderer si dispo
+        VeilLightCompat.initClient();
+        WireBridge.initRenderer();
 
 
         DustManager.INSTANCE.installHooks();
@@ -123,11 +112,13 @@ public class OdysseyClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.SENTRY, SentryRenderer::new);
         EntityRendererRegistry.register(ModEntities.SENTINEL, SentinelRenderer::new);
         EntityRendererRegistry.register(ModEntities.LASER_PROJECTILE, LaserProjectileRenderer::new);
+        EntityRendererRegistry.register(ModEntities.DEBRIS_BLOCK, DebrisBlockRenderer::new);
 
         BlockEntityRendererFactories.register(ModBlocks.MAP_BLOCK_ENTITY, MapBlockEntityRenderer::new);
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.MAP_BLOCK, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ALARM, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.LIGHT1, RenderLayer.getCutoutMipped());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.LIGHT2, RenderLayer.getCutoutMipped());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.FACILITY_REBAR_BLOCK, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ENERGY_BARRIER, RenderLayer.getCutout());
 

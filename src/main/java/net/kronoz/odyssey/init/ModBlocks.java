@@ -21,6 +21,7 @@ import static net.kronoz.odyssey.Odyssey.id;
 public class ModBlocks {
 
     public static final Block ALARM  = registerBlock("alarm", new AlarmBlock(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
+    public static final Block LIGHT2  = registerBlock("light_2", new Light2Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block VERDIGRIS_BLOCK  = registerBlock("verdigris_block", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block VERDIGRIS_PANNEL  = registerBlock("verdigris_pannel", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
     public static final Block VERDIGRIS_PLATES  = registerBlock("verdigris_plates", new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK)));
