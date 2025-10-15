@@ -38,6 +38,15 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     private static final int HUGE_LASER_INTERVAL = 65;
     private static final double HUGE_LASER_SPEED = 2.75;
     private static final double SMALL_LASER_SPEED = 2.15;
+    private static final int EYE_BURST_INTERVAL = 6;
+    private static final int EYE_BURST_LIFETIME = 60;
+    private static final double EYE_BURST_DAMAGE = 4.0;
+    private static final double EYE_MUZZLE_FORWARD = 0.60;
+    private static final double EYE_ALIGN_DEG = 22.5;
+
+    private int eyeBurstShotsLeft = 0;
+    private int eyeBurstTimer = 0;
+    private int eyeBurstTargetId = -1;
 
     private static final int TELEGRAPH_TICKS = 20;
     private static final int P2_SINGLE_COOLDOWN = 60;
@@ -119,6 +128,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
             case P2 -> handlePhase2(target);
             case P3, P4 -> handlePhase3(target);
         }
+        tickEyeBurst();
     }
 
     private void repulsePlayers() {
@@ -142,12 +152,13 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
 
     private void handlePhase1(PlayerEntity target) {
         if (ringShotCooldown-- <= 0) { ringShotCooldown = RING_SHOT_INTERVAL; fireRingsBurst(target); }
-        if (this.random.nextFloat() < 0.02f && hugeLaserCooldown <= 0) { hugeLaserCooldown = 50; fireEyeHugeLaser(target); }
-        else if (hugeLaserCooldown > 0) hugeLaserCooldown--;
+        if (this.random.nextFloat() < 0.10f) tryStartEyeBurst(target, 6);
+        if (this.random.nextFloat() < 0.03f) fireShockwaveAtPlayer(target);
     }
 
     private void handlePhase2(PlayerEntity target) {
-        if (ringShotCooldown-- <= 0) { ringShotCooldown = RING_SHOT_INTERVAL; fireRingsBurst(target); }
+        if (hugeLaserCooldown-- <= 0) { hugeLaserCooldown = HUGE_LASER_INTERVAL; fireEyeHugeLaser(target); }
+        if (this.random.nextFloat() < 0.14f) tryStartEyeBurst(target, 8);
 
         if (lightningCooldown-- <= 0) {
             lightningCooldown = P2_SINGLE_COOLDOWN;
@@ -158,6 +169,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
                 spawnDebrisCloud(sw, strikePos, pulled, 4);
             }
         }
+        if (this.random.nextFloat() < 0.05f) fireShockwaveAtPlayer(target);
 
         boolean near = this.squaredDistanceTo(target) <= (LINE_TRIGGER_RANGE * LINE_TRIGGER_RANGE);
         if (near && this.random.nextFloat() < 0.05f) {
@@ -168,11 +180,9 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         else if (hugeLaserCooldown > 0) hugeLaserCooldown--;
     }
 
-
-
     private void handlePhase3(PlayerEntity target) {
         if (hugeLaserCooldown-- <= 0) { hugeLaserCooldown = HUGE_LASER_INTERVAL; fireEyeHugeLaser(target); }
-        if (ringShotCooldown-- <= 0) { ringShotCooldown = RING_SHOT_INTERVAL + 8; fireRingsBurst(target); }
+        if (this.random.nextFloat() < 0.14f) tryStartEyeBurst(target, 8);
 
         if (lightningCooldown-- <= 0) {
             lightningCooldown = P3_ZONE_COOLDOWN;
@@ -184,6 +194,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
                 delay += 6;
             }
         }
+        if (this.random.nextFloat() < 0.05f) fireShockwaveAtPlayer(target);
 
         boolean near = this.squaredDistanceTo(target) <= (LINE_TRIGGER_RANGE * LINE_TRIGGER_RANGE);
         if (near && this.random.nextFloat() < 0.07f) {
@@ -191,6 +202,81 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         }
     }
 
+    private boolean isEyeAlignedWith(PlayerEntity target, double maxDeg) {
+        float headYaw = this.getHeadYaw();
+        double dx = target.getX() - this.getX();
+        double dz = target.getZ() - this.getZ();
+        double bearingDeg = Math.toDegrees(Math.atan2(dz, dx)) - 90.0;
+        double d = MathHelper.wrapDegrees(bearingDeg - headYaw);
+        return Math.abs(d) <= maxDeg;
+    }
+
+    private Vec3d eyeMuzzle() {
+        return this.getPos().add(0, this.getStandingEyeHeight() + 0.4, 0);
+    }
+
+    private Vec3d aimDirectionFor(PlayerEntity target) {
+        Vec3d vel = target.getVelocity();
+        if (vel.lengthSquared() > 0.05) return vel.normalize();
+        Vec3d eye = eyeMuzzle();
+        Vec3d aim = target.getPos().add(0, target.getStandingEyeHeight() * 0.6, 0);
+        Vec3d dir = aim.subtract(eye);
+        double L2 = dir.lengthSquared();
+        if (L2 < 1e-6) return new Vec3d(0, 0, 1);
+        return dir.normalize();
+    }
+
+    private void tryStartEyeBurst(PlayerEntity target, int shots) {
+        if (eyeBurstShotsLeft > 0) return;
+        if (!isEyeAlignedWith(target, EYE_ALIGN_DEG)) return;
+        eyeBurstShotsLeft = Math.max(1, shots);
+        eyeBurstTimer = 0;
+        eyeBurstTargetId = target.getId();
+    }
+
+    private void tickEyeBurst() {
+        if (!(this.getWorld() instanceof ServerWorld sw)) return;
+        if (eyeBurstShotsLeft <= 0) return;
+
+        PlayerEntity p = (PlayerEntity) sw.getEntityById(eyeBurstTargetId);
+        if (p == null || !p.isAlive()) { eyeBurstShotsLeft = 0; return; }
+
+        boolean aligned = isEyeAlignedWith(p, EYE_ALIGN_DEG * 1.25);
+        if (!aligned) { eyeBurstTimer = Math.max(eyeBurstTimer - 1, 0); return; }
+
+        if (eyeBurstTimer-- <= 0) {
+            fireOneEyeLaser(p);
+            eyeBurstShotsLeft--;
+            eyeBurstTimer = EYE_BURST_INTERVAL;
+            if (eyeBurstShotsLeft <= 0) eyeBurstTargetId = -1;
+        }
+    }
+
+    private void fireOneEyeLaser(PlayerEntity target) {
+        if (!(this.getWorld() instanceof ServerWorld sw)) return;
+        Vec3d eye = eyeMuzzle();
+        Vec3d dir = aimDirectionFor(target);
+        Vec3d muzzle = eye.add(dir.multiply(EYE_MUZZLE_FORWARD));
+
+        LaserProjectileEntity laser = ModEntities.LASER_PROJECTILE.create(sw);
+        if (laser == null) return;
+        laser.refreshPositionAndAngles(muzzle.x, muzzle.y, muzzle.z, 0, 0);
+        laser.setOwner(this);
+        laser.setVelocity(dir.multiply(2.6));
+        laser.setDamage(EYE_BURST_DAMAGE);
+        laser.setLifetime(EYE_BURST_LIFETIME);
+        sw.spawnEntity(laser);
+    }
+
+    private void fireShockwaveAtPlayer(PlayerEntity target) {
+        if (!(this.getWorld() instanceof ServerWorld sw)) return;
+        var e = ModEntities.SHOCKWAVE.create(sw);
+        if (e == null) return;
+        double py = Math.floor(target.getY()) + 0.05;
+        e.refreshPositionAndAngles(this.getX(), py, this.getZ(), 0, 0);
+        e.setup(50f, 40, py, this.getId());
+        sw.spawnEntity(e);
+    }
 
     private BlockPos randomPosAround(int minR, int maxR) {
         double a = this.random.nextDouble() * Math.PI * 2;
@@ -249,7 +335,6 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
                         sw.spawnEntity(bolt);
                         sw.emitGameEvent(GameEvent.LIGHTNING_STRIKE, strikePos, GameEvent.Emitter.of(this));
                         causeDebrisOnLightning(sw, strikePos);
-
                     }
                 }
             } else {
@@ -260,6 +345,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         pendingStrikes.addAll(next);
         pendingStrikes.addAll(toAdd);
     }
+
     private void scheduleLightningLineTowards(PlayerEntity target, int nodes, double step, int tickDelayStep) {
         BlockPos start = safeStrikeAt(BlockPos.ofFloored(getX(), getY(), getZ()));
         Vec3d startV = new Vec3d(start.getX() + 0.5, start.getY(), start.getZ() + 0.5);
@@ -276,9 +362,6 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         }
     }
 
-
-
-
     private void causeDebrisOnLightning(ServerWorld sw, BlockPos strikePos) {
         java.util.ArrayList<BlockState> list = new java.util.ArrayList<>();
         BlockState ground = groundStateAt(sw, strikePos);
@@ -286,6 +369,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         list.addAll(pullDownColumnBlocks(sw, strikePos, 12, 6));
         spawnDebrisCloud(sw, strikePos, list, 6);
     }
+
     private BlockState groundStateAt(ServerWorld sw, BlockPos pos) {
         BlockPos p = pos;
         for (int i = 0; i < 3; i++) {
@@ -295,7 +379,6 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         }
         return Blocks.COBBLESTONE.getDefaultState();
     }
-
 
     private BlockPos randomPosInRadius(BlockPos center, int radius) {
         double a = this.random.nextDouble() * Math.PI * 2.0;

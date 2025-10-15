@@ -14,10 +14,7 @@ import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.kronoz.odyssey.block.custom.SimpleBlockLightManager;
 import net.kronoz.odyssey.client.ClientElevatorAssist;
 import net.kronoz.odyssey.config.OdysseyConfig;
-import net.kronoz.odyssey.entity.DebrisBlockRenderer;
-import net.kronoz.odyssey.entity.GroundDecalRenderer;
-import net.kronoz.odyssey.entity.MapBlockEntityRenderer;
-import net.kronoz.odyssey.entity.VeilLightCompat;
+import net.kronoz.odyssey.entity.*;
 import net.kronoz.odyssey.entity.apostasy.ApostasyRenderer;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileEntity;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileRenderer;
@@ -113,6 +110,7 @@ public class OdysseyClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.SENTINEL, SentinelRenderer::new);
         EntityRendererRegistry.register(ModEntities.LASER_PROJECTILE, LaserProjectileRenderer::new);
         EntityRendererRegistry.register(ModEntities.DEBRIS_BLOCK, DebrisBlockRenderer::new);
+        EntityRendererRegistry.register(ModEntities.SHOCKWAVE, ShockwaveRenderer::new);
 
         BlockEntityRendererFactories.register(ModBlocks.MAP_BLOCK_ENTITY, MapBlockEntityRenderer::new);
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.MAP_BLOCK, RenderLayer.getCutout());

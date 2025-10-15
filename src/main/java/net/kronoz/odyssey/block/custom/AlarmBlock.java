@@ -13,9 +13,14 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
+import net.minecraft.block.Waterloggable;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.fluid.FluidState;
+import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.state.StateManager;
+import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.BlockMirror;
@@ -37,8 +42,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AlarmBlock extends Block {
+public class AlarmBlock extends Block implements Waterloggable {
     public static final DirectionProperty FACING = Properties.FACING;
+    public static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
 
     private static final Map<Direction, VoxelShape> DIR_SHAPES =
             CollisionShapeHelper.loadDirectionalCollisionFromModelJson(Odyssey.MODID, "alarm");
@@ -57,29 +63,51 @@ public class AlarmBlock extends Block {
     private static final Map<BlockPos, PointLightData> POINT_DATA = new HashMap<>();
 
     private static final Vec3d BONE_LIGHT_OFFSET = new Vec3d(0.5, 0.8, 0.5);
-
-    // 2s down (5->0), 2s up (0->5): total 4s period. omega = π / HALF_PERIOD.
-    private static final float HALF_PERIOD_SECONDS = 2.0f;
-    private static float pulseTime = 0f;
-
     private static boolean hooks = false;
     private static boolean rescanPending = false;
     private static boolean rendererWasReady = false;
 
     public AlarmBlock(Settings settings) {
         super(settings);
-        setDefaultState(getStateManager().getDefaultState().with(FACING, Direction.NORTH));
+        setDefaultState(getStateManager().getDefaultState()
+                .with(FACING, Direction.NORTH)
+                .with(WATERLOGGED, false));
         ensureHooks();
     }
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, WATERLOGGED);
     }
 
     @Override
     public @Nullable BlockState getPlacementState(ItemPlacementContext ctx) {
-        return getDefaultState().with(FACING, ctx.getSide());
+        boolean water = ctx.getWorld().getFluidState(ctx.getBlockPos()).getFluid() == Fluids.WATER;
+        return getDefaultState().with(FACING, ctx.getSide()).with(WATERLOGGED, water);
+    }
+
+    @Override
+    public BlockState rotate(BlockState state, BlockRotation rotation) {
+        return state.with(FACING, rotation.rotate(state.get(FACING)));
+    }
+
+    @Override
+    public BlockState mirror(BlockState state, BlockMirror mirror) {
+        return state.rotate(mirror.getRotation(state.get(FACING)));
+    }
+
+    @Override
+    public BlockState getStateForNeighborUpdate(BlockState state, Direction dir, BlockState neighborState,
+                                                WorldAccess world, BlockPos pos, BlockPos neighborPos) {
+        if (state.get(WATERLOGGED)) {
+            world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+        }
+        return super.getStateForNeighborUpdate(state, dir, neighborState, world, pos, neighborPos);
+    }
+
+    @Override
+    public FluidState getFluidState(BlockState state) {
+        return state.get(WATERLOGGED) ? Fluids.WATER.getStill(false) : super.getFluidState(state);
     }
 
     @Override
@@ -108,31 +136,19 @@ public class AlarmBlock extends Block {
     }
 
     @Override
-    public BlockState rotate(BlockState state, BlockRotation rotation) {
-        return state.with(FACING, rotation.rotate(state.get(FACING)));
-    }
-
-    @Override
-    public BlockState mirror(BlockState state, BlockMirror mirror) {
-        return state.rotate(mirror.getRotation(state.get(FACING)));
-    }
-
-    @Override
     public VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         VoxelShape s = DIR_SHAPES.get(state.get(FACING));
-        return s != null ? s : VoxelShapes.empty();
+        return s != null ? s : VoxelShapes.fullCube();
     }
 
     @Override
     public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         VoxelShape s = DIR_SHAPES.get(state.get(FACING));
-        return s != null ? s : VoxelShapes.empty();
+        return s != null ? s : VoxelShapes.fullCube();
     }
 
     @Override
-    public BlockRenderType getRenderType(BlockState state) {
-        return BlockRenderType.MODEL;
-    }
+    public BlockRenderType getRenderType(BlockState state) { return BlockRenderType.MODEL; }
 
     private static void spawnLightsIfNeeded(World world, BlockPos pos) {
         if (!world.isClient) return;
@@ -156,10 +172,8 @@ public class AlarmBlock extends Block {
                 .setRadius(PL_RADIUS);
         pl.setPosition((float) c.x, (float) c.y, (float) c.z);
 
-        LightRenderHandle<AreaLightData> ah =
-                VeilRenderSystem.renderer().getLightRenderer().addLight(al);
-        LightRenderHandle<PointLightData> ph =
-                VeilRenderSystem.renderer().getLightRenderer().addLight(pl);
+        LightRenderHandle<AreaLightData> ah = VeilRenderSystem.renderer().getLightRenderer().addLight(al);
+        LightRenderHandle<PointLightData> ph = VeilRenderSystem.renderer().getLightRenderer().addLight(pl);
 
         AREA_HANDLES.put(pos, ah);
         POINT_HANDLES.put(pos, ph);
@@ -182,105 +196,57 @@ public class AlarmBlock extends Block {
         hooks = true;
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            pulseTime = 0f;
             rescanPending = true;
             rendererWasReady = false;
         });
-
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             for (LightRenderHandle<AreaLightData> h : AREA_HANDLES.values()) if (h != null && h.isValid()) h.close();
             for (LightRenderHandle<PointLightData> h : POINT_HANDLES.values()) if (h != null && h.isValid()) h.close();
-            AREA_HANDLES.clear();
-            POINT_HANDLES.clear();
-            AREA_DATA.clear();
-            POINT_DATA.clear();
-            pulseTime = 0f;
-            rescanPending = false;
-            rendererWasReady = false;
+            AREA_HANDLES.clear(); POINT_HANDLES.clear(); AREA_DATA.clear(); POINT_DATA.clear();
+            rescanPending = false; rendererWasReady = false;
         });
-
         ClientChunkEvents.CHUNK_LOAD.register((world, chunk) -> {
             if (world == null || chunk == null) return;
             if (VeilRenderSystem.renderer() == null || VeilRenderSystem.renderer().getLightRenderer() == null) return;
             ChunkPos cpos = chunk.getPos();
-            int minY = world.getBottomY();
-            int maxY = world.getTopY();
-            int sx = cpos.getStartX();
-            int sz = cpos.getStartZ();
-            for (int y = minY; y < maxY; y++) {
-                for (int x = 0; x < 16; x++) {
+            int minY = world.getBottomY(), maxY = world.getTopY(), sx = cpos.getStartX(), sz = cpos.getStartZ();
+            for (int y = minY; y < maxY; y++)
+                for (int x = 0; x < 16; x++)
                     for (int z = 0; z < 16; z++) {
                         BlockPos bp = new BlockPos(sx + x, y, sz + z);
                         BlockState st = world.getBlockState(bp);
                         if (st.getBlock() instanceof AlarmBlock) spawnLightsIfNeeded(world, bp);
                     }
-                }
-            }
         });
-
         ClientChunkEvents.CHUNK_UNLOAD.register((world, chunk) -> {
             if (world == null || chunk == null) return;
             ChunkPos cpos = chunk.getPos();
             List<BlockPos> toRemove = new ArrayList<>();
-            for (BlockPos p : AREA_HANDLES.keySet()) {
+            for (BlockPos p : AREA_HANDLES.keySet())
                 if ((p.getX() >> 4) == cpos.x && (p.getZ() >> 4) == cpos.z) toRemove.add(p);
-            }
             for (BlockPos p : toRemove) removeLightsIfAny(p);
         });
-
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client == null || client.isPaused()) return;
-
             boolean rendererReady = VeilRenderSystem.renderer() != null && VeilRenderSystem.renderer().getLightRenderer() != null;
             if (rendererReady && !rendererWasReady) rescanPending = true;
             rendererWasReady = rendererReady;
-
             if (rescanPending && client.world != null && client.player != null && rendererReady) {
-                var w = client.world;
-                var p = client.player.getBlockPos();
-                int r = 4;
-                for (int cx = (p.getX() >> 4) - r; cx <= (p.getX() >> 4) + r; cx++) {
+                var w = client.world; var p = client.player.getBlockPos(); int r = 4;
+                for (int cx = (p.getX() >> 4) - r; cx <= (p.getX() >> 4) + r; cx++)
                     for (int cz = (p.getZ() >> 4) - r; cz <= (p.getZ() >> 4) + r; cz++) {
                         if (w.getChunkManager().getChunk(cx, cz) == null) continue;
-                        ChunkPos cpos = new ChunkPos(cx, cz);
-                        int minY = w.getBottomY();
-                        int maxY = w.getTopY();
-                        int sx = cpos.getStartX();
-                        int sz = cpos.getStartZ();
-                        for (int y = minY; y < maxY; y++) {
-                            for (int x = 0; x < 16; x++) {
+                        ChunkPos cp = new ChunkPos(cx, cz);
+                        int minY = w.getBottomY(), maxY = w.getTopY(), sx = cp.getStartX(), sz = cp.getStartZ();
+                        for (int y = minY; y < maxY; y++)
+                            for (int x = 0; x < 16; x++)
                                 for (int z = 0; z < 16; z++) {
                                     BlockPos bp = new BlockPos(sx + x, y, sz + z);
                                     BlockState st = w.getBlockState(bp);
                                     if (st.getBlock() instanceof AlarmBlock) spawnLightsIfNeeded(w, bp);
                                 }
-                            }
-                        }
                     }
-                }
                 rescanPending = false;
-            }
-
-            float dt = client.getRenderTickCounter().getLastFrameDuration();
-            pulseTime += dt;
-            float omega = (float)(Math.PI / HALF_PERIOD_SECONDS); // π/2 rad/s -> 4s total period
-            float b = 2.5f * (1.0f + (float)Math.cos(omega * pulseTime)); // [0..5], smooth
-
-            if (!rendererReady) return;
-
-            for (Map.Entry<BlockPos, AreaLightData> e : AREA_DATA.entrySet()) {
-                AreaLightData al = e.getValue();
-                if (al == null) continue;
-                al.setBrightness(b);
-                LightRenderHandle<AreaLightData> h = AREA_HANDLES.get(e.getKey());
-                if (h != null && h.isValid()) h.markDirty();
-            }
-            for (Map.Entry<BlockPos, PointLightData> e : POINT_DATA.entrySet()) {
-                PointLightData pl = e.getValue();
-                if (pl == null) continue;
-                pl.setBrightness(b);
-                LightRenderHandle<PointLightData> h = POINT_HANDLES.get(e.getKey());
-                if (h != null && h.isValid()) h.markDirty();
             }
         });
     }

@@ -4,27 +4,28 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MovementType;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileUtil;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.world.World;
 
 public class LaserProjectileEntity extends ProjectileEntity {
-    private int lifetime = 120;
-    private double damage = 0.5;
+    private double damage = 4.0;
+    private int lifetime = 60;
 
     public LaserProjectileEntity(EntityType<? extends LaserProjectileEntity> type, World world) {
         super(type, world);
         this.noClip = false;
-        this.setNoGravity(true);
     }
 
-    public void setLifetime(int life) { this.lifetime = life; }
     public void setDamage(double dmg) { this.damage = dmg; }
+    public void setLifetime(int ticks) { this.lifetime = Math.max(1, ticks); }
 
     @Override
     protected void initDataTracker(DataTracker.Builder builder) {}
@@ -32,61 +33,55 @@ public class LaserProjectileEntity extends ProjectileEntity {
     @Override
     public void tick() {
         super.tick();
+        if (this.getWorld().isClient) return;
 
-        // détection collision côté serveur uniquement
-        if (!this.getWorld().isClient) {
-            HitResult hit = ProjectileUtil.getCollision(this, this::canHitProjectileTarget);
-            if (hit.getType() != HitResult.Type.MISS) {
-                this.onCollision(hit);
-            }
-            if (this.isRemoved()) return;
-        }
-
-        // mouvement visible client + serveur
+        this.setVelocity(this.getVelocity()); // keep straight line
         this.move(MovementType.SELF, this.getVelocity());
-        this.checkBlockCollision();
 
-        if (!this.getWorld().isClient && this.age > lifetime) {
-            this.discard();
-        }
+        HitResult hr = ProjectileUtil.getCollision(this, this::canHit);
+        if (hr != null && hr.getType() != HitResult.Type.MISS) onCollision(hr);
+
+        if (this.age++ >= this.lifetime) discard();
     }
 
-    private boolean canHitProjectileTarget(Entity e) {
-        if (!e.isAlive() || e.isSpectator()) return false;
-        Entity owner = this.getOwner();
-        if (owner != null && e.getId() == owner.getId()) return false; // ignore tireur
-        return true;
+    public boolean canHit(Entity e) {
+        if (!e.isAlive()) return false;
+        Entity owner = getOwner();
+        if (owner != null && e.getId() == owner.getId()) return false;
+        return e.isAttackable();
     }
 
     @Override
     protected void onEntityHit(EntityHitResult hit) {
-        if (this.getWorld().isClient) return;
-        if (hit.getEntity() instanceof LivingEntity l) {
-            l.damage(this.getDamageSources().indirectMagic(this, this.getOwner()), (float) damage);
+        Entity e = hit.getEntity();
+        if (this.getWorld() instanceof ServerWorld sw) {
+            DamageSource src = getWorld().getDamageSources().mobProjectile(this, (LivingEntity)(getOwner() instanceof LivingEntity ? getOwner() : null));
+            e.damage(src, (float)this.damage);
         }
-        this.discard();
+        discard();
     }
 
     @Override
     protected void onBlockHit(BlockHitResult hit) {
-        if (!this.getWorld().isClient) this.discard();
+        discard();
     }
 
     @Override
     protected void onCollision(HitResult hitResult) {
         super.onCollision(hitResult);
-        if (!this.getWorld().isClient) this.discard();
+        if (hitResult.getType() == HitResult.Type.ENTITY) onEntityHit((EntityHitResult)hitResult);
+        else if (hitResult.getType() == HitResult.Type.BLOCK) onBlockHit((BlockHitResult)hitResult);
     }
 
     @Override
     protected void readCustomDataFromNbt(NbtCompound nbt) {
-        if (nbt.contains("Life")) this.lifetime = nbt.getInt("Life");
-        if (nbt.contains("Dmg"))  this.damage   = nbt.getDouble("Dmg");
+        if (nbt.contains("dmg")) damage = nbt.getDouble("dmg");
+        if (nbt.contains("life")) lifetime = nbt.getInt("life");
     }
 
     @Override
     protected void writeCustomDataToNbt(NbtCompound nbt) {
-        nbt.putInt("Life", lifetime);
-        nbt.putDouble("Dmg", damage);
+        nbt.putDouble("dmg", damage);
+        nbt.putInt("life", lifetime);
     }
 }

@@ -73,7 +73,11 @@ public class ModEntities {
                     .trackingTickInterval(1)
                     .build()
     );
-
+    public static EntityType<ShockwaveEntity> SHOCKWAVE =
+            Registry.register(Registries.ENTITY_TYPE, Identifier.of("odyssey","shockwave"),
+                    EntityType.Builder.create(ShockwaveEntity::new, SpawnGroup.MISC)
+                            .dimensions(0.1f, 0.1f).maxTrackingRange(128).trackingTickInterval(1).build()
+            );
 
 
     public static void init() {

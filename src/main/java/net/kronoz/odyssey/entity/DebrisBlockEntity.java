@@ -22,7 +22,7 @@ public class DebrisBlockEntity extends Entity {
     private BlockState state = Blocks.BARRIER.getDefaultState();
     private int lifetime = 60;
     private float rollX, rollY, rollZ;
-    private float avx, avy, avz; // °/tick
+    private float avx, avy, avz;
     private boolean onGroundDamping = true;
 
     public DebrisBlockEntity(EntityType<? extends DebrisBlockEntity> type, World world) {

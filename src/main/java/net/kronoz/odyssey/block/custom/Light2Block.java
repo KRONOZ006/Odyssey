@@ -13,9 +13,13 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ShapeContext;
+import net.minecraft.block.Waterloggable;
+import net.minecraft.fluid.FluidState;
+import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.state.StateManager;
+import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
 import net.minecraft.util.BlockMirror;
@@ -35,8 +39,9 @@ import org.joml.Quaternionf;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Light2Block extends Block {
+public class Light2Block extends Block implements Waterloggable {
     public static final DirectionProperty FACING = Properties.FACING;
+    public static final BooleanProperty WATERLOGGED = Properties.WATERLOGGED;
 
     private static final Map<Direction, VoxelShape> DIR_SHAPES =
             CollisionShapeHelper.loadDirectionalCollisionFromModelJson(Odyssey.MODID, "light_2");
@@ -55,24 +60,14 @@ public class Light2Block extends Block {
     private static final Map<BlockPos, PointLightData> POINT_DATA = new ConcurrentHashMap<>();
 
     private static final Vec3d BONE_LIGHT_OFFSET = new Vec3d(0.5, 0.8, 0.5);
-    private static final float BASE_BRIGHTNESS = 1.0f;
-    private static final float OFF_BRIGHTNESS  = 0.0f;
-
+    private static final float BASE_BRIGHTNESS = 5.0f;
     private static boolean hooks = false;
     private static boolean rescanPending = false;
     private static boolean rendererWasReady = false;
 
     private static final java.util.Random RNG = new java.util.Random();
 
-    private enum Phase {
-        IDLE,
-        BURST_OFF,
-        BURST_ON,
-        TAIL_WAIT,
-        TAIL_OFF,
-        TAIL_ON,
-        SETTLE
-    }
+    private enum Phase { IDLE, BURST_OFF, BURST_ON, TAIL_WAIT, TAIL_OFF, TAIL_ON, SETTLE }
 
     private static final class Flicker {
         Phase phase = Phase.IDLE;
@@ -81,10 +76,8 @@ public class Light2Block extends Block {
         float timer;
         float offDur;
         float onDur;
-
         int   tailLeft;
         float tailGap;
-
         float settleTime;
         float settleDur;
         float settleFrom;
@@ -94,18 +87,45 @@ public class Light2Block extends Block {
 
     public Light2Block(Settings settings) {
         super(settings);
-        setDefaultState(getStateManager().getDefaultState().with(FACING, Direction.NORTH));
+        setDefaultState(getStateManager().getDefaultState()
+                .with(FACING, Direction.NORTH)
+                .with(WATERLOGGED, false));
         ensureHooks();
     }
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        builder.add(FACING);
+        builder.add(FACING, WATERLOGGED);
     }
 
     @Override
     public @Nullable BlockState getPlacementState(ItemPlacementContext ctx) {
-        return getDefaultState().with(FACING, ctx.getSide());
+        boolean water = ctx.getWorld().getFluidState(ctx.getBlockPos()).getFluid() == Fluids.WATER;
+        return getDefaultState().with(FACING, ctx.getSide()).with(WATERLOGGED, water);
+    }
+
+    @Override
+    public BlockState rotate(BlockState state, BlockRotation rotation) {
+        return state.with(FACING, rotation.rotate(state.get(FACING)));
+    }
+
+    @Override
+    public BlockState mirror(BlockState state, BlockMirror mirror) {
+        return state.rotate(mirror.getRotation(state.get(FACING)));
+    }
+
+    @Override
+    public BlockState getStateForNeighborUpdate(BlockState state, Direction dir, BlockState neighborState,
+                                                WorldAccess world, BlockPos pos, BlockPos neighborPos) {
+        if (state.get(WATERLOGGED)) {
+            world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+        }
+        return super.getStateForNeighborUpdate(state, dir, neighborState, world, pos, neighborPos);
+    }
+
+    @Override
+    public FluidState getFluidState(BlockState state) {
+        return state.get(WATERLOGGED) ? Fluids.WATER.getStill(false) : super.getFluidState(state);
     }
 
     @Override
@@ -134,16 +154,6 @@ public class Light2Block extends Block {
     }
 
     @Override
-    public BlockState rotate(BlockState state, BlockRotation rotation) {
-        return state.with(FACING, rotation.rotate(state.get(FACING)));
-    }
-
-    @Override
-    public BlockState mirror(BlockState state, BlockMirror mirror) {
-        return state.rotate(mirror.getRotation(state.get(FACING)));
-    }
-
-    @Override
     public VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
         VoxelShape s = DIR_SHAPES.get(state.get(FACING));
         return s != null ? s : VoxelShapes.fullCube();
@@ -156,9 +166,7 @@ public class Light2Block extends Block {
     }
 
     @Override
-    public BlockRenderType getRenderType(BlockState state) {
-        return BlockRenderType.MODEL;
-    }
+    public BlockRenderType getRenderType(BlockState state) { return BlockRenderType.MODEL; }
 
     private static void spawnLightsIfNeeded(World world, BlockPos pos) {
         if (!world.isClient) return;
@@ -182,10 +190,8 @@ public class Light2Block extends Block {
                 .setRadius(PL_RADIUS);
         pl.setPosition((float) c.x, (float) c.y, (float) c.z);
 
-        LightRenderHandle<AreaLightData> ah =
-                VeilRenderSystem.renderer().getLightRenderer().addLight(al);
-        LightRenderHandle<PointLightData> ph =
-                VeilRenderSystem.renderer().getLightRenderer().addLight(pl);
+        LightRenderHandle<AreaLightData> ah = VeilRenderSystem.renderer().getLightRenderer().addLight(al);
+        LightRenderHandle<PointLightData> ph = VeilRenderSystem.renderer().getLightRenderer().addLight(pl);
 
         AREA_HANDLES.put(pos, ah);
         POINT_HANDLES.put(pos, ph);
@@ -202,11 +208,9 @@ public class Light2Block extends Block {
         LightRenderHandle<AreaLightData> ah = AREA_HANDLES.remove(pos);
         if (ah != null && ah.isValid()) ah.close();
         AREA_DATA.remove(pos);
-
         LightRenderHandle<PointLightData> ph = POINT_HANDLES.remove(pos);
         if (ph != null && ph.isValid()) ph.close();
         POINT_DATA.remove(pos);
-
         FLICKER.remove(pos);
     }
 
@@ -215,81 +219,56 @@ public class Light2Block extends Block {
         hooks = true;
 
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            rescanPending = true;
-            rendererWasReady = false;
+            rescanPending = true; rendererWasReady = false;
         });
-
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             for (LightRenderHandle<AreaLightData> h : AREA_HANDLES.values()) if (h != null && h.isValid()) h.close();
             for (LightRenderHandle<PointLightData> h : POINT_HANDLES.values()) if (h != null && h.isValid()) h.close();
-            AREA_HANDLES.clear();
-            POINT_HANDLES.clear();
-            AREA_DATA.clear();
-            POINT_DATA.clear();
-            FLICKER.clear();
-            rescanPending = false;
-            rendererWasReady = false;
+            AREA_HANDLES.clear(); POINT_HANDLES.clear(); AREA_DATA.clear(); POINT_DATA.clear(); FLICKER.clear();
+            rescanPending = false; rendererWasReady = false;
         });
-
         ClientChunkEvents.CHUNK_LOAD.register((world, chunk) -> {
             if (world == null || chunk == null) return;
             if (VeilRenderSystem.renderer() == null || VeilRenderSystem.renderer().getLightRenderer() == null) return;
             ChunkPos cpos = chunk.getPos();
-            int minY = world.getBottomY();
-            int maxY = world.getTopY();
-            int sx = cpos.getStartX();
-            int sz = cpos.getStartZ();
-            for (int y = minY; y < maxY; y++) {
-                for (int x = 0; x < 16; x++) {
+            int minY = world.getBottomY(), maxY = world.getTopY(), sx = cpos.getStartX(), sz = cpos.getStartZ();
+            for (int y = minY; y < maxY; y++)
+                for (int x = 0; x < 16; x++)
                     for (int z = 0; z < 16; z++) {
                         BlockPos bp = new BlockPos(sx + x, y, sz + z);
                         BlockState st = world.getBlockState(bp);
                         if (st.getBlock() instanceof Light2Block) spawnLightsIfNeeded(world, bp);
                     }
-                }
-            }
         });
-
         ClientChunkEvents.CHUNK_UNLOAD.register((world, chunk) -> {
             if (world == null || chunk == null) return;
             ChunkPos cpos = chunk.getPos();
             List<BlockPos> toRemove = new ArrayList<>();
-            for (BlockPos p : AREA_HANDLES.keySet()) {
+            for (BlockPos p : AREA_HANDLES.keySet())
                 if ((p.getX() >> 4) == cpos.x && (p.getZ() >> 4) == cpos.z) toRemove.add(p);
-            }
             for (BlockPos p : toRemove) removeLightsIfAny(p);
         });
-
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client == null || client.isPaused()) return;
-
             boolean rendererReady = VeilRenderSystem.renderer() != null && VeilRenderSystem.renderer().getLightRenderer() != null;
             if (rendererReady && !rendererWasReady) rescanPending = true;
             rendererWasReady = rendererReady;
 
             if (rescanPending && client.world != null && client.player != null && rendererReady) {
-                var w = client.world;
-                var p = client.player.getBlockPos();
-                int r = 4;
-                for (int cx = (p.getX() >> 4) - r; cx <= (p.getX() >> 4) + r; cx++) {
+                var w = client.world; var p = client.player.getBlockPos(); int r = 4;
+                for (int cx = (p.getX() >> 4) - r; cx <= (p.getX() >> 4) + r; cx++)
                     for (int cz = (p.getZ() >> 4) - r; cz <= (p.getZ() >> 4) + r; cz++) {
                         if (w.getChunkManager().getChunk(cx, cz) == null) continue;
-                        ChunkPos cpos = new ChunkPos(cx, cz);
-                        int minY = w.getBottomY();
-                        int maxY = w.getTopY();
-                        int sx = cpos.getStartX();
-                        int sz = cpos.getStartZ();
-                        for (int y = minY; y < maxY; y++) {
-                            for (int x = 0; x < 16; x++) {
+                        ChunkPos cp = new ChunkPos(cx, cz);
+                        int minY = w.getBottomY(), maxY = w.getTopY(), sx = cp.getStartX(), sz = cp.getStartZ();
+                        for (int y = minY; y < maxY; y++)
+                            for (int x = 0; x < 16; x++)
                                 for (int z = 0; z < 16; z++) {
                                     BlockPos bp = new BlockPos(sx + x, y, sz + z);
                                     BlockState st = w.getBlockState(bp);
                                     if (st.getBlock() instanceof Light2Block) spawnLightsIfNeeded(w, bp);
                                 }
-                            }
-                        }
                     }
-                }
                 rescanPending = false;
             }
 
@@ -297,96 +276,69 @@ public class Light2Block extends Block {
 
             float dt = client.getRenderTickCounter().getLastFrameDuration();
             for (BlockPos pos : AREA_DATA.keySet().toArray(new BlockPos[0])) {
-                Flicker f = FLICKER.computeIfAbsent(pos, k -> {
-                    Flicker n = new Flicker();
-                    n.phase = Phase.IDLE;
-                    n.cooldown = rand(5f, 30f);
-                    return n;
-                });
+                Flicker f = FLICKER.computeIfAbsent(pos, k -> { Flicker n = new Flicker(); n.phase = Phase.IDLE; n.cooldown = rand(5f, 30f); return n; });
 
                 switch (f.phase) {
                     case IDLE -> {
                         f.cooldown -= dt;
                         applyBrightness(pos, BASE_BRIGHTNESS);
                         if (f.cooldown <= 0f) {
-                            f.flashesLeft = 1 + RNG.nextInt(5); // 1..5 fast blips
+                            f.flashesLeft = 1 + RNG.nextInt(5);
                             f.offDur = rand(0.04f, 0.12f);
                             f.onDur  = rand(0.04f, 0.12f);
-                            f.timer = 0f;
-                            f.phase = Phase.BURST_OFF;
+                            f.timer = 0f; f.phase = Phase.BURST_OFF;
                         }
                     }
                     case BURST_OFF -> {
-                        f.timer += dt;
-                        applyBrightness(pos, OFF_BRIGHTNESS);
-                        if (f.timer >= f.offDur) {
-                            f.timer = 0f;
-                            f.phase = Phase.BURST_ON;
-                        }
+                        f.timer += dt; applyBrightness(pos, 0f);
+                        if (f.timer >= f.offDur) { f.timer = 0f; f.phase = Phase.BURST_ON; }
                     }
                     case BURST_ON -> {
-                        f.timer += dt;
-                        applyBrightness(pos, BASE_BRIGHTNESS);
+                        f.timer += dt; applyBrightness(pos, BASE_BRIGHTNESS);
                         if (f.timer >= f.onDur) {
                             f.flashesLeft--;
                             if (f.flashesLeft <= 0) {
-                                f.tailLeft = 1 + RNG.nextInt(3); // 1..3 slow flicks
+                                f.tailLeft = 1 + RNG.nextInt(3);
                                 f.tailGap = rand(0.35f, 0.9f);
-                                f.timer = 0f;
-                                f.phase = Phase.TAIL_WAIT;
+                                f.timer = 0f; f.phase = Phase.TAIL_WAIT;
                             } else {
                                 f.offDur = rand(0.04f, 0.12f);
                                 f.onDur  = rand(0.04f, 0.12f);
-                                f.timer = 0f;
-                                f.phase = Phase.BURST_OFF;
+                                f.timer = 0f; f.phase = Phase.BURST_OFF;
                             }
                         }
                     }
                     case TAIL_WAIT -> {
-                        f.timer += dt;
-                        applyBrightness(pos, BASE_BRIGHTNESS);
+                        f.timer += dt; applyBrightness(pos, BASE_BRIGHTNESS);
                         if (f.timer >= f.tailGap) {
                             f.timer = 0f;
-                            f.offDur = rand(0.12f, 0.25f); // longer off
-                            f.onDur  = rand(0.10f, 0.22f); // longer on
+                            f.offDur = rand(0.12f, 0.25f);
+                            f.onDur  = rand(0.10f, 0.22f);
                             f.phase = Phase.TAIL_OFF;
                         }
                     }
                     case TAIL_OFF -> {
-                        f.timer += dt;
-                        applyBrightness(pos, OFF_BRIGHTNESS);
-                        if (f.timer >= f.offDur) {
-                            f.timer = 0f;
-                            f.phase = Phase.TAIL_ON;
-                        }
+                        f.timer += dt; applyBrightness(pos, 0f);
+                        if (f.timer >= f.offDur) { f.timer = 0f; f.phase = Phase.TAIL_ON; }
                     }
                     case TAIL_ON -> {
-                        f.timer += dt;
-                        applyBrightness(pos, BASE_BRIGHTNESS);
+                        f.timer += dt; applyBrightness(pos, BASE_BRIGHTNESS);
                         if (f.timer >= f.onDur) {
                             f.tailLeft--;
                             if (f.tailLeft <= 0) {
-                                f.settleTime = 0f;
-                                f.settleDur  = rand(0.4f, 0.8f); // smooth settle 0.4–0.8s
-                                f.settleFrom = BASE_BRIGHTNESS;  // last was on; still ease to be safe
-                                f.phase = Phase.SETTLE;
+                                f.settleTime = 0f; f.settleDur = rand(0.4f, 0.8f);
+                                f.settleFrom = BASE_BRIGHTNESS; f.phase = Phase.SETTLE;
                             } else {
-                                f.timer = 0f;
-                                f.tailGap = rand(0.35f, 0.9f);
-                                f.phase = Phase.TAIL_WAIT;
+                                f.timer = 0f; f.tailGap = rand(0.35f, 0.9f); f.phase = Phase.TAIL_WAIT;
                             }
                         }
                     }
                     case SETTLE -> {
                         f.settleTime += dt;
                         float t = clamp01(f.settleTime / f.settleDur);
-                        float smooth = smoothstep(0f, 1f, t);
-                        float b = lerp(f.settleFrom, BASE_BRIGHTNESS, smooth);
+                        float b = lerp(f.settleFrom, BASE_BRIGHTNESS, smoothstep01(t));
                         applyBrightness(pos, b);
-                        if (t >= 1f) {
-                            f.cooldown = rand(5f, 30f);
-                            f.phase = Phase.IDLE;
-                        }
+                        if (t >= 1f) { f.cooldown = rand(5f, 30f); f.phase = Phase.IDLE; }
                     }
                 }
             }
@@ -404,17 +356,8 @@ public class Light2Block extends Block {
         if (ph != null && ph.isValid()) ph.markDirty();
     }
 
-    private static float rand(float a, float b) {
-        return a + (b - a) * RNG.nextFloat();
-    }
-    private static float lerp(float a, float b, float t) {
-        return a + (b - a) * t;
-    }
-    private static float clamp01(float v) {
-        return v < 0f ? 0f : (v > 1f ? 1f : v);
-    }
-    private static float smoothstep(float edge0, float edge1, float x) {
-        x = clamp01((x - edge0) / (edge1 - edge0));
-        return x * x * (3f - 2f * x);
-    }
+    private static float rand(float a, float b) { return a + (b - a) * RNG.nextFloat(); }
+    private static float lerp(float a, float b, float t) { return a + (b - a) * t; }
+    private static float clamp01(float v) { return v < 0f ? 0f : (v > 1f ? 1f : v); }
+    private static float smoothstep01(float x) { x = clamp01(x); return x * x * (3f - 2f * x); }
 }
