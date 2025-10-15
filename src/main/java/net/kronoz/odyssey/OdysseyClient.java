@@ -68,6 +68,7 @@ public class OdysseyClient implements ClientModInitializer {
         ClientElevatorAssist.init();
         WireWorldRenderer.init();
         WireClientMirror.init();
+        ModKeybinds.init();
         SimpleBlockLightManager.initClient();
         SentinelLightClient.initClient();
         ModEntityRenderers.register();

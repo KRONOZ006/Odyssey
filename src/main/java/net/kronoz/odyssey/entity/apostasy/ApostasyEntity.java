@@ -246,7 +246,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         lastShotDir = dir;
         orientTowards(dir, 12f); // smooth rotate to shot direction
 
-        glowShotCooldown = 10; // 0.5s @ 20tps
+        glowShotCooldown = 10;
     }
 
     private void orientTowards(Vec3d dir, float maxStepDeg) {
@@ -264,12 +264,11 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     }
 
     private List<Vec3d> getGlowMuzzles() {
-        // Server can’t read model bones; use your existing ring muzzles as the “glow” emitters.
         double yawRad = MathHelper.RADIANS_PER_DEGREE * (this.getYaw() % 360f);
         List<Vec3d> out = new ArrayList<>(24);
-        out.addAll(buildRingMuzzles(2.4, yawRad * 1.00, 8)); // pretend these are glow1..8
-        out.addAll(buildRingMuzzles(3.1, yawRad * 0.97, 8)); // glow9..16
-        out.addAll(buildRingMuzzles(3.8, yawRad * 0.94, 8)); // glow17..24
+        out.addAll(buildRingMuzzles(2.4, yawRad * 1.00, 8));
+        out.addAll(buildRingMuzzles(3.1, yawRad * 0.97, 8));
+        out.addAll(buildRingMuzzles(3.8, yawRad * 0.94, 8));
         return out;
     }
 

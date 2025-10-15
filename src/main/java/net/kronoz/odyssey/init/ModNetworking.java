@@ -1,8 +1,11 @@
 package net.kronoz.odyssey.init;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.kronoz.odyssey.net.BodyModPackets;
+import net.kronoz.odyssey.net.DashC2SPayload;
+import net.kronoz.odyssey.movement.DashHandler;
 import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.minecraft.entity.player.PlayerEntity;
 
@@ -22,7 +25,11 @@ public final class ModNetworking {
                 }
             });
         });
-
+        PayloadTypeRegistry.playC2S().register(DashC2SPayload.ID, DashC2SPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(DashC2SPayload.ID, (payload, ctx) -> {
+            var player = ctx.player();
+            DashHandler.onDashPacket(player, payload);
+        });
         ServerPlayNetworking.registerGlobalReceiver(BodyModPackets.ClearSlotC2S.ID, (payload, context) -> {
             var server = context.player().getServer();
             if (server == null) return;
@@ -40,5 +47,8 @@ public final class ModNetworking {
                 if (p != null) ModComponents.BODY.get(p).clientApply(payload.equipped);
             });
         });
+    }
+    public static void send(DashC2SPayload payload) {
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(payload);
     }
 }

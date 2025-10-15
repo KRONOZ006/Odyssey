@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:stone",
+    "minecraft:stone_bricks",
+    "minecraft:deepslate",
+    "minecraft:polished_andesite"
+  ]
+}

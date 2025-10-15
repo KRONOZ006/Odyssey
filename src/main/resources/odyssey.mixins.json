@@ -4,11 +4,13 @@
   "package": "net.kronoz.odyssey.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "LevelPropertiesMixin"
+    "LevelPropertiesMixin",
+    "PlayerEntityMixin"
   ],
   "client": [
     "CameraMixin",
     "CameraShakeMixin",
+    "ClientPlayerEntityMixin",
     "GameRendererMixin",
     "GameRendererShakeMixin",
     "HeldItemFeatureRendererMixin",
