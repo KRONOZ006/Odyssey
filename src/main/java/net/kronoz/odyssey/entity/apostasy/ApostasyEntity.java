@@ -38,6 +38,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     private static final int HUGE_LASER_INTERVAL = 65;
     private static final double HUGE_LASER_SPEED = 2.75;
     private static final double SMALL_LASER_SPEED = 2.15;
+
     private static final int EYE_BURST_INTERVAL = 6;
     private static final int EYE_BURST_LIFETIME = 60;
     private static final double EYE_BURST_DAMAGE = 4.0;
@@ -53,10 +54,8 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     private static final int P3_ZONE_COOLDOWN = 150;
     private static final int PHASE3_BURST = 20;
     private static final int PHASE3_MIN_R = 10, PHASE3_MAX_R = 50;
-    private static final int EXTRA_BURST_RADIUS = 100;
     private static final double KEEP_OUT_RADIUS = 20.0;
     private static final double KEEP_OUT_PUSH = 20.4;
-    private static final int EXTRA_BURST_ON_STRIKE_P3 = 10;
     private static final double LINE_TRIGGER_RANGE = 20.0;
 
     private static final double HOVER_OFFSET = 8.0;
@@ -69,6 +68,14 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     private int ringShotCooldown = 10;
     private int hugeLaserCooldown = 40;
     private int lightningCooldown = 40;
+    private int glowShotCooldown = 0;          // ticks
+    private int glowMuzzleIndex = 0;
+    private Vec3d lastShotDir = Vec3d.ZERO;
+
+    private int shockwaveCooldown = 0;
+    private static final int SHOCKWAVE_COOLDOWN_P1 = 120;
+    private static final int SHOCKWAVE_COOLDOWN_P2 = 90;
+    private static final int SHOCKWAVE_COOLDOWN_P3 = 70;
 
     private Phase phase = Phase.P1;
     private double hoverVy = 0.0;
@@ -128,7 +135,8 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
             case P2 -> handlePhase2(target);
             case P3, P4 -> handlePhase3(target);
         }
-        tickEyeBurst();
+        tickGlowFire();
+        if (shockwaveCooldown > 0) shockwaveCooldown--;
     }
 
     private void repulsePlayers() {
@@ -153,13 +161,12 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     private void handlePhase1(PlayerEntity target) {
         if (ringShotCooldown-- <= 0) { ringShotCooldown = RING_SHOT_INTERVAL; fireRingsBurst(target); }
         if (this.random.nextFloat() < 0.10f) tryStartEyeBurst(target, 6);
-        if (this.random.nextFloat() < 0.03f) fireShockwaveAtPlayer(target);
+        if (this.random.nextFloat() < 0.04f) tryShockwave(target);
     }
 
     private void handlePhase2(PlayerEntity target) {
         if (hugeLaserCooldown-- <= 0) { hugeLaserCooldown = HUGE_LASER_INTERVAL; fireEyeHugeLaser(target); }
         if (this.random.nextFloat() < 0.14f) tryStartEyeBurst(target, 8);
-
         if (lightningCooldown-- <= 0) {
             lightningCooldown = P2_SINGLE_COOLDOWN;
             BlockPos strikePos = safeStrikeNear(target.getBlockPos(), 2, 5);
@@ -169,13 +176,11 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
                 spawnDebrisCloud(sw, strikePos, pulled, 4);
             }
         }
-        if (this.random.nextFloat() < 0.05f) fireShockwaveAtPlayer(target);
-
+        if (this.random.nextFloat() < 0.06f) tryShockwave(target);
         boolean near = this.squaredDistanceTo(target) <= (LINE_TRIGGER_RANGE * LINE_TRIGGER_RANGE);
         if (near && this.random.nextFloat() < 0.05f) {
             scheduleLightningLineTowards(target, 8, 4.0, 5);
         }
-
         if (this.random.nextFloat() < 0.03f && hugeLaserCooldown <= 0) { hugeLaserCooldown = 45; fireEyeHugeLaser(target); }
         else if (hugeLaserCooldown > 0) hugeLaserCooldown--;
     }
@@ -183,7 +188,6 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     private void handlePhase3(PlayerEntity target) {
         if (hugeLaserCooldown-- <= 0) { hugeLaserCooldown = HUGE_LASER_INTERVAL; fireEyeHugeLaser(target); }
         if (this.random.nextFloat() < 0.14f) tryStartEyeBurst(target, 8);
-
         if (lightningCooldown-- <= 0) {
             lightningCooldown = P3_ZONE_COOLDOWN;
             int delay = 0;
@@ -194,8 +198,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
                 delay += 6;
             }
         }
-        if (this.random.nextFloat() < 0.05f) fireShockwaveAtPlayer(target);
-
+        if (this.random.nextFloat() < 0.08f) tryShockwave(target);
         boolean near = this.squaredDistanceTo(target) <= (LINE_TRIGGER_RANGE * LINE_TRIGGER_RANGE);
         if (near && this.random.nextFloat() < 0.07f) {
             scheduleLightningLineTowards(target, 12, 4.0, 4);
@@ -209,6 +212,65 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         double bearingDeg = Math.toDegrees(Math.atan2(dz, dx)) - 90.0;
         double d = MathHelper.wrapDegrees(bearingDeg - headYaw);
         return Math.abs(d) <= maxDeg;
+    }
+    private void tickGlowFire() {
+        if (!(this.getWorld() instanceof ServerWorld sw)) return;
+        PlayerEntity target = getClosestTarget(64.0);
+        if (target == null) return;
+
+        if (glowShotCooldown > 0) { glowShotCooldown--; return; }
+
+        List<Vec3d> muzzles = getGlowMuzzles(); // server-side stand-in for “bones starting with glow”
+        if (muzzles.isEmpty()) return;
+
+        if (glowMuzzleIndex >= muzzles.size()) glowMuzzleIndex = 0;
+        Vec3d mCenter = muzzles.get(glowMuzzleIndex++);
+
+        Vec3d aim = target.getPos().add(0, target.getStandingEyeHeight() * 0.6, 0);
+        Vec3d dir = aim.subtract(mCenter);
+        double L2 = dir.lengthSquared();
+        if (L2 < 1e-6) dir = new Vec3d(0,0,1); else dir = dir.normalize();
+
+        Vec3d muzzle = mCenter.add(dir.multiply(0.35));
+
+        LaserProjectileEntity laser = ModEntities.LASER_PROJECTILE.create(sw);
+        if (laser != null) {
+            laser.refreshPositionAndAngles(muzzle.x, muzzle.y, muzzle.z, 0, 0);
+            laser.setOwner(this);
+            laser.setVelocity(dir.multiply(2.6));
+            laser.setDamage(4.0);
+            laser.setLifetime(60);
+            sw.spawnEntity(laser);
+        }
+
+        lastShotDir = dir;
+        orientTowards(dir, 12f); // smooth rotate to shot direction
+
+        glowShotCooldown = 10; // 0.5s @ 20tps
+    }
+
+    private void orientTowards(Vec3d dir, float maxStepDeg) {
+        if (dir.lengthSquared() < 1e-6) return;
+        float targetYaw = (float)(MathHelper.atan2(dir.z, dir.x) * (180F/Math.PI)) - 90f;
+        float targetPitch = (float)(-(MathHelper.atan2(dir.y, Math.sqrt(dir.x*dir.x + dir.z*dir.z)) * (180F/Math.PI)));
+
+        float newYaw = MathHelper.stepUnwrappedAngleTowards(this.getYaw(), targetYaw, maxStepDeg);
+        float newHead = MathHelper.stepUnwrappedAngleTowards(this.getHeadYaw(), targetYaw, maxStepDeg);
+        float newPitch = MathHelper.stepUnwrappedAngleTowards(this.getPitch(), targetPitch, maxStepDeg);
+
+        this.setYaw(newYaw);
+        this.setHeadYaw(newHead);
+        this.setPitch(newPitch);
+    }
+
+    private List<Vec3d> getGlowMuzzles() {
+        // Server can’t read model bones; use your existing ring muzzles as the “glow” emitters.
+        double yawRad = MathHelper.RADIANS_PER_DEGREE * (this.getYaw() % 360f);
+        List<Vec3d> out = new ArrayList<>(24);
+        out.addAll(buildRingMuzzles(2.4, yawRad * 1.00, 8)); // pretend these are glow1..8
+        out.addAll(buildRingMuzzles(3.1, yawRad * 0.97, 8)); // glow9..16
+        out.addAll(buildRingMuzzles(3.8, yawRad * 0.94, 8)); // glow17..24
+        return out;
     }
 
     private Vec3d eyeMuzzle() {
@@ -234,30 +296,12 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         eyeBurstTargetId = target.getId();
     }
 
-    private void tickEyeBurst() {
-        if (!(this.getWorld() instanceof ServerWorld sw)) return;
-        if (eyeBurstShotsLeft <= 0) return;
-
-        PlayerEntity p = (PlayerEntity) sw.getEntityById(eyeBurstTargetId);
-        if (p == null || !p.isAlive()) { eyeBurstShotsLeft = 0; return; }
-
-        boolean aligned = isEyeAlignedWith(p, EYE_ALIGN_DEG * 1.25);
-        if (!aligned) { eyeBurstTimer = Math.max(eyeBurstTimer - 1, 0); return; }
-
-        if (eyeBurstTimer-- <= 0) {
-            fireOneEyeLaser(p);
-            eyeBurstShotsLeft--;
-            eyeBurstTimer = EYE_BURST_INTERVAL;
-            if (eyeBurstShotsLeft <= 0) eyeBurstTargetId = -1;
-        }
-    }
 
     private void fireOneEyeLaser(PlayerEntity target) {
         if (!(this.getWorld() instanceof ServerWorld sw)) return;
         Vec3d eye = eyeMuzzle();
         Vec3d dir = aimDirectionFor(target);
         Vec3d muzzle = eye.add(dir.multiply(EYE_MUZZLE_FORWARD));
-
         LaserProjectileEntity laser = ModEntities.LASER_PROJECTILE.create(sw);
         if (laser == null) return;
         laser.refreshPositionAndAngles(muzzle.x, muzzle.y, muzzle.z, 0, 0);
@@ -268,15 +312,30 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         sw.spawnEntity(laser);
     }
 
-    private void fireShockwaveAtPlayer(PlayerEntity target) {
+    private void tryShockwave(PlayerEntity target) {
+        if (shockwaveCooldown > 0) return;
+        spawnShockwaveAtPlayerY(target);
+        shockwaveCooldown = switch (phase) {
+            case P1 -> SHOCKWAVE_COOLDOWN_P1;
+            case P2 -> SHOCKWAVE_COOLDOWN_P2;
+            default -> SHOCKWAVE_COOLDOWN_P3;
+        };
+    }
+
+    private void spawnShockwaveAtPlayerY(PlayerEntity target) {
         if (!(this.getWorld() instanceof ServerWorld sw)) return;
-        var e = ModEntities.SHOCKWAVE.create(sw);
+        var e = net.kronoz.odyssey.init.ModEntities.SHOCKWAVE.create(sw);
         if (e == null) return;
-        double py = Math.floor(target.getY()) + 0.05;
+
+        double py = Math.floor(target.getY()) + 0.05; // spawn at player's level
         e.refreshPositionAndAngles(this.getX(), py, this.getZ(), 0, 0);
-        e.setup(50f, 40, py, this.getId());
+
+        // OLD: e.setup(50f, 40, py, this.getId());
+        e.setup(50f, 40, false); // false = ground wave (yOffset ~ 0.05)
+
         sw.spawnEntity(e);
     }
+
 
     private BlockPos randomPosAround(int minR, int maxR) {
         double a = this.random.nextDouble() * Math.PI * 2;
@@ -317,10 +376,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
 
     private void tickPendingStrikes() {
         if (!(this.getWorld() instanceof ServerWorld sw)) return;
-
-        List<PendingStrike> toAdd = new ArrayList<>();
         List<PendingStrike> next = new ArrayList<>(pendingStrikes.size());
-
         for (int i = 0; i < pendingStrikes.size(); i++) {
             PendingStrike ps = pendingStrikes.get(i);
             spawnGroundTelegraph(sw, ps.pos, 0.9, 0.9, TELEGRAPH_TICKS);
@@ -343,7 +399,6 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         }
         pendingStrikes.clear();
         pendingStrikes.addAll(next);
-        pendingStrikes.addAll(toAdd);
     }
 
     private void scheduleLightningLineTowards(PlayerEntity target, int nodes, double step, int tickDelayStep) {
@@ -547,6 +602,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         nbt.putInt("cdRing", ringShotCooldown);
         nbt.putInt("cdHuge", hugeLaserCooldown);
         nbt.putInt("cdBolt", lightningCooldown);
+        nbt.putInt("cdShock", shockwaveCooldown);
         nbt.putDouble("hvVy", hoverVy);
         nbt.putDouble("lastTY", lastTargetY);
     }
@@ -557,6 +613,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         ringShotCooldown = nbt.getInt("cdRing");
         hugeLaserCooldown = nbt.getInt("cdHuge");
         lightningCooldown = nbt.getInt("cdBolt");
+        if (nbt.contains("cdShock")) shockwaveCooldown = nbt.getInt("cdShock");
         if (nbt.contains("hvVy")) hoverVy = nbt.getDouble("hvVy");
         if (nbt.contains("lastTY")) lastTargetY = nbt.getDouble("lastTY");
     }

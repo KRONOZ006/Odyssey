@@ -60,7 +60,7 @@ public class Light2Block extends Block implements Waterloggable {
     private static final Map<BlockPos, PointLightData> POINT_DATA = new ConcurrentHashMap<>();
 
     private static final Vec3d BONE_LIGHT_OFFSET = new Vec3d(0.5, 0.8, 0.5);
-    private static final float BASE_BRIGHTNESS = 5.0f;
+    private static final float BASE_BRIGHTNESS = 1.0f;
     private static boolean hooks = false;
     private static boolean rescanPending = false;
     private static boolean rendererWasReady = false;

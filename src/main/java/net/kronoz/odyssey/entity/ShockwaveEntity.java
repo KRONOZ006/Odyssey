@@ -1,13 +1,11 @@
 package net.kronoz.odyssey.entity;
 
-import net.kronoz.odyssey.entity.apostasy.ApostasyEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
@@ -17,20 +15,20 @@ import java.util.HashSet;
 public class ShockwaveEntity extends Entity {
     private int duration = 40;
     private float maxRadius = 50f;
-    private double planeY = 0.05;
+    private float band = 1.25f;
+    private double yOffset = 0.05;
     private final HashSet<Integer> hit = new HashSet<>();
-    private int ownerId = -1;
 
     public ShockwaveEntity(EntityType<? extends ShockwaveEntity> type, World world) {
         super(type, world);
         this.noClip = true;
     }
 
-    public void setup(float maxRadius, int duration, double planeY, int ownerId) {
+    public void setup(float maxRadius, int duration, boolean overhead) {
         this.maxRadius = maxRadius;
         this.duration = Math.max(1, duration);
-        this.planeY = planeY;
-        this.ownerId = ownerId;
+        this.band = Math.max(0.5f, maxRadius / 40f);
+        this.yOffset = overhead ? 2.0 : 0.05;
     }
 
     public float getProgress(float tickDelta) {
@@ -50,20 +48,13 @@ public class ShockwaveEntity extends Entity {
         if (this.getWorld().isClient) return;
 
         float r = getCurrentRadius(0f);
-        float inner = r * 0.9f;
-        Box box = new Box(getX() - r - 1, planeY - 2, getZ() - r - 1, getX() + r + 1, planeY + 2, getZ() + r + 1);
-
-        for (LivingEntity le : this.getWorld().getEntitiesByClass(LivingEntity.class, box, Entity::isAlive)) {
+        float inner = Math.max(0f, r - band);
+        Box box = new Box(getX() - r - 1, getY() - 2, getZ() - r - 1, getX() + r + 1, getY() + 2, getZ() + r + 1);
+        for (LivingEntity le : this.getWorld().getEntitiesByClass(LivingEntity.class, box, e -> e.isAlive())) {
             if (hit.contains(le.getId())) continue;
-            if (le instanceof ApostasyEntity) continue;
-            if (le.getId() == ownerId) continue;
-
-            double dy = le.getY() - planeY;
-            if (dy > 0.9) continue;
-
-            Vec3d v = le.getPos().subtract(getX(), le.getY(), getZ());
-            double d2 = Math.hypot(v.x, le.getZ() - this.getZ());
-            if (d2 >= inner && d2 <= r + 0.75) {
+            Vec3d d = le.getPos().subtract(getX(), le.getY(), getZ());
+            double dist2D = Math.hypot(d.x, le.getZ() - this.getZ());
+            if (dist2D >= inner && dist2D <= r + 0.75) {
                 float lvl = (le instanceof PlayerEntity pe) ? pe.experienceLevel : nearestPlayerLevel(le);
                 float dmg = 4.0f + 0.18f * lvl;
                 le.damage(getWorld().getDamageSources().generic(), dmg);
@@ -89,20 +80,20 @@ public class ShockwaveEntity extends Entity {
     protected void readCustomDataFromNbt(NbtCompound nbt) {
         if (nbt.contains("dur")) duration = nbt.getInt("dur");
         if (nbt.contains("rad")) maxRadius = nbt.getFloat("rad");
-        if (nbt.contains("py")) planeY = nbt.getDouble("py");
-        if (nbt.contains("oid")) ownerId = nbt.getInt("oid");
+        if (nbt.contains("band")) band = nbt.getFloat("band");
+        if (nbt.contains("yoff")) yOffset = nbt.getDouble("yoff");
     }
 
     @Override
     protected void writeCustomDataToNbt(NbtCompound nbt) {
         nbt.putInt("dur", duration);
         nbt.putFloat("rad", maxRadius);
-        nbt.putDouble("py", planeY);
-        nbt.putInt("oid", ownerId);
+        nbt.putFloat("band", band);
+        nbt.putDouble("yoff", yOffset);
     }
 
     @Override
     public boolean shouldRender(double distance) { return true; }
 
-    public double getPlaneY() { return planeY; }
+    public double getYOffset() { return yOffset; }
 }

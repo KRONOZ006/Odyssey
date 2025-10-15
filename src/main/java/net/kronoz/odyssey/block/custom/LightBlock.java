@@ -39,7 +39,7 @@ public class LightBlock extends Block implements Waterloggable {
     public LightBlock(Settings settings) {
         super(settings);
         setDefaultState(getStateManager().getDefaultState()
-                .with(FACING, Direction.NORTH)
+                .with(FACING, Direction.UP)
                 .with(WATERLOGGED, false));
     }
 
