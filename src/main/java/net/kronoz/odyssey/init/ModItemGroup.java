@@ -37,6 +37,7 @@ public class ModItemGroup {
                         entries.add(ModBlocks.ALARM);
                         entries.add(ModBlocks.FACILITY_TILES);
                         entries.add(ModBlocks.ENERGY_BARRIER);
+                        entries.add(ModItems.SPEAR_DASH);
 
 
                     })
