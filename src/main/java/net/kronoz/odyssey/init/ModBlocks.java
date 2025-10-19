@@ -40,8 +40,18 @@ public class ModBlocks {
     public static final Block ENERGY_EMITTER  = registerBlock("energy_emitter", new EnergyEmitterBlock(AbstractBlock.Settings.copy(Blocks.TUFF)));
     public static final Block ENERGY_BARRIER  = registerBlock("energy_barrier", new EnergyBarrierBlock(AbstractBlock.Settings.create().nonOpaque().strength(-1.0f, 3600000f).pistonBehavior(PistonBehavior.BLOCK).emissiveLighting((state, world, pos) -> true)
             .strength(-1.0f).luminance(state -> state.get(EnergyBarrierBlock.LIGHT_LEVEL))));
-
-
+    public static final Block SHELF1 = registerBlock("shelf1", new Shelf1Block(AbstractBlock.Settings.copy(Blocks.TUFF).nonOpaque()));
+    public static final Block STASISPOD = Registry.register(
+            Registries.BLOCK, Identifier.of(Odyssey.MODID,"stasispod"),
+            new StasisPodBlock(AbstractBlock.Settings.create().strength(3.0f).nonOpaque())
+    );
+    public static final Block RAILING = Registry.register(
+            Registries.BLOCK, Identifier.of("odyssey","railing"),
+            new RailingBlock(AbstractBlock.Settings.create().nonOpaque().strength(2.0f, 3.0f))
+    );public static final Block TERMINAL = Registry.register(
+            Registries.BLOCK, Identifier.of("odyssey","terminal"),
+            new TerminalBlock(AbstractBlock.Settings.create().nonOpaque().strength(2.0f, 3.0f))
+    );
     public static final Block MAP_BLOCK = registerBlock(
             "map_block",
             new MapBlock(Block.Settings.create()

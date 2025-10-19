@@ -1,0 +1,9 @@
+
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "odyssey:block/energy_emitter_top",
+    "bottom": "odyssey:block/energy_emitter_bottom",
+    "side": "odyssey:block/energy_emitter_side"
+  }
+}

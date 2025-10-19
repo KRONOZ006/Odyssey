@@ -5,6 +5,7 @@ import net.fabricmc.fabric.api.object.builder.v1.entity.FabricEntityTypeBuilder;
 import net.kronoz.odyssey.Odyssey;
 import net.kronoz.odyssey.entity.*;
 import net.kronoz.odyssey.entity.apostasy.ApostasyEntity;
+import net.kronoz.odyssey.entity.arcangel.ArcangelEntity;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileEntity;
 import net.kronoz.odyssey.entity.sentinel.SentinelEntity;
 import net.kronoz.odyssey.entity.sentry.SentryEntity;
@@ -35,20 +36,17 @@ public class ModEntities {
                     .dimensions(0.9f, 2.95f)
                     .build()
     );
+    public static final EntityType<ArcangelEntity> ARCANGEL =
+            FabricEntityTypeBuilder.<ArcangelEntity>create(SpawnGroup.MISC, ArcangelEntity::new)
+                    .dimensions(EntityDimensions.fixed(1.8f, 3.0f))
+                    .trackRangeChunks(12)
+                    .fireImmune()
+                    .build();
     public static final EntityType<ApostasyEntity> APOSTASY = Registry.register(
             Registries.ENTITY_TYPE,
             Identifier.of(Odyssey.MODID, "apostasy"),
             EntityType.Builder.<ApostasyEntity>create(ApostasyEntity::new, SpawnGroup.MONSTER)
                     .dimensions(3.0f, 5.0f)
-                    .build()
-    );
-    public static final net.minecraft.entity.EntityType<GrappleHookEntity> GRAPPLE_HOOK = Registry.register(
-            Registries.ENTITY_TYPE,
-            Identifier.of(Odyssey.MODID,"grapple_hook"),
-            FabricEntityTypeBuilder.<GrappleHookEntity>create(SpawnGroup.MISC, GrappleHookEntity::new)
-                    .dimensions(EntityDimensions.fixed(0.25f, 0.25f))
-                    .trackRangeChunks(8)
-                    .trackedUpdateRate(2)
                     .build()
     );
     public static final EntityType<LaserProjectileEntity> LASER_PROJECTILE =
@@ -84,6 +82,8 @@ public class ModEntities {
         FabricDefaultAttributeRegistry.register(APOSTASY, ApostasyEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(SENTRY, SentryEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(SENTINEL, SentinelEntity.createAttributes());
+        FabricDefaultAttributeRegistry.register(ARCANGEL, ArcangelEntity.createAttributes());
+
     }
     public static void register() {
         LIFT_PLATFORM = Registry.register(

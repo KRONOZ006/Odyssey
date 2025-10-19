@@ -13,8 +13,7 @@
       "net.kronoz.odyssey.OdysseyDataGenerator"
     ],
     "client": [
-      "net.kronoz.odyssey.OdysseyClient",
-      "net.kronoz.odyssey.systems.grapple.GrappleClient"
+      "net.kronoz.odyssey.OdysseyClient"
     ],
     "main": [
       "net.kronoz.odyssey.Odyssey"

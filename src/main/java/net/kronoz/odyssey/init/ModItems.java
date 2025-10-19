@@ -2,6 +2,7 @@ package net.kronoz.odyssey.init;
 
 import net.kronoz.odyssey.Odyssey;
 import net.kronoz.odyssey.item.custom.*;
+import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
@@ -14,17 +15,12 @@ public class ModItems {
     public static final Item JETPACK = registerItem("jetpack", new JetpackTorso(new Item.Settings().maxCount(1).fireproof()));
     public static final Item WIRE_TOOL = Registry.register(Registries.ITEM, Identifier.of("odyssey","wire_tool"), new WireToolItem(new Item.Settings().maxCount(1)));
     public static final Item WIRE_CUTTER_TOOL = Registry.register(Registries.ITEM, Identifier.of("odyssey","wire_cutter_tool"), new WireCutterItem(new Item.Settings().maxCount(1)));
-public static final Item GRAPPLE = Registry.register(Registries.ITEM,
-            Identifier.of("odyssey","grapple"),
-            new LoyalGrappleItem(new Item.Settings().maxCount(1)));
-    public static final Item SPEAR_DASH = Registry.register(
-            Registries.ITEM, Identifier.of("odyssey","spear"),
-            new SpearDashItem(new Item.Settings().maxCount(1))
-    );
-    private static Item registerItem(String name, Item item) {
-        return Registry.register(Registries.ITEM, Identifier.of(Odyssey.MODID, name), item);
-    }
+    public static final Item SPEAR_DASH = Registry.register(Registries.ITEM, Identifier.of("odyssey","spear"), new SpearDashItem(new Item.Settings().maxCount(1)));
+    public static final Item STASISPOD_ITEM = Registry.register(Registries.ITEM, Identifier.of("odyssey","stasispod"), new BlockItem(ModBlocks.STASISPOD, new Item.Settings()));
+    public static final Item RAILING_ITEM = Registry.register(Registries.ITEM, Identifier.of("odyssey","railing"), new BlockItem(ModBlocks.RAILING, new Item.Settings()));
+    public static final Item TERMINAL_ITEM = Registry.register(Registries.ITEM, Identifier.of("odyssey","terminal"), new BlockItem(ModBlocks.TERMINAL, new Item.Settings()));
 
+    private static Item registerItem(String name, Item item) {return Registry.register(Registries.ITEM, Identifier.of(Odyssey.MODID, name), item);}
     public static void registerModItems(){
         Odyssey.LOGGER.info("register items for" + Odyssey.MODID);
     }

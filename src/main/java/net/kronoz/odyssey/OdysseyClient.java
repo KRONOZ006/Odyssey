@@ -12,10 +12,12 @@ import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.kronoz.odyssey.block.custom.SimpleBlockLightManager;
+import net.kronoz.odyssey.block.custom.StasisPodBERenderer;
 import net.kronoz.odyssey.client.ClientElevatorAssist;
 import net.kronoz.odyssey.config.OdysseyConfig;
 import net.kronoz.odyssey.entity.*;
 import net.kronoz.odyssey.entity.apostasy.ApostasyRenderer;
+import net.kronoz.odyssey.entity.arcangel.ArcangelRenderer;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileEntity;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileRenderer;
 import net.kronoz.odyssey.entity.sentinel.SentinelLightClient;
@@ -24,7 +26,8 @@ import net.kronoz.odyssey.entity.sentry.SentryRenderer;
 import net.kronoz.odyssey.hud.bosshud.BossHudClient;
 import net.kronoz.odyssey.hud.death.DeathUICutscene;
 import net.kronoz.odyssey.init.*;
-import net.kronoz.odyssey.item.client.renderer.GrappleHookRenderer;
+import net.kronoz.odyssey.movement.WallRun;
+import net.kronoz.odyssey.movement.WallRunLoopSound;
 import net.kronoz.odyssey.net.BossHudClearPayload;
 import net.kronoz.odyssey.net.BossHudUpdatePayload;
 import net.kronoz.odyssey.net.CineNetworking;
@@ -33,13 +36,12 @@ import net.kronoz.odyssey.systems.cam.ShakeEvents;
 import net.kronoz.odyssey.systems.cinematics.runtime.BootstrapScenes;
 import net.kronoz.odyssey.systems.cinematics.runtime.CutsceneManager;
 import net.kronoz.odyssey.systems.dialogue.client.DialogueClient;
-import net.kronoz.odyssey.systems.grapple.GrappleNetworking;
 import net.kronoz.odyssey.systems.physics.dust.DustManager;
 import net.kronoz.odyssey.systems.physics.dust.LightDustPinger;
 import net.kronoz.odyssey.systems.physics.jetpack.JetpackSystem;
 import net.kronoz.odyssey.systems.physics.wire.*;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.render.*;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
 import net.minecraft.client.render.entity.EntityRenderer;
@@ -57,7 +59,7 @@ import java.util.UUID;
 
 public class OdysseyClient implements ClientModInitializer {
 
-
+    private static WallRunLoopSound current;
     private static final Identifier FOG = Identifier.of(Odyssey.MODID, "fog");
     private static final Identifier BLOOM = Identifier.of(Odyssey.MODID, "bloom");
     private boolean fogadded = false;
@@ -93,7 +95,6 @@ public class OdysseyClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.GROUND_DECAL, GroundDecalRenderer::new);
 
         DeathUICutscene.register();
-        GrappleHookRenderer.register();
         VeilLightCompat.initClient();
         WireBridge.initRenderer();
 
@@ -112,18 +113,20 @@ public class OdysseyClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.LASER_PROJECTILE, LaserProjectileRenderer::new);
         EntityRendererRegistry.register(ModEntities.DEBRIS_BLOCK, DebrisBlockRenderer::new);
         EntityRendererRegistry.register(ModEntities.SHOCKWAVE, ShockwaveRenderer::new);
-
         BlockEntityRendererFactories.register(ModBlocks.MAP_BLOCK_ENTITY, MapBlockEntityRenderer::new);
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.MAP_BLOCK, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ALARM, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.LIGHT1, RenderLayer.getCutoutMipped());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.SHELF1, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.STASISPOD, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.TERMINAL, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.RAILING, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.LIGHT2, RenderLayer.getCutoutMipped());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.FACILITY_REBAR_BLOCK, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ENERGY_BARRIER, RenderLayer.getCutout());
-
-        GrappleNetworking.registerClient();
-        GrappleHookRenderer.register();
-        GrappleNetworking.registerClient();
+        BlockEntityRendererFactories.register(ModBlockEntities.STASISPOD, StasisPodBERenderer::new);
+        BlockEntityRendererFactories.register(ModBlockEntities.SHELF1, Shelf1GeoBERenderer::new);
+        EntityRendererRegistry.register(ModEntities.ARCANGEL, ArcangelRenderer::new);
 
         PayloadTypeRegistry.playS2C().register(BossHudUpdatePayload.ID, BossHudUpdatePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(BossHudClearPayload.ID,  BossHudClearPayload.CODEC);
@@ -177,6 +180,20 @@ public class OdysseyClient implements ClientModInitializer {
 
             }
         });
+    }
+    public static void update(ClientPlayerEntity p, WallRun.WallState s) {
+        boolean active = s != null && s.active();
+        var sm = MinecraftClient.getInstance().getSoundManager();
+
+        if (active) {
+            if (current == null || current.isDone()) {
+                current = new WallRunLoopSound(p);
+                sm.play(current);
+            }
+        } else if (current != null) {
+            sm.stop(current);
+            current = null;
+        }
     }
     private static UUID nameId(String s) {
         return UUID.nameUUIDFromBytes(s.getBytes(StandardCharsets.UTF_8));

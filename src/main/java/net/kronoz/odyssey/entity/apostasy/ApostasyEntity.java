@@ -10,6 +10,7 @@ import net.minecraft.entity.MovementType;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
@@ -335,7 +336,13 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         sw.spawnEntity(e);
     }
 
+    @Override public boolean isInvulnerableTo(DamageSource source) { return true; }
+    @Override public boolean isAttackable() { return false; }
 
+    @Override public boolean isPushable() { return false; }
+    @Override public void pushAwayFrom(net.minecraft.entity.Entity e) { }
+    @Override public void takeKnockback(double s, double x, double z) { }
+    @Override public void addVelocity(double x, double y, double z) { }
     private BlockPos randomPosAround(int minR, int maxR) {
         double a = this.random.nextDouble() * Math.PI * 2;
         int r = this.random.nextBetween(minR, maxR);

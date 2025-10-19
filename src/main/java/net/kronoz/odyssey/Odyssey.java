@@ -1,25 +1,16 @@
 package net.kronoz.odyssey;
 
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.kronoz.odyssey.block.SequencerRegistry;
 import net.kronoz.odyssey.init.*;
 import net.kronoz.odyssey.net.CineNetworking;
 import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.kronoz.odyssey.systems.dialogue.Dialogue;
-import net.kronoz.odyssey.systems.grapple.GrappleNetworking;
-import net.kronoz.odyssey.systems.grapple.GrapplePayloads;
-import net.kronoz.odyssey.systems.slide.SlideServer;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
 import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.mojang.brigadier.builder.LiteralArgumentBuilder.literal;
 
 public class Odyssey implements ModInitializer {
     public static final String MODID = "odyssey";
@@ -29,7 +20,6 @@ public class Odyssey implements ModInitializer {
     @Override
     public void onInitialize() {
         CineNetworking.registerCommon();
-        SlideServer.init();
         SequencerRegistry.init();
         ModEntities.init();
         ModBlockEntities.register();
@@ -44,9 +34,6 @@ public class Odyssey implements ModInitializer {
         ModNetworking.init();
         ModCommands.init();
         ModSounds.registerSounds();
-
-
-        GrapplePayloads.registerPayloads();
-        new GrappleNetworking().registerServer();
+        Registry.register(Registries.ENTITY_TYPE, Identifier.of(MODID, "arcangel"), ModEntities.ARCANGEL);
     }
 }

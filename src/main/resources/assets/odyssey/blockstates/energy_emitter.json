@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "facing=up":    { "model": "odyssey:block/energy_emitter" },
+    "facing=down":  { "model": "odyssey:block/energy_emitter", "x": 180 },
+    "facing=north": { "model": "odyssey:block/energy_emitter", "x": 90 },
+    "facing=south": { "model": "odyssey:block/energy_emitter", "x": 90, "y": 180 },
+    "facing=west":  { "model": "odyssey:block/energy_emitter", "x": 90, "y": 270 },
+    "facing=east":  { "model": "odyssey:block/energy_emitter", "x": 90, "y": 90 }
+  }
+}

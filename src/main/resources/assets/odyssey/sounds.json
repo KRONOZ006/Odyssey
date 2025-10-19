@@ -28,5 +28,33 @@
         "name": "odyssey:energy_shield_hit"
       }
     ]
+  },
+  "dash_1": {
+    "sounds": [
+      {
+        "name": "odyssey:dash_1"
+      }
+    ]
+  },
+  "dash_2": {
+    "sounds": [
+      {
+        "name": "odyssey:dash_2"
+      }
+    ]
+  },
+  "dash_3": {
+    "sounds": [
+      {
+        "name": "odyssey:dash_3"
+      }
+    ]
+  },
+  "wallrun_loop": {
+    "sounds": [
+      {
+        "name": "odyssey:walrun_loop"
+      }
+    ]
   }
 }

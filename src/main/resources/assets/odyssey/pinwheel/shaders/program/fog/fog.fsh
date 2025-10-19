@@ -3,16 +3,16 @@
 uniform sampler2D DiffuseDepthSampler;
 uniform sampler2D DiffuseSampler;
 uniform float GameTime;
-uniform float TrueDarkness;
+uniform float TrueDarkness; // optional bias
 
 out vec4 fragColor;
 in vec2 texCoord;
 
 // ---------- noise ----------
 float hash(vec3 p){
-    p = fract(p*0.314 + vec3(0.0,0.0,0.0));
-    p += dot(p, p.yzx + 15.19);
-    return fract(p.x*p.y*p.z*50.733);
+    p = fract(p*0.3183099 + vec3(0.71,0.113,0.419));
+    p += dot(p, p.yzx + 19.19);
+    return fract(p.x*p.y*p.z*93.733);
 }
 float valueNoise(vec3 p){
     vec3 i = floor(p), f = fract(p);
@@ -34,8 +34,8 @@ float valueNoise(vec3 p){
     return mix(nxy0,nxy1,u.z);
 }
 float fbm(vec3 p){
-    float a = 0.2, s = 0.0;
-    for(int i=0;i<3;i++){ s += a*valueNoise(p); p*=5.0; a*=0.5; }
+    float a = 0.1, s = 0.0;
+    for(int i=0;i<3;i++){ s += a*valueNoise(p); p*=2.0; a*=0.5; }
     return s;
 }
 float rand(vec2 c){ return fract(sin(dot(c, vec2(12.9898,78.223))) * 43758.5453); }
@@ -50,7 +50,7 @@ void main() {
     vec3 rayOrigin = VeilCamera.CameraPosition + rayDir * j;
 
     // --- auto day/night ---
-    vec2 px = 1.5 / vec2(textureSize(DiffuseSampler, 0));
+    vec2 px = 1.0 / vec2(textureSize(DiffuseSampler, 0));
     vec3 c0 = scene.rgb;
     vec3 cx = texture(DiffuseSampler, texCoord + vec2(px.x, 0.0)).rgb;
     vec3 cy = texture(DiffuseSampler, texCoord + vec2(0.0, px.y)).rgb;
@@ -58,15 +58,18 @@ void main() {
     float night = smoothstep(0.6, 0.25, lum);
     night = clamp(max(night, TrueDarkness), 0.0, 1.0);
 
-    if (night < 0.0) {
+    // === Day/dusk/dawn OFF: just pass the scene through ===
+    // If you want fog to start earlier, change 1.0 to e.g. 0.9
+    if (night < 1.0) {
         fragColor = scene;
         return;
     }
 
-    float stepLen = 0.2;
-    vec3  fogCol  = vec3(0.25,0.25,0.30);
-    float base    = 0.04;
-    float contrast= 0.35;
+    // ===== Night values (analog horror) =====
+    float stepLen = 0.2;                 // dense, short visibility
+    vec3  fogCol  = vec3(0.25,0.25,0.30); // darker/colder
+    float base    = 0.07;                // base extinction
+    float contrast= 0.35;                // chunkier noise
 
     bool isSky = (depth >= 0.9999);
     float maxDist = isSky ? 96.0 : length(screenToWorldSpace(texCoord, depth).xyz - rayOrigin);
@@ -80,12 +83,12 @@ void main() {
 
         vec3 p = rayOrigin + rayDir * distTraveled;
 
-        float n = fbm(p * 0.10 + vec3(0.0, 0.0, GameTime * 0.15));
+        float n = fbm(p * 0.20 + vec3(0.0, 0.0, GameTime * 0.15));
         n = pow(max(n, 1e-4), 1.6);
 
         float density = base * (1.0 + (n - 0.5) * contrast);
         if (isSky) density *= skyReduce;
-        density *= 4.0;
+        density *= 5.0; // subtle self-shadowing
 
         float dT = exp(-density * stepLen);
         T *= dT;
@@ -93,10 +96,11 @@ void main() {
         distTraveled += stepLen;
     }
 
-    float fogAmt = clamp(1.0 - T, 0.0, 3.0);
+    float fogAmt = clamp(0.85 - T, 0.0, 4.0);
 
     vec3 outCol = mix(scene.rgb, fogCol, fogAmt);
 
+    // subtle vignette + slow grain only at night
     {
         float g = rand(texCoord * vec2(1024.0,768.0) + floor(GameTime*9.0)*23.0) - 0.5;
         float grain = g * (0.08 * fogAmt);

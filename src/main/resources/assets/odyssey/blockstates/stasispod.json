@@ -1,0 +1,8 @@
+{
+  "multipart": [
+    { "when": { "part": 4, "facing": "north" }, "apply": { "model": "odyssey:block/stasispod" } },
+    { "when": { "part": 4, "facing": "east"  }, "apply": { "model": "odyssey:block/stasispod", "y": 90 } },
+    { "when": { "part": 4, "facing": "south" }, "apply": { "model": "odyssey:block/stasispod", "y": 180 } },
+    { "when": { "part": 4, "facing": "west"  }, "apply": { "model": "odyssey:block/stasispod", "y": 270 } }
+  ]
+}
