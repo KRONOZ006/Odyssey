@@ -18,21 +18,18 @@ public class ArcangelModel extends GeoModel<ArcangelEntity> {
 
     @Override
     public Identifier getAnimationResource(ArcangelEntity animatable) {
-        return Identifier.of("odyssey", "animations/empty.json");
+        return Identifier.of("odyssey", "animations/entity/arcangel.animation.json");
     }
 
     @Override
-    public void setCustomAnimations(ArcangelEntity entity, long instanceId, AnimationState<ArcangelEntity> state) {
-        GeoBone full = this.getAnimationProcessor().getBone("full");
-        GeoBone head = this.getAnimationProcessor().getBone("head");
-
-        if (full != null) {
-            float yawRad = (float) Math.toRadians(-entity.getDataTracker().get(ArcangelEntity.FULL_YAW));
-            full.setRotY(yawRad);
-        }
+    public void setCustomAnimations(ArcangelEntity e, long id, AnimationState<ArcangelEntity> state) {
+        GeoBone head = getAnimationProcessor().getBone("head");
+        GeoBone root = getAnimationProcessor().getBone("root");
+        if (root != null) root.setRotY((float)Math.toRadians(e.getFullBodyYaw()));
         if (head != null) {
-            float pitchRad = (float) Math.toRadians(-entity.getDataTracker().get(ArcangelEntity.HEAD_PITCH));
-            head.setRotX(pitchRad);
+            float baseX = (float)Math.toRadians(-e.getHeadPitchDeg());
+            head.setRotX(baseX + e.getRecoilRad());
+            head.setRotY((float)Math.toRadians(e.getFullBodyYaw()));
         }
     }
 }

@@ -1,49 +1,68 @@
 package net.kronoz.odyssey.entity.arcangel;
 
 import net.kronoz.odyssey.entity.apostasy.ApostasyEntity;
+import net.kronoz.odyssey.init.ModSounds;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
-
 import software.bernie.geckolib.animatable.GeoAnimatable;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animation.Animation;
+import software.bernie.geckolib.animation.AnimationController;
+import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.Comparator;
+import java.util.UUID;
 
 public class ArcangelEntity extends HostileEntity implements GeoAnimatable {
-    public static final TrackedData<Float> FULL_YAW =
-            DataTracker.registerData(ArcangelEntity.class, TrackedDataHandlerRegistry.FLOAT);
-    public static final TrackedData<Float> HEAD_PITCH =
-            DataTracker.registerData(ArcangelEntity.class, TrackedDataHandlerRegistry.FLOAT);
+    public static final TrackedData<Float> FULL_YAW = DataTracker.registerData(ArcangelEntity.class, TrackedDataHandlerRegistry.FLOAT);
+    public static final TrackedData<Float> HEAD_PITCH = DataTracker.registerData(ArcangelEntity.class, TrackedDataHandlerRegistry.FLOAT);
 
-    private final AnimatableInstanceCache animCache = GeckoLibUtil.createInstanceCache(this);
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
 
     private float desiredYaw;
     private float desiredPitch;
+    private int aimCooldown;
 
-    private static final float YAW_DEG_PER_TICK = 1.2f;
-    private static final float HEAD_LERP = 0.35f;
+    private int blood;
+    private boolean shooting;
+    private boolean hitApplied;
+    private int shootStartTick;
+    private UUID beamTargetUuid;
+
+    private float recoilRad;
+
+    private static final int SHOOT_IMPACT_TICKS = 40;
+
+    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("idle");
+    private static final RawAnimation SHOOT = RawAnimation.begin().then("shoot", Animation.LoopType.PLAY_ONCE);
 
     public ArcangelEntity(EntityType<? extends HostileEntity> type, World world) {
         super(type, world);
         this.experiencePoints = 0;
-        this.setNoGravity(false);
         this.setPersistent();
+        this.setNoGravity(false);
     }
 
     public static DefaultAttributeContainer.Builder createAttributes() {
         return HostileEntity.createHostileAttributes()
                 .add(EntityAttributes.GENERIC_MAX_HEALTH, 200.0)
-                .add(EntityAttributes.GENERIC_ARMOR, 20.0)
+                .add(EntityAttributes.GENERIC_ARMOR, 12.0)
                 .add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, 1.0)
                 .add(EntityAttributes.GENERIC_FOLLOW_RANGE, 128.0)
                 .add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.0);
@@ -59,68 +78,167 @@ public class ArcangelEntity extends HostileEntity implements GeoAnimatable {
     @Override
     public void tick() {
         super.tick();
-
         if (!getWorld().isClient) {
-            // Find nearest Apostasy every tick
-            ApostasyEntity target = getWorld()
-                    .getEntitiesByClass(ApostasyEntity.class, getBoundingBox().expand(128.0), e -> true)
-                    .stream()
-                    .min(Comparator.comparingDouble(e -> e.squaredDistanceTo(this)))
-                    .orElse(null);
-
-            if (target != null) {
-                double dx = target.getX() - this.getX();
-                double dz = target.getZ() - this.getZ();
-                double dy = target.getEyeY() - (this.getY() + this.getStandingEyeHeight());
-
-                float yaw = (float) (MathHelper.atan2(dz, dx) * (180f / Math.PI)) - 90f;
-                float distHoriz = MathHelper.sqrt((float) (dx * dx + dz * dz));
-                float pitch = (float) (-(MathHelper.atan2(dy, distHoriz) * (180f / Math.PI)));
-
-                desiredYaw = wrapAngle(yaw);
-                desiredPitch = MathHelper.clamp(pitch, -60f, 60f);
+            if (--aimCooldown <= 0) {
+                aimCooldown = 10;
+                ApostasyEntity t = getBeamTarget();
+                if (t == null) t = findNearestApostasy(128.0);
+                if (t != null) {
+                    beamTargetUuid = t.getUuid();
+                    Vec3d eye = getPos().add(0, getStandingEyeHeight(), 0);
+                    Vec3d tgt = new Vec3d(t.getX(), t.getEyeY(), t.getZ());
+                    Vec3d d = tgt.subtract(eye);
+                    float yaw = (float)(MathHelper.atan2(d.x, d.z) * (180f / Math.PI));
+                    float horiz = MathHelper.sqrt((float)(d.x * d.x + d.z * d.z));
+                    float pitch = (float)(MathHelper.atan2(d.y, horiz) * (180f / Math.PI));
+                    desiredYaw = wrap(yaw);
+                    desiredPitch = MathHelper.clamp(pitch, -45f, 45f);
+                }
             }
 
-            float currentFullYaw = getDataTracker().get(FULL_YAW);
-            float currentHeadPitch = getDataTracker().get(HEAD_PITCH);
+            float cy = getDataTracker().get(FULL_YAW);
+            float cp = getDataTracker().get(HEAD_PITCH);
+            float ny = stepAngle(cy, desiredYaw, 0.8f);
+            float np = MathHelper.lerp(0.2f, cp, desiredPitch);
+            getDataTracker().set(FULL_YAW, wrap(ny));
+            getDataTracker().set(HEAD_PITCH, np);
 
-            float newFullYaw = approachAngle(currentFullYaw, desiredYaw, YAW_DEG_PER_TICK);
-            float newHeadPitch = MathHelper.lerp(HEAD_LERP, currentHeadPitch, desiredPitch);
-
-            getDataTracker().set(FULL_YAW, wrapAngle(newFullYaw));
-            getDataTracker().set(HEAD_PITCH, newHeadPitch);
+            if (shooting) {
+                int elapsed = this.age - shootStartTick;
+                if (!hitApplied && elapsed >= SHOOT_IMPACT_TICKS) {
+                    applyGuaranteedHit();
+                    hitApplied = true;
+                    recoilRad = (float)Math.toRadians(-5.0);
+                }
+                recoilRad *= 0.85f;
+                if (elapsed >= SHOOT_IMPACT_TICKS + 20) {
+                    shooting = false;
+                }
+            }
         }
     }
 
-    private float wrapAngle(float a) {
-        a = a % 360f;
+    public void addBlood(int amount) {
+        int old = this.blood;
+        this.blood = Math.max(0, Math.min(100, this.blood + amount));
+        if (old < 100 && this.blood == 100) {
+            ApostasyEntity t = getBeamTarget();
+            if (t == null) t = findNearestApostasy(128.0);
+            beginShootAt(t);
+        }
+    }
+
+    public void beginShootAt(ApostasyEntity target) {
+        if (shooting) return;
+        shooting = true;
+        hitApplied = false;
+        shootStartTick = this.age;
+        beamTargetUuid = target != null ? target.getUuid() : null;
+        blood = 0;
+        if (!getWorld().isClient) {
+            getWorld().playSound(null, getBlockPos(), ModSounds.ARC_SHOOT, SoundCategory.HOSTILE, 1f, 1f);
+        }
+    }
+
+    private void applyGuaranteedHit() {
+        ApostasyEntity t = getBeamTarget();
+        if (t == null || !t.isAlive()) t = findNearestApostasy(128.0);
+        if (t == null) return;
+        ServerWorld sw = (ServerWorld) getWorld();
+        LivingEntity attacker = this;
+        t.damage(sw.getDamageSources().mobAttack(attacker), 150f);
+        t.velocityModified = true;
+    }
+
+    public ApostasyEntity getBeamTarget() {
+        if (beamTargetUuid == null) return null;
+        Entity e = getWorld() instanceof ServerWorld sw ? sw.getEntity(beamTargetUuid) : null;
+        return e instanceof ApostasyEntity a ? a : null;
+    }
+
+    private ApostasyEntity findNearestApostasy(double range) {
+        double r2 = range * range;
+        return getWorld()
+                .getEntitiesByClass(ApostasyEntity.class, getBoundingBox().expand(range), e -> true)
+                .stream()
+                .filter(Entity::isAlive)
+                .min(Comparator.comparingDouble(e -> e.squaredDistanceTo(this)))
+                .filter(e -> e.squaredDistanceTo(this) <= r2)
+                .orElse(null);
+    }
+
+    private float wrap(float a) {
+        a %= 360f;
         if (a < -180f) a += 360f;
         if (a > 180f) a -= 360f;
         return a;
     }
 
-    private float approachAngle(float from, float to, float maxDeltaDegPerTick) {
-        float delta = wrapAngle(to - from);
-        float step = MathHelper.clamp(delta, -maxDeltaDegPerTick, maxDeltaDegPerTick);
-        return from + step;
+    private float stepAngle(float from, float to, float maxStep) {
+        float d = wrap(to - from);
+        float s = MathHelper.clamp(d, -maxStep, maxStep);
+        return from + s;
     }
-    /* ======== IMMOBILE (no push/KB/impulses) & INVULNÉRABLE, WITH GRAVITY ======== */
+
     @Override public boolean isPushable() { return false; }
-    @Override public void pushAwayFrom(net.minecraft.entity.Entity e) { }
-    @Override public void takeKnockback(double s, double x, double z) { }
-    @Override public void addVelocity(double x, double y, double z) { }
-    @Override public boolean canImmediatelyDespawn(double distanceSquared) {return false;}
-    @Override public boolean isPersistent() {return true;}
+    @Override public void pushAwayFrom(Entity entity) {}
+    @Override public void takeKnockback(double s, double x, double z) {}
+    @Override public boolean isPushedByFluids() { return false; }
+    @Override public boolean canImmediatelyDespawn(double distanceSquared) { return false; }
+    @Override protected void initGoals() {}
 
-    @Override public boolean damage(DamageSource source, float amount) { return false; }
-    @Override public boolean isInvulnerableTo(DamageSource source) { return true; }
-    @Override public boolean isAttackable() { return false; }
+    public boolean isShooting() { return shooting; }
+    public int getShootStartTick() { return shootStartTick; }
+    public float getFullBodyYaw() { return getDataTracker().get(FULL_YAW); }
+    public float getHeadPitchDeg() { return getDataTracker().get(HEAD_PITCH); }
+    public float getRecoilRad() { return recoilRad; }
 
-    /* ======== AI ======== */
-    @Override protected void initGoals() { }
+    @Override
+    public void readCustomDataFromNbt(NbtCompound nbt) {
+        this.blood = nbt.getInt("Blood");
+        this.shooting = nbt.getBoolean("Shooting");
+        this.hitApplied = nbt.getBoolean("HitApplied");
+        this.shootStartTick = nbt.getInt("ShootStart");
+        if (nbt.containsUuid("BeamTgt")) this.beamTargetUuid = nbt.getUuid("BeamTgt");
+        this.desiredYaw = nbt.getFloat("DesYaw");
+        this.desiredPitch = nbt.getFloat("DesPitch");
+        this.getDataTracker().set(FULL_YAW, nbt.getFloat("TrackYaw"));
+        this.getDataTracker().set(HEAD_PITCH, nbt.getFloat("TrackPitch"));
+        this.recoilRad = nbt.getFloat("Recoil");
+    }
 
-    /* ======== GeckoLib ======== */
-    @Override public void registerControllers(AnimatableManager.ControllerRegistrar controllers) { }
-    @Override public AnimatableInstanceCache getAnimatableInstanceCache() { return animCache; }
-    @Override public double getTick(Object o) { return this.age; }
+    @Override
+    public void writeCustomDataToNbt(NbtCompound nbt) {
+        nbt.putInt("Blood", this.blood);
+        nbt.putBoolean("Shooting", this.shooting);
+        nbt.putBoolean("HitApplied", this.hitApplied);
+        nbt.putInt("ShootStart", this.shootStartTick);
+        if (this.beamTargetUuid != null) nbt.putUuid("BeamTgt", this.beamTargetUuid);
+        nbt.putFloat("DesYaw", this.desiredYaw);
+        nbt.putFloat("DesPitch", this.desiredPitch);
+        nbt.putFloat("TrackYaw", this.getDataTracker().get(FULL_YAW));
+        nbt.putFloat("TrackPitch", this.getDataTracker().get(HEAD_PITCH));
+        nbt.putFloat("Recoil", this.recoilRad);
+    }
+
+    private PlayState controller(software.bernie.geckolib.animation.AnimationState<ArcangelEntity> s) {
+        if (this.isShooting()) s.getController().setAnimation(SHOOT);
+        else s.getController().setAnimation(IDLE);
+        return PlayState.CONTINUE;
+    }
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        controllers.add(new AnimationController<>(this, "main", 0, this::controller));
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return cache;
+    }
+
+    @Override
+    public double getTick(Object o) {
+        return this.age;
+    }
 }

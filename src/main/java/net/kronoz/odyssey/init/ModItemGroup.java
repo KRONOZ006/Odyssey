@@ -40,6 +40,7 @@ public class ModItemGroup {
                         entries.add(ModBlocks.SHELF1);
                         entries.add(ModBlocks.RAILING);
                         entries.add(ModBlocks.TERMINAL);
+                        entries.add(ModBlocks.DVM);
 
 
                     })

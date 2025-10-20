@@ -19,6 +19,7 @@ public class ModItems {
     public static final Item STASISPOD_ITEM = Registry.register(Registries.ITEM, Identifier.of("odyssey","stasispod"), new BlockItem(ModBlocks.STASISPOD, new Item.Settings()));
     public static final Item RAILING_ITEM = Registry.register(Registries.ITEM, Identifier.of("odyssey","railing"), new BlockItem(ModBlocks.RAILING, new Item.Settings()));
     public static final Item TERMINAL_ITEM = Registry.register(Registries.ITEM, Identifier.of("odyssey","terminal"), new BlockItem(ModBlocks.TERMINAL, new Item.Settings()));
+    public static final Item DVM_ITEM = Registry.register(Registries.ITEM, Identifier.of("odyssey","dvm"), new BlockItem(ModBlocks.DVM, new Item.Settings()));
 
     private static Item registerItem(String name, Item item) {return Registry.register(Registries.ITEM, Identifier.of(Odyssey.MODID, name), item);}
     public static void registerModItems(){

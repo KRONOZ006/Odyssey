@@ -1,9 +1,91 @@
 {
   "credit": "Made with Blockbench",
+  "parent": "builtin/entity",
   "texture_size": [
     64,
     64
   ],
+  "display": {
+    "thirdperson_righthand": {
+      "translation": [
+        0,
+        -18.25,
+        0
+      ]
+    },
+    "thirdperson_lefthand": {
+      "translation": [
+        0,
+        -18.25,
+        0
+      ]
+    },
+    "firstperson_righthand": {
+      "rotation": [
+        -62,
+        8,
+        -5
+      ],
+      "translation": [
+        3,
+        -7.5,
+        13
+      ]
+    },
+    "firstperson_lefthand": {
+      "rotation": [
+        -62,
+        8,
+        -5
+      ],
+      "translation": [
+        3,
+        -7.5,
+        13
+      ]
+    },
+    "gui": {
+      "rotation": [
+        8.840000000000146,
+        58.38000000000011,
+        -25.61999999999989
+      ],
+      "translation": [
+        -2.25,
+        -8,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    },
+    "head": {
+      "rotation": [
+        -52.75,
+        0,
+        0
+      ]
+    },
+    "fixed": {
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "translation": [
+        0,
+        -10,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.5,
+        0.5
+      ]
+    }
+  },
   "textures": {
     "particle": "odyssey:item/spear"
   }

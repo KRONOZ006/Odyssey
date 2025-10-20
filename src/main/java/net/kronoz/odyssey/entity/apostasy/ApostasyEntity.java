@@ -20,6 +20,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.RaycastContext;
 import net.minecraft.world.World;
 import net.minecraft.world.event.GameEvent;
@@ -49,6 +50,8 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     private int eyeBurstShotsLeft = 0;
     private int eyeBurstTimer = 0;
     private int eyeBurstTargetId = -1;
+    private int glowShotCooldown = 0;
+    private int glowMuzzleIndex = 0;
 
     private static final int TELEGRAPH_TICKS = 20;
     private static final int P2_SINGLE_COOLDOWN = 60;
@@ -69,9 +72,6 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     private int ringShotCooldown = 10;
     private int hugeLaserCooldown = 40;
     private int lightningCooldown = 40;
-    private int glowShotCooldown = 0;          // ticks
-    private int glowMuzzleIndex = 0;
-    private Vec3d lastShotDir = Vec3d.ZERO;
 
     private int shockwaveCooldown = 0;
     private static final int SHOCKWAVE_COOLDOWN_P1 = 120;
@@ -102,7 +102,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
 
     public static DefaultAttributeContainer.Builder createAttributes() {
         return PathAwareEntity.createMobAttributes()
-                .add(EntityAttributes.GENERIC_MAX_HEALTH, 600.0)
+                .add(EntityAttributes.GENERIC_MAX_HEALTH, 900.0)
                 .add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.0)
                 .add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, 1.0)
                 .add(EntityAttributes.GENERIC_FOLLOW_RANGE, 64.0);
@@ -117,7 +117,13 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
 
     @Override
     protected void initGoals() { this.goalSelector.add(0, new BrainGoal()); }
-
+    public void checkDespawn() {
+        if (this.getWorld().getDifficulty() == Difficulty.PEACEFUL && this.isDisallowedInPeaceful()) {
+            this.discard();
+        } else {
+            this.despawnCounter = 0;
+        }
+    }
     private class BrainGoal extends Goal {
         BrainGoal() { setControls(EnumSet.of(Control.MOVE, Control.LOOK)); }
         @Override public boolean canStart() { return true; }
@@ -129,6 +135,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         updatePhase();
         repulsePlayers();
         tickPendingStrikes();
+        tickGlowHoming();
         PlayerEntity target = getClosestTarget(64.0);
         if (target == null) return;
         switch (phase) {
@@ -136,7 +143,6 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
             case P2 -> handlePhase2(target);
             case P3, P4 -> handlePhase3(target);
         }
-        tickGlowFire();
         if (shockwaveCooldown > 0) shockwaveCooldown--;
     }
 
@@ -214,41 +220,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         double d = MathHelper.wrapDegrees(bearingDeg - headYaw);
         return Math.abs(d) <= maxDeg;
     }
-    private void tickGlowFire() {
-        if (!(this.getWorld() instanceof ServerWorld sw)) return;
-        PlayerEntity target = getClosestTarget(64.0);
-        if (target == null) return;
 
-        if (glowShotCooldown > 0) { glowShotCooldown--; return; }
-
-        List<Vec3d> muzzles = getGlowMuzzles(); // server-side stand-in for “bones starting with glow”
-        if (muzzles.isEmpty()) return;
-
-        if (glowMuzzleIndex >= muzzles.size()) glowMuzzleIndex = 0;
-        Vec3d mCenter = muzzles.get(glowMuzzleIndex++);
-
-        Vec3d aim = target.getPos().add(0, target.getStandingEyeHeight() * 0.6, 0);
-        Vec3d dir = aim.subtract(mCenter);
-        double L2 = dir.lengthSquared();
-        if (L2 < 1e-6) dir = new Vec3d(0,0,1); else dir = dir.normalize();
-
-        Vec3d muzzle = mCenter.add(dir.multiply(0.35));
-
-        LaserProjectileEntity laser = ModEntities.LASER_PROJECTILE.create(sw);
-        if (laser != null) {
-            laser.refreshPositionAndAngles(muzzle.x, muzzle.y, muzzle.z, 0, 0);
-            laser.setOwner(this);
-            laser.setVelocity(dir.multiply(2.6));
-            laser.setDamage(4.0);
-            laser.setLifetime(60);
-            sw.spawnEntity(laser);
-        }
-
-        lastShotDir = dir;
-        orientTowards(dir, 12f); // smooth rotate to shot direction
-
-        glowShotCooldown = 10;
-    }
 
     private void orientTowards(Vec3d dir, float maxStepDeg) {
         if (dir.lengthSquared() < 1e-6) return;
@@ -264,14 +236,6 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         this.setPitch(newPitch);
     }
 
-    private List<Vec3d> getGlowMuzzles() {
-        double yawRad = MathHelper.RADIANS_PER_DEGREE * (this.getYaw() % 360f);
-        List<Vec3d> out = new ArrayList<>(24);
-        out.addAll(buildRingMuzzles(2.4, yawRad * 1.00, 8));
-        out.addAll(buildRingMuzzles(3.1, yawRad * 0.97, 8));
-        out.addAll(buildRingMuzzles(3.8, yawRad * 0.94, 8));
-        return out;
-    }
 
     private Vec3d eyeMuzzle() {
         return this.getPos().add(0, this.getStandingEyeHeight() + 0.4, 0);
@@ -296,21 +260,6 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         eyeBurstTargetId = target.getId();
     }
 
-
-    private void fireOneEyeLaser(PlayerEntity target) {
-        if (!(this.getWorld() instanceof ServerWorld sw)) return;
-        Vec3d eye = eyeMuzzle();
-        Vec3d dir = aimDirectionFor(target);
-        Vec3d muzzle = eye.add(dir.multiply(EYE_MUZZLE_FORWARD));
-        LaserProjectileEntity laser = ModEntities.LASER_PROJECTILE.create(sw);
-        if (laser == null) return;
-        laser.refreshPositionAndAngles(muzzle.x, muzzle.y, muzzle.z, 0, 0);
-        laser.setOwner(this);
-        laser.setVelocity(dir.multiply(2.6));
-        laser.setDamage(EYE_BURST_DAMAGE);
-        laser.setLifetime(EYE_BURST_LIFETIME);
-        sw.spawnEntity(laser);
-    }
 
     private void tryShockwave(PlayerEntity target) {
         if (shockwaveCooldown > 0) return;
@@ -506,6 +455,39 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         e.setup(0.95, life);
         sw.spawnEntity(e);
     }
+    private void tickGlowHoming() {
+        if (!(this.getWorld() instanceof net.minecraft.server.world.ServerWorld sw)) return;
+        if (glowShotCooldown > 0) { glowShotCooldown--; return; }
+
+        net.minecraft.entity.player.PlayerEntity target = getClosestTarget(64.0);
+        if (target == null) return;
+
+        java.util.List<net.minecraft.util.math.Vec3d> muzzles = getGlowMuzzles();
+        if (muzzles.isEmpty()) return;
+
+        if (glowMuzzleIndex >= muzzles.size()) glowMuzzleIndex = 0;
+        net.minecraft.util.math.Vec3d mCenter = muzzles.get(glowMuzzleIndex++);
+
+        net.kronoz.odyssey.entity.projectile.LaserProjectileEntity rocket =
+                net.kronoz.odyssey.init.ModEntities.LASER_PROJECTILE.create(sw);
+        if (rocket != null) {
+            // small push so it immediately leaves the muzzle
+            rocket.initHoming(this, target, mCenter, 0.6);
+            rocket.setOdysseyDamage(1.0f); // ½ heart
+            sw.spawnEntity(rocket);
+        }
+
+        glowShotCooldown = 10; // 0.5s at 20 TPS
+    }
+
+    private java.util.List<net.minecraft.util.math.Vec3d> getGlowMuzzles() {
+        double yawRad = net.minecraft.util.math.MathHelper.RADIANS_PER_DEGREE * (this.getYaw() % 360f);
+        java.util.ArrayList<net.minecraft.util.math.Vec3d> out = new java.util.ArrayList<>(24);
+        out.addAll(buildRingMuzzles(2.4, yawRad, 8));
+        out.addAll(buildRingMuzzles(3.1, yawRad * 0.97, 8));
+        out.addAll(buildRingMuzzles(3.8, yawRad * 0.94, 8));
+        return out;
+    }
 
     private void fireEyeHugeLaser(PlayerEntity target) {
         if (!(this.getWorld() instanceof ServerWorld sw)) return;
@@ -518,8 +500,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         beam.refreshPositionAndAngles(muzzle.x, muzzle.y, muzzle.z, 0, 0);
         beam.setOwner(this);
         beam.setVelocity(dir.multiply(HUGE_LASER_SPEED));
-        beam.setDamage(10.0);
-        beam.setLifetime(70);
+        beam.setOdysseyDamage(10f);
         sw.spawnEntity(beam);
     }
 
@@ -535,8 +516,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
             laser.refreshPositionAndAngles(m.x, m.y, m.z, 0, 0);
             laser.setOwner(this);
             laser.setVelocity(dir.multiply(SMALL_LASER_SPEED));
-            laser.setDamage(3.0);
-            laser.setLifetime(60);
+            laser.setOdysseyDamage(3f);
             sw.spawnEntity(laser);
         }
     }

@@ -48,6 +48,9 @@ public class ModBlocks {
     public static final Block RAILING = Registry.register(
             Registries.BLOCK, Identifier.of("odyssey","railing"),
             new RailingBlock(AbstractBlock.Settings.create().nonOpaque().strength(2.0f, 3.0f))
+    );public static final Block DVM = Registry.register(
+            Registries.BLOCK, Identifier.of("odyssey","dvm"),
+            new DevinityMachineBlock(AbstractBlock.Settings.create().nonOpaque().strength(2.0f, 3.0f))
     );public static final Block TERMINAL = Registry.register(
             Registries.BLOCK, Identifier.of("odyssey","terminal"),
             new TerminalBlock(AbstractBlock.Settings.create().nonOpaque().strength(2.0f, 3.0f))

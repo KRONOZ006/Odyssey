@@ -53,7 +53,14 @@
   "wallrun_loop": {
     "sounds": [
       {
-        "name": "odyssey:walrun_loop"
+        "name": "odyssey:wallrun_loop"
+      }
+    ]
+  },
+  "arc_shoot": {
+    "sounds": [
+      {
+        "name": "odyssey:arc_shoot"
       }
     ]
   }
