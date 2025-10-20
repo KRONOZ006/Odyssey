@@ -1,5 +1,5 @@
 {
-  "type": "minecraft:overworld",
+  "type": "odyssey:void",
   "generator": {
     "type": "noise",
     "biome_source": {

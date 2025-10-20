@@ -9,6 +9,7 @@ import net.kronoz.odyssey.entity.arcangel.ArcangelEntity;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileEntity;
 import net.kronoz.odyssey.entity.sentinel.SentinelEntity;
 import net.kronoz.odyssey.entity.sentry.SentryEntity;
+import net.kronoz.odyssey.entity.thrasher.ThrasherEntity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
@@ -48,6 +49,12 @@ public class ModEntities {
             EntityType.Builder.<ApostasyEntity>create(ApostasyEntity::new, SpawnGroup.MONSTER)
                     .dimensions(3.0f, 5.0f)
                     .build()
+    ); public static final EntityType<ThrasherEntity> THRASHER = Registry.register(
+            Registries.ENTITY_TYPE,
+            Identifier.of(Odyssey.MODID, "thrasher"),
+            EntityType.Builder.<ThrasherEntity>create(ThrasherEntity::new, SpawnGroup.MONSTER)
+                    .dimensions(3.0f, 5.0f)
+                    .build()
     );
     public static final EntityType<LaserProjectileEntity> LASER_PROJECTILE =
             Registry.register(Registries.ENTITY_TYPE, Identifier.of("odyssey","laser_projectile"),
@@ -83,6 +90,7 @@ public class ModEntities {
         FabricDefaultAttributeRegistry.register(SENTRY, SentryEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(SENTINEL, SentinelEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(ARCANGEL, ArcangelEntity.createAttributes());
+        FabricDefaultAttributeRegistry.register(THRASHER, ThrasherEntity.createAttributes());
 
     }
     public static void register() {

@@ -23,6 +23,7 @@ import net.kronoz.odyssey.entity.projectile.LaserProjectileRenderer;
 import net.kronoz.odyssey.entity.sentinel.SentinelLightClient;
 import net.kronoz.odyssey.entity.sentinel.SentinelRenderer;
 import net.kronoz.odyssey.entity.sentry.SentryRenderer;
+import net.kronoz.odyssey.entity.thrasher.ThrasherRenderer;
 import net.kronoz.odyssey.hud.bosshud.BossHudClient;
 import net.kronoz.odyssey.hud.death.DeathUICutscene;
 import net.kronoz.odyssey.init.*;
@@ -127,6 +128,7 @@ public class OdysseyClient implements ClientModInitializer {
         BlockEntityRendererFactories.register(ModBlockEntities.STASISPOD, StasisPodBERenderer::new);
         BlockEntityRendererFactories.register(ModBlockEntities.SHELF1, Shelf1GeoBERenderer::new);
         EntityRendererRegistry.register(ModEntities.ARCANGEL, ArcangelRenderer::new);
+        EntityRendererRegistry.register(ModEntities.THRASHER, ThrasherRenderer::new);
 
         PayloadTypeRegistry.playS2C().register(BossHudUpdatePayload.ID, BossHudUpdatePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(BossHudClearPayload.ID,  BossHudClearPayload.CODEC);

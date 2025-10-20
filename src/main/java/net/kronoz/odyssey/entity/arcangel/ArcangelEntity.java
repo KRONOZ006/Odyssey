@@ -7,11 +7,17 @@ import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.damage.DamageSources;
+import net.minecraft.entity.damage.DamageType;
+import net.minecraft.entity.damage.DamageTypes;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.HostileEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.math.MathHelper;
@@ -19,11 +25,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import software.bernie.geckolib.animatable.GeoAnimatable;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.animation.Animation;
-import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.PlayState;
-import software.bernie.geckolib.animation.RawAnimation;
+import software.bernie.geckolib.animation.*;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.Comparator;
@@ -49,8 +51,11 @@ public class ArcangelEntity extends HostileEntity implements GeoAnimatable {
 
     private static final int SHOOT_IMPACT_TICKS = 40;
 
-    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("idle");
+    private static final RawAnimation IDLE = RawAnimation.begin().thenLoop("shoot");
     private static final RawAnimation SHOOT = RawAnimation.begin().then("shoot", Animation.LoopType.PLAY_ONCE);
+    private boolean wasShootingLastTick = false;
+
+
 
     public ArcangelEntity(EntityType<? extends HostileEntity> type, World world) {
         super(type, world);
@@ -59,11 +64,24 @@ public class ArcangelEntity extends HostileEntity implements GeoAnimatable {
         this.setNoGravity(false);
     }
 
+
+    @Override
+    public boolean damage(DamageSource source, float amount) {
+        if (source.isOf(DamageTypes.OUT_OF_WORLD) || amount > 5000) {
+
+            return super.damage(source, amount);
+
+
+        } else {
+            return false;
+        }
+    }
+
     public static DefaultAttributeContainer.Builder createAttributes() {
         return HostileEntity.createHostileAttributes()
-                .add(EntityAttributes.GENERIC_MAX_HEALTH, 200.0)
+                .add(EntityAttributes.GENERIC_MAX_HEALTH, 2.0)
                 .add(EntityAttributes.GENERIC_ARMOR, 12.0)
-                .add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, 1.0)
+                .add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, 10000)
                 .add(EntityAttributes.GENERIC_FOLLOW_RANGE, 128.0)
                 .add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.0);
     }
@@ -90,7 +108,8 @@ public class ArcangelEntity extends HostileEntity implements GeoAnimatable {
                     Vec3d d = tgt.subtract(eye);
                     float yaw = (float)(MathHelper.atan2(d.x, d.z) * (180f / Math.PI));
                     float horiz = MathHelper.sqrt((float)(d.x * d.x + d.z * d.z));
-                    float pitch = (float)(MathHelper.atan2(d.y, horiz) * (180f / Math.PI));
+                    float pitch = (float)(MathHelper.atan2(d.y, horiz) * (-180f / Math.PI ));
+                    //it does not look fully at the apostasy, maybe you can fix this mr math goat ~ krono
                     desiredYaw = wrap(yaw);
                     desiredPitch = MathHelper.clamp(pitch, -45f, 45f);
                 }
@@ -221,9 +240,21 @@ public class ArcangelEntity extends HostileEntity implements GeoAnimatable {
         nbt.putFloat("Recoil", this.recoilRad);
     }
 
-    private PlayState controller(software.bernie.geckolib.animation.AnimationState<ArcangelEntity> s) {
-        if (this.isShooting()) s.getController().setAnimation(SHOOT);
-        else s.getController().setAnimation(IDLE);
+    private PlayState controller(AnimationState<ArcangelEntity> state) {
+        AnimationController<ArcangelEntity> controller = state.getController();
+
+
+        boolean shootingNow = this.shooting && (this.age - shootStartTick < SHOOT_IMPACT_TICKS);
+
+        if (shootingNow) {
+
+            controller.forceAnimationReset();
+            controller.setAnimation(SHOOT);
+        } else {
+
+            controller.setAnimation(IDLE);
+        }
+
         return PlayState.CONTINUE;
     }
 

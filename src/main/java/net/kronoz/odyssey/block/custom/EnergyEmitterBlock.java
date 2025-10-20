@@ -3,6 +3,7 @@ package net.kronoz.odyssey.block.custom;
 import net.kronoz.odyssey.init.ModBlocks;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
@@ -48,6 +49,15 @@ public class EnergyEmitterBlock extends Block {
             world.setBlockState(pos, state.with(POWERED, isPowered), Block.NOTIFY_LISTENERS);
             world.scheduleBlockTick(pos, this, 1);
         }
+    }
+
+    @Override
+    public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
+        if (!world.isClient && !state.isOf(newState.getBlock())) {
+            Direction dir = state.get(FACING);
+            retractChain((ServerWorld) world, pos, dir);
+        }
+        super.onStateReplaced(state, world, pos, newState, moved);
     }
 
     @Override
@@ -103,7 +113,8 @@ public class EnergyEmitterBlock extends Block {
         for (int i = 1; i <= MAX_DISTANCE; i++) {
             BlockPos p = origin.offset(dir, i);
             if (world.getBlockState(p).isOf(ModBlocks.ENERGY_BARRIER)) {
-                world.breakBlock(p, false);
+
+                world.removeBlock(p, false);
             } else {
                 break;
             }

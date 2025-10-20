@@ -43,23 +43,23 @@ public class EnergyBarrierBlock extends Block {
         builder.add(LIGHT_LEVEL, FACING);
     }
 
-//    @Override
-//    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
-//        super.onBlockAdded(state, world, pos, oldState, notify);
-//
-//        if (!world.isClient) {
-//            world.scheduleBlockTick(pos, this, 2);
-//        }
-//    }
-//
-//    @Override
-//    public void onPlaced(World world, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack itemStack) {
-//        super.onPlaced(world, pos, state, placer, itemStack);
-//        if (!world.isClient) {
-//            world.scheduleBlockTick(pos, this, 2);
-//        }
-//    }
-//
+      @Override
+    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
+        super.onBlockAdded(state, world, pos, oldState, notify);
+
+       if (!world.isClient) {
+           world.scheduleBlockTick(pos, this, 1);
+       }
+   }
+
+    @Override
+   public void onPlaced(World world, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack itemStack) {
+        super.onPlaced(world, pos, state, placer, itemStack);
+        if (!world.isClient) {
+            world.scheduleBlockTick(pos, this, 1);
+        }
+   }
+
     @Override
     public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
 
@@ -70,7 +70,9 @@ public class EnergyBarrierBlock extends Block {
 //        BlockState behindState = world.getBlockState(behindBlock);
 
         int lightLevel = getPulsingLight(world);
-//        world.setBlockState(pos, state.with(LIGHT_LEVEL, lightLevel), 3);
+        world.setBlockState(pos, state.with(LIGHT_LEVEL, lightLevel), 3);
+        world.scheduleBlockTick(pos, this, 1);
+
 
 //        if (!world.isClient) {
 //            if (!world.getBlockState(behindBlock).isOf(ModBlocks.ENERGY_BARRIER)) {

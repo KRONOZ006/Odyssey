@@ -3,6 +3,7 @@
   "temperature": 2.0,
   "temperature_modifier": "none",
   "downfall": 0,
+
   "effects": {
 
     "particle": {

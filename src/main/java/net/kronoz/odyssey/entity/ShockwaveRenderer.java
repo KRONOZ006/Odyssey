@@ -40,7 +40,7 @@ public class ShockwaveRenderer extends EntityRenderer<ShockwaveEntity> {
         MatrixStack.Entry entry = matrices.peek();
         Matrix4f pose = entry.getPositionMatrix();
 
-        VertexConsumer vc = buffers.getBuffer(RenderLayer.getEntityTranslucent(tex));
+        VertexConsumer vc = buffers.getBuffer(RenderLayer.getEyes(tex));
         float u0=0f,v0=0f,u1=1f,v1=1f;
 
         vc.vertex(pose, -r, -r, 0).color(1f,1f,1f,alpha).texture(u0,v0).overlay(OverlayTexture.DEFAULT_UV).light(0x00F000F0).normal(entry,0,0,1);

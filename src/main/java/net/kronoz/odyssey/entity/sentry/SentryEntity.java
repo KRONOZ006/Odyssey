@@ -93,7 +93,7 @@ public class SentryEntity extends PathAwareEntity implements GeoEntity {
 
             if (attacker instanceof PlayerEntity player) {
                 axeHit = player.getMainHandStack().isIn(ItemTags.AXES);
-                if (this.getWorld().isClient) {
+                if (!this.getWorld().isClient) {
                     double x1 = this.getX();
                     double y1 = this.getY() + this.getHeight() / 2.0;
                     double z1 = this.getZ();
