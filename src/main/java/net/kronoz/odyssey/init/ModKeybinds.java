@@ -4,6 +4,7 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.kronoz.odyssey.movement.MovementVisuals;
 import net.kronoz.odyssey.net.DashC2SPayload;
+import net.kronoz.odyssey.net.SliceAttackC2SPayload;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
@@ -13,6 +14,7 @@ import org.lwjgl.glfw.GLFW;
 
 public final class ModKeybinds {
     private static KeyBinding DASH;
+    private static KeyBinding SLICE;
     private static long lastPressMs = 0;
 
     public static void init() {
@@ -21,6 +23,14 @@ public final class ModKeybinds {
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_R,
                 "key.categories.movement"
+        ));
+
+
+        SLICE = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.odyssey.slice",
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_Y,
+                "key.categories.gameplay"
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
@@ -65,6 +75,12 @@ public final class ModKeybinds {
                 float tinyUp = p.isOnGround() ? 0.04f : 0.0f;
 
                 ModNetworking.send(new DashC2SPayload((float)dir.x, (float)dir.y, (float)dir.z, spd, tinyUp));
+            }
+
+            while (SLICE.wasPressed()) {
+                if (p != null) {
+                    ModNetworking.send(new SliceAttackC2SPayload(1, 1, 1, 1));
+                }
             }
         });
     }

@@ -34,10 +34,14 @@ public class ThrasherRenderer extends DynamicGeoEntityRenderer<ThrasherEntity> {
 
       
         boolean isEmissive =
-                bone.getName().equals("rightaxe") ||
-                bone.getName().equals("rightsawpart");
-                bone.getName().equals("righttopblade");
-                bone.getName().equals("rightbottomblade");
+                bone.getName().equals("rightaxeb") ||
+                bone.getName().equals("leftaxeb") ||
+                bone.getName().equals("rightsawpart") ||
+                bone.getName().equals("leftsawpart") ||
+                bone.getName().equals("righttopbladeb") ||
+                bone.getName().equals("lefttopbladeb") ||
+                bone.getName().equals("rightbottombladeb") ||
+                bone.getName().equals("leftbottombladeb");
 
 
         VertexConsumer vertexConsumer;

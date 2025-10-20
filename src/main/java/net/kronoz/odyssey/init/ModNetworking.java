@@ -3,9 +3,11 @@ package net.kronoz.odyssey.init;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.kronoz.odyssey.entity.thrasher.SliceAttackHandler;
 import net.kronoz.odyssey.net.BodyModPackets;
 import net.kronoz.odyssey.net.DashC2SPayload;
 import net.kronoz.odyssey.movement.DashHandler;
+import net.kronoz.odyssey.net.SliceAttackC2SPayload;
 import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.minecraft.entity.player.PlayerEntity;
 
@@ -30,6 +32,12 @@ public final class ModNetworking {
             var player = ctx.player();
             DashHandler.onDashPacket(player, payload);
         });
+
+        PayloadTypeRegistry.playC2S().register(SliceAttackC2SPayload.ID, SliceAttackC2SPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(SliceAttackC2SPayload.ID, (sliceAttackC2SPayload, ctx) -> {
+            var player = ctx.player();
+            SliceAttackHandler.onSlicePacket(player, sliceAttackC2SPayload);
+        });
         ServerPlayNetworking.registerGlobalReceiver(BodyModPackets.ClearSlotC2S.ID, (payload, context) -> {
             var server = context.player().getServer();
             if (server == null) return;
@@ -49,6 +57,10 @@ public final class ModNetworking {
         });
     }
     public static void send(DashC2SPayload payload) {
-        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(payload);
+        ClientPlayNetworking.send(payload);
+    }
+
+    public static void send(SliceAttackC2SPayload payload) {
+        ClientPlayNetworking.send(payload);
     }
 }

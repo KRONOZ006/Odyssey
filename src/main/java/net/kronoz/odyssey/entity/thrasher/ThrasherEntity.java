@@ -1,5 +1,6 @@
 package net.kronoz.odyssey.entity.thrasher;
 
+import net.kronoz.odyssey.entity.sentry.SentryEntity;
 import net.minecraft.entity.*;
 import net.minecraft.entity.ai.control.MoveControl;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
@@ -18,7 +19,8 @@ import software.bernie.geckolib.animatable.GeoAnimatable;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animatable.instance.SingletonAnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animation.*;
+import software.bernie.geckolib.animation.AnimationState;
 
 import java.util.UUID;
 
@@ -53,8 +55,19 @@ public class ThrasherEntity extends PathAwareEntity implements GeoEntity {
 
     }
 
+
+
     @Override
-    public void registerControllers(AnimatableManager.ControllerRegistrar controllerRegistrar) {
+    public void registerControllers(AnimatableManager.ControllerRegistrar reg) {
+        reg.add(new AnimationController<>(this, "controller", 2, this::predicate));
+    }
+
+
+    private PlayState predicate(AnimationState<ThrasherEntity> s) {
+        if (s.isMoving()) s.getController().setAnimation(RawAnimation.begin().then("walk", Animation.LoopType.LOOP));
+
+        else s.getController().setAnimation(RawAnimation.begin().then("new", Animation.LoopType.LOOP));
+        return PlayState.CONTINUE;
 
     }
 
@@ -87,7 +100,7 @@ public class ThrasherEntity extends PathAwareEntity implements GeoEntity {
 
 
         double forwardOffset = -0.2D;
-        double heightOffset = 2.0D;
+        double heightOffset = 1.5D;
         double sideOffset = 0.0D;
 
 
