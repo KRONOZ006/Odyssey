@@ -23,13 +23,15 @@ public class ArcangelModel extends GeoModel<ArcangelEntity> {
 
     @Override
     public void setCustomAnimations(ArcangelEntity e, long id, AnimationState<ArcangelEntity> state) {
-        GeoBone head = getAnimationProcessor().getBone("head");
-        GeoBone root = getAnimationProcessor().getBone("root");
-        if (root != null) root.setRotY((float)Math.toRadians(e.getFullBodyYaw()));
+        GeoBone full = getAnimationProcessor().getBone("full"); // horizontal yaw bone
+        GeoBone head = getAnimationProcessor().getBone("head"); // vertical pitch bone
+
+        if (full != null) {
+            full.setRotY((float) Math.toRadians(-e.getFullBodyYaw()));
+        }
         if (head != null) {
-            float baseX = (float)Math.toRadians(-e.getHeadPitchDeg());
+            float baseX = (float) Math.toRadians(-e.getHeadPitchDeg());
             head.setRotX(baseX + e.getRecoilRad());
-            head.setRotY((float)Math.toRadians(e.getFullBodyYaw()));
         }
     }
 }

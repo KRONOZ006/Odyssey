@@ -1,5 +1,6 @@
 package net.kronoz.odyssey.entity.apostasy;
 
+import net.kronoz.odyssey.entity.arcangel.ArcangelEntity;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileEntity;
 import net.kronoz.odyssey.init.ModEntities;
 import net.minecraft.block.BlockState;
@@ -284,8 +285,11 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
 
         sw.spawnEntity(e);
     }
-
-    @Override public boolean isInvulnerableTo(DamageSource source) { return true; }
+    @Override
+    public boolean isInvulnerable() {
+        return false;
+    }
+    @Override public boolean isInvulnerableTo(DamageSource source) { return false; }
     @Override public boolean isAttackable() { return false; }
 
     @Override public boolean isPushable() { return false; }
@@ -573,12 +577,17 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     }
 
     @Override
+    public void kill() {
+        super.kill();
+    }
+    @Override
     public boolean isFireImmune() { return true; }
 
     @Override
     public boolean damage(net.minecraft.entity.damage.DamageSource source, float amount) {
         if (source.isOf(net.minecraft.entity.damage.DamageTypes.LIGHTNING_BOLT)) return false;
         if (source.isIn(net.minecraft.registry.tag.DamageTypeTags.IS_FIRE)) return false;
+
         return super.damage(source, amount);
     }
 
