@@ -1,7 +1,6 @@
 package net.kronoz.odyssey.systems.cam;
 
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.random.Random;
 

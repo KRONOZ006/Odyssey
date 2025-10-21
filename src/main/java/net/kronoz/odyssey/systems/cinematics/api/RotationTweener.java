@@ -1,8 +1,5 @@
 package net.kronoz.odyssey.systems.cinematics.api;
 
-import net.kronoz.odyssey.systems.cinematics.api.Easing;
-import net.kronoz.odyssey.systems.cinematics.api.EasingUtil;
-
 public final class RotationTweener {
     private final float startYaw;
     private final float startPitch;

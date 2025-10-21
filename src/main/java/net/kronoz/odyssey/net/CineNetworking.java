@@ -6,7 +6,6 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.kronoz.odyssey.Odyssey;
-import net.kronoz.odyssey.OdysseyDataGenerator;
 import net.kronoz.odyssey.systems.cinematics.runtime.CutsceneManager;
 import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.network.codec.PacketCodec;

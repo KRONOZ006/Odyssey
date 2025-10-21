@@ -1,6 +1,5 @@
 package net.kronoz.odyssey.block.custom;
 
-import net.kronoz.odyssey.block.custom.StasisPodBlock;
 import net.kronoz.odyssey.entity.StasisPodBlockEntity;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;

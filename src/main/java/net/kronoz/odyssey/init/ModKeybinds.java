@@ -1,7 +1,7 @@
 package net.kronoz.odyssey.init;
 
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.kronoz.odyssey.movement.MovementVisuals;
 import net.kronoz.odyssey.net.DashC2SPayload;
 import net.kronoz.odyssey.net.SliceAttackC2SPayload;

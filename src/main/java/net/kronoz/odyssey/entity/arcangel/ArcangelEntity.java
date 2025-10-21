@@ -11,7 +11,6 @@ import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Box;
@@ -21,11 +20,7 @@ import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
-import software.bernie.geckolib.animation.PlayState;
-import software.bernie.geckolib.animation.RawAnimation;
+import software.bernie.geckolib.animation.*;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.Comparator;
@@ -33,7 +28,7 @@ import java.util.List;
 import java.util.UUID;
 
 public class ArcangelEntity extends PathAwareEntity implements GeoEntity {
-
+// also don't ask why it's a path aware entity XD, it just is caus minecraft. (idk either) -Dark
     // === Synced flags/data ===
     public static final TrackedData<Boolean> SHOOTING =
             DataTracker.registerData(ArcangelEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
@@ -50,17 +45,12 @@ public class ArcangelEntity extends PathAwareEntity implements GeoEntity {
     private static final int DAMAGE_HIT_TICKS     = 50;
     private static final float ARCANGEL_DAMAGE    = 150.0f;
 
-    // shooting state
     private int shootingTicks;
     private boolean playedShootSfx;
     @Nullable private UUID lockedTarget;
-
-    // aiming state (fed to model)
-    private float fullBodyYawDeg;            // current yaw for bone "full"
-    private float headPitchDeg;              // current pitch for bone "head"
-    private float recoilRad;                 // head recoil in radians
-
-    // desired angles (smoothed each tick)
+    private float fullBodyYawDeg;
+    private float headPitchDeg;
+    private float recoilRad;
     private float bodyYawTargetDeg;
     private float headPitchTargetDeg;
 
@@ -68,15 +58,15 @@ public class ArcangelEntity extends PathAwareEntity implements GeoEntity {
         super(type, world);
         this.setNoGravity(true);
         this.setPersistent();
-        this.setAiDisabled(true); // we don't want goal navigation; still needs attributes registered
+        this.setAiDisabled(true);
     }
 
     public static DefaultAttributeContainer.Builder createAttributes() {
         return PathAwareEntity.createLivingAttributes()
                 .add(EntityAttributes.GENERIC_MAX_HEALTH, 40.0)
-                .add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.0)        // statue
-                .add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, 1.0)  // unmovable
-                .add(EntityAttributes.GENERIC_FOLLOW_RANGE, 32.0);        // required by PathAwareEntity/nav
+                .add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.0)
+                .add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, 1.0)
+                .add(EntityAttributes.GENERIC_FOLLOW_RANGE, 32.0);
     }
 
     @Override
@@ -87,24 +77,22 @@ public class ArcangelEntity extends PathAwareEntity implements GeoEntity {
     }
 
     // ======= External blood feed =======
-    /** Called by your DevinityMachine block. When this hits 100, Arcangel auto-shoots and resets to 0. */
-    public int addBlood(int amount) {
-        if (this.getWorld().isClient) return this.dataTracker.get(BLOOD);
+    public void addBlood(int amount) {
+        if (this.getWorld().isClient) {
+            this.dataTracker.get(BLOOD);
+            return;
+        }
         int cur = MathHelper.clamp(this.dataTracker.get(BLOOD) + amount, 0, 100);
         this.dataTracker.set(BLOOD, cur);
         if (cur >= 100) {
             startShooting();
             this.dataTracker.set(BLOOD, 0);
         }
-        return this.dataTracker.get(BLOOD);
+        this.dataTracker.get(BLOOD);
     }
 
-    public int getBlood() {
-        return this.dataTracker.get(BLOOD);
-    }
 
     // ======= Shoot sequence =======
-    /** Public trigger; also called automatically when blood reaches 100. */
     public void startShooting() {
         if (this.getWorld().isClient) return;
         if (!this.dataTracker.get(SHOOTING)) {
@@ -115,9 +103,7 @@ public class ArcangelEntity extends PathAwareEntity implements GeoEntity {
             ApostasyEntity target = findNearestApostasyUnlimited();
             this.lockedTarget = (target != null) ? target.getUuid() : null;
 
-            // update desired angles immediately
             updateAimTargets(target);
-            // recoil kick
             this.recoilRad = 0.35f;
         }
     }
@@ -126,22 +112,18 @@ public class ArcangelEntity extends PathAwareEntity implements GeoEntity {
     public void tick() {
         super.tick();
 
-        // hard-freeze movement/physics
         this.setVelocity(Vec3d.ZERO);
         this.fallDistance = 0f;
 
-        // passive tracking even when idle (smooth, slow)
         ApostasyEntity visibleTarget = resolveLockedTarget();
         if (visibleTarget == null) {
             visibleTarget = findNearestApostasyUnlimited();
         }
         updateAimTargets(visibleTarget);
 
-        // smooth the angles every tick
-        this.fullBodyYawDeg = approachAngleDeg(this.fullBodyYawDeg, this.bodyYawTargetDeg, 6.0f);
+        this.fullBodyYawDeg = approachAngleDeg(this.fullBodyYawDeg, this.bodyYawTargetDeg);
         this.headPitchDeg   = MathHelper.lerp(0.2f, this.headPitchDeg, this.headPitchTargetDeg);
 
-        // recoil relax
         if (this.recoilRad > 0f) {
             this.recoilRad *= 0.88f;
             if (this.recoilRad < 0.005f) this.recoilRad = 0f;
@@ -161,7 +143,7 @@ public class ArcangelEntity extends PathAwareEntity implements GeoEntity {
                     ApostasyEntity target = resolveLockedTarget();
                     if (target == null) target = findNearestApostasyUnlimited();
                     if (target != null && target.isAlive()) {
-                        target.damage(((ServerWorld)this.getWorld()).getDamageSources().mobAttack(this), ARCANGEL_DAMAGE);
+                        target.damage((this.getWorld()).getDamageSources().mobAttack(this), ARCANGEL_DAMAGE);
                     }
                 }
 
@@ -175,8 +157,6 @@ public class ArcangelEntity extends PathAwareEntity implements GeoEntity {
     }
 
     // ======= Aiming helpers =======
-
-
     @Nullable
     private ApostasyEntity resolveLockedTarget() {
         if (lockedTarget == null) return null;
@@ -185,13 +165,13 @@ public class ArcangelEntity extends PathAwareEntity implements GeoEntity {
                 this.getBoundingBox().expand(1_000_000.0), // effectively global
                 e -> e.getUuid().equals(lockedTarget) && e.isAlive()
         );
-        return list.isEmpty() ? null : list.get(0);
+        return list.isEmpty() ? null : list.getFirst();
     }
 
-    private static float approachAngleDeg(float current, float target, float maxStepDeg) {
+    private static float approachAngleDeg(float current, float target) {
         float delta = MathHelper.wrapDegrees(target - current);
-        if (delta > maxStepDeg) delta = maxStepDeg;
-        if (delta < -maxStepDeg) delta = -maxStepDeg;
+        if (delta > (float) 6.0) delta = (float) 6.0;
+        if (delta < -(float) 6.0) delta = -(float) 6.0;
         return current + delta;
     }
 
@@ -203,7 +183,6 @@ public class ArcangelEntity extends PathAwareEntity implements GeoEntity {
     }
 
 
-    /** Search essentially the whole loaded world by using a huge expanded AABB. */
     @Nullable
     private ApostasyEntity findNearestApostasyUnlimited() {
         Box huge = this.getBoundingBox().expand(1_000_000.0); // ~infinite for practical purposes
@@ -272,9 +251,12 @@ public class ArcangelEntity extends PathAwareEntity implements GeoEntity {
         if (this.lockedTarget != null) nbt.putUuid("LockedTarget", this.lockedTarget);
     }
 
-    // ======= Extra immobility guarantees =======
+    // ======= Extra immobility =======
     @Override public boolean isPushable() { return false; }
-    @Override public boolean isPushedByFluids() { return false; }
+    @Override public boolean isPushedByFluids() { return false; } //why is mojang like this :(
     @Override public void takeKnockback(double s, double x, double z) { /* no-op */ }
     @Override public void travel(Vec3d in) { this.setVelocity(Vec3d.ZERO); }
+    @Override public boolean cannotDespawn() {return true;}
+    @Override protected boolean isDisallowedInPeaceful() {return false;}
+    @Override public boolean isPersistent() {return true;}
 }

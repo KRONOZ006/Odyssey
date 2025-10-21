@@ -1,9 +1,7 @@
 package net.kronoz.odyssey.dialogue;
 
-import net.kronoz.odyssey.dialogue.net.s2c.CaptionClearS2C;
-import net.kronoz.odyssey.dialogue.net.s2c.CaptionPlayS2C;
-import net.kronoz.odyssey.dialogue.net.Packets2;
 import net.kronoz.odyssey.dialogue.ServerTickScheduler.Task;
+import net.kronoz.odyssey.dialogue.net.s2c.CaptionClearS2C;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 

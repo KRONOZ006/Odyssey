@@ -1,7 +1,11 @@
 package net.kronoz.odyssey.dialogue;
 
 import net.minecraft.util.Identifier;
-import java.util.*;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 public final class Registry {
     private static final Map<Identifier, BaseDialogue> BY_ID = new HashMap<>();

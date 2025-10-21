@@ -1,7 +1,6 @@
 package net.kronoz.odyssey.entity.arcangel;
 
 import net.kronoz.odyssey.Odyssey;
-import net.kronoz.odyssey.entity.sentinel.SentinelEntity;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
@@ -11,9 +10,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.cache.object.GeoCube;
-import software.bernie.geckolib.renderer.GeoEntityRenderer;
 import software.bernie.geckolib.renderer.specialty.DynamicGeoEntityRenderer;
-import software.bernie.geckolib.util.Color;
 
 public class ArcangelRenderer extends DynamicGeoEntityRenderer<ArcangelEntity> {
     public ArcangelRenderer(EntityRendererFactory.Context ctx) {

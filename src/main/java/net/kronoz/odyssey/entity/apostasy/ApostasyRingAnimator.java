@@ -20,7 +20,7 @@ public final class ApostasyRingAnimator {
     }
 
     public static Ang angles(long seed, String bone, float t) {
-        int h = mix((int)(seed ^ (seed >>> 32)), bone.hashCode());
+        int h = mix(Long.hashCode(seed), bone.hashCode());
         Random r = new Random(h);
 
         float sYaw   = rf(r, -2.6f,  2.6f);

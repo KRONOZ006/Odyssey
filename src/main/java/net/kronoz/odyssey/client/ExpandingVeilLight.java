@@ -6,7 +6,6 @@ import foundry.veil.api.client.render.light.renderer.LightRenderHandle;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.kronoz.odyssey.hud.death.DeathUICutscene;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 

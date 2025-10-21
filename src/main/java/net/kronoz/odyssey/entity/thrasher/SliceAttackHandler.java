@@ -1,10 +1,8 @@
 package net.kronoz.odyssey.entity.thrasher;
 
 
-import net.kronoz.odyssey.net.DashC2SPayload;
 import net.kronoz.odyssey.net.SliceAttackC2SPayload;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.Vec3d;
 

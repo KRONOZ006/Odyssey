@@ -1,6 +1,5 @@
 package net.kronoz.odyssey.entity.apostasy;
 
-import net.kronoz.odyssey.entity.arcangel.ArcangelEntity;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileEntity;
 import net.kronoz.odyssey.init.ModEntities;
 import net.minecraft.block.BlockState;
@@ -28,9 +27,12 @@ import net.minecraft.world.event.GameEvent;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animation.AnimatableManager;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
 
 public class ApostasyEntity extends PathAwareEntity implements software.bernie.geckolib.animatable.GeoEntity {
+    // so much junk code it's insane
     public enum Phase { P1, P2, P3, P4 }
 
     private static final double RING1_R = 2.4;
@@ -42,15 +44,9 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     private static final double HUGE_LASER_SPEED = 2.75;
     private static final double SMALL_LASER_SPEED = 2.15;
 
-    private static final int EYE_BURST_INTERVAL = 6;
-    private static final int EYE_BURST_LIFETIME = 60;
-    private static final double EYE_BURST_DAMAGE = 4.0;
-    private static final double EYE_MUZZLE_FORWARD = 0.60;
     private static final double EYE_ALIGN_DEG = 22.5;
 
     private int eyeBurstShotsLeft = 0;
-    private int eyeBurstTimer = 0;
-    private int eyeBurstTargetId = -1;
     private int glowShotCooldown = 0;
     private int glowMuzzleIndex = 0;
 
@@ -114,7 +110,6 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         Phase newPhase = pct > 0.75f ? Phase.P1 : pct > 0.50f ? Phase.P2 : pct > 0.25f ? Phase.P3 : Phase.P4;
         if (newPhase != phase) phase = newPhase;
     }
-    public Phase getPhase() { return phase; }
 
     @Override
     protected void initGoals() { this.goalSelector.add(0, new BrainGoal()); }
@@ -137,7 +132,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         repulsePlayers();
         tickPendingStrikes();
         tickGlowHoming();
-        PlayerEntity target = getClosestTarget(64.0);
+        PlayerEntity target = getClosestTarget();
         if (target == null) return;
         switch (phase) {
             case P1 -> handlePhase1(target);
@@ -162,8 +157,8 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         }
     }
 
-    private @Nullable PlayerEntity getClosestTarget(double range) {
-        return this.getWorld().getClosestPlayer(this, range);
+    private @Nullable PlayerEntity getClosestTarget() {
+        return this.getWorld().getClosestPlayer(this, 64.0);
     }
 
     private void handlePhase1(PlayerEntity target) {
@@ -177,7 +172,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         if (this.random.nextFloat() < 0.14f) tryStartEyeBurst(target, 8);
         if (lightningCooldown-- <= 0) {
             lightningCooldown = P2_SINGLE_COOLDOWN;
-            BlockPos strikePos = safeStrikeNear(target.getBlockPos(), 2, 5);
+            BlockPos strikePos = safeStrikeNear(target.getBlockPos());
             scheduleLightning(strikePos, TELEGRAPH_TICKS);
             if (this.getWorld() instanceof ServerWorld sw) {
                 java.util.List<BlockState> pulled = pullDownColumnBlocks(sw, strikePos, 8, 4);
@@ -187,7 +182,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         if (this.random.nextFloat() < 0.06f) tryShockwave(target);
         boolean near = this.squaredDistanceTo(target) <= (LINE_TRIGGER_RANGE * LINE_TRIGGER_RANGE);
         if (near && this.random.nextFloat() < 0.05f) {
-            scheduleLightningLineTowards(target, 8, 4.0, 5);
+            scheduleLightningLineTowards(target, 8, 5);
         }
         if (this.random.nextFloat() < 0.03f && hugeLaserCooldown <= 0) { hugeLaserCooldown = 45; fireEyeHugeLaser(target); }
         else if (hugeLaserCooldown > 0) hugeLaserCooldown--;
@@ -200,7 +195,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
             lightningCooldown = P3_ZONE_COOLDOWN;
             int delay = 0;
             for (int i = 0; i < PHASE3_BURST; i++) {
-                BlockPos around = randomPosAround(PHASE3_MIN_R, PHASE3_MAX_R);
+                BlockPos around = randomPosAround();
                 BlockPos safe = safeStrikeAt(around);
                 scheduleLightning(safe, TELEGRAPH_TICKS + delay);
                 delay += 6;
@@ -209,58 +204,24 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         if (this.random.nextFloat() < 0.08f) tryShockwave(target);
         boolean near = this.squaredDistanceTo(target) <= (LINE_TRIGGER_RANGE * LINE_TRIGGER_RANGE);
         if (near && this.random.nextFloat() < 0.07f) {
-            scheduleLightningLineTowards(target, 12, 4.0, 4);
+            scheduleLightningLineTowards(target, 12, 4);
         }
     }
 
-    private boolean isEyeAlignedWith(PlayerEntity target, double maxDeg) {
+    private boolean isEyeAlignedWith(PlayerEntity target) {
         float headYaw = this.getHeadYaw();
         double dx = target.getX() - this.getX();
         double dz = target.getZ() - this.getZ();
         double bearingDeg = Math.toDegrees(Math.atan2(dz, dx)) - 90.0;
         double d = MathHelper.wrapDegrees(bearingDeg - headYaw);
-        return Math.abs(d) <= maxDeg;
-    }
-
-
-    private void orientTowards(Vec3d dir, float maxStepDeg) {
-        if (dir.lengthSquared() < 1e-6) return;
-        float targetYaw = (float)(MathHelper.atan2(dir.z, dir.x) * (180F/Math.PI)) - 90f;
-        float targetPitch = (float)(-(MathHelper.atan2(dir.y, Math.sqrt(dir.x*dir.x + dir.z*dir.z)) * (180F/Math.PI)));
-
-        float newYaw = MathHelper.stepUnwrappedAngleTowards(this.getYaw(), targetYaw, maxStepDeg);
-        float newHead = MathHelper.stepUnwrappedAngleTowards(this.getHeadYaw(), targetYaw, maxStepDeg);
-        float newPitch = MathHelper.stepUnwrappedAngleTowards(this.getPitch(), targetPitch, maxStepDeg);
-
-        this.setYaw(newYaw);
-        this.setHeadYaw(newHead);
-        this.setPitch(newPitch);
-    }
-
-
-    private Vec3d eyeMuzzle() {
-        return this.getPos().add(0, this.getStandingEyeHeight() + 0.4, 0);
-    }
-
-    private Vec3d aimDirectionFor(PlayerEntity target) {
-        Vec3d vel = target.getVelocity();
-        if (vel.lengthSquared() > 0.05) return vel.normalize();
-        Vec3d eye = eyeMuzzle();
-        Vec3d aim = target.getPos().add(0, target.getStandingEyeHeight() * 0.6, 0);
-        Vec3d dir = aim.subtract(eye);
-        double L2 = dir.lengthSquared();
-        if (L2 < 1e-6) return new Vec3d(0, 0, 1);
-        return dir.normalize();
+        return Math.abs(d) <= ApostasyEntity.EYE_ALIGN_DEG;
     }
 
     private void tryStartEyeBurst(PlayerEntity target, int shots) {
         if (eyeBurstShotsLeft > 0) return;
-        if (!isEyeAlignedWith(target, EYE_ALIGN_DEG)) return;
+        if (!isEyeAlignedWith(target)) return;
         eyeBurstShotsLeft = Math.max(1, shots);
-        eyeBurstTimer = 0;
-        eyeBurstTargetId = target.getId();
     }
-
 
     private void tryShockwave(PlayerEntity target) {
         if (shockwaveCooldown > 0) return;
@@ -280,7 +241,6 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         double py = Math.floor(target.getY()) + 0.05; // spawn at player's level
         e.refreshPositionAndAngles(this.getX(), py, this.getZ(), 0, 0);
 
-        // OLD: e.setup(50f, 40, py, this.getId());
         e.setup(50f, 40, false); // false = ground wave (yOffset ~ 0.05)
 
         sw.spawnEntity(e);
@@ -296,25 +256,25 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     @Override public void pushAwayFrom(net.minecraft.entity.Entity e) { }
     @Override public void takeKnockback(double s, double x, double z) { }
     @Override public void addVelocity(double x, double y, double z) { }
-    private BlockPos randomPosAround(int minR, int maxR) {
+    private BlockPos randomPosAround() {
         double a = this.random.nextDouble() * Math.PI * 2;
-        int r = this.random.nextBetween(minR, maxR);
+        int r = this.random.nextBetween(ApostasyEntity.PHASE3_MIN_R, ApostasyEntity.PHASE3_MAX_R);
         int x = MathHelper.floor(getX() + Math.cos(a) * r);
         int z = MathHelper.floor(getZ() + Math.sin(a) * r);
         return new BlockPos(x, getBlockY(), z);
     }
 
-    private boolean playerOn(BlockPos pos, double radius) {
-        return !this.getWorld().getEntitiesByClass(PlayerEntity.class, new Box(pos).expand(radius), p -> p.isAlive() && !p.isSpectator()).isEmpty();
+    private boolean playerOn(BlockPos pos) {
+        return !this.getWorld().getEntitiesByClass(PlayerEntity.class, new Box(pos).expand(1.5), p -> p.isAlive() && !p.isSpectator()).isEmpty();
     }
 
-    private BlockPos safeStrikeNear(BlockPos center, int minR, int maxR) {
+    private BlockPos safeStrikeNear(BlockPos center) {
         for (int tries = 0; tries < 16; tries++) {
             double a = this.random.nextDouble() * Math.PI * 2;
-            int r = this.random.nextBetween(minR, maxR);
+            int r = this.random.nextBetween(2, 5);
             BlockPos candidate = center.add(MathHelper.floor(Math.cos(a) * r), 0, MathHelper.floor(Math.sin(a) * r));
             BlockPos safe = safeStrikeAt(candidate);
-            if (!playerOn(safe, 1.5)) return safe;
+            if (!playerOn(safe)) return safe;
         }
         return safeStrikeAt(center);
     }
@@ -336,13 +296,12 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     private void tickPendingStrikes() {
         if (!(this.getWorld() instanceof ServerWorld sw)) return;
         List<PendingStrike> next = new ArrayList<>(pendingStrikes.size());
-        for (int i = 0; i < pendingStrikes.size(); i++) {
-            PendingStrike ps = pendingStrikes.get(i);
-            spawnGroundTelegraph(sw, ps.pos, 0.9, 0.9, TELEGRAPH_TICKS);
+        for (PendingStrike ps : pendingStrikes) {
+            spawnGroundTelegraph(sw, ps.pos);
             ps.ticks--;
             if (ps.ticks <= 0) {
                 BlockPos strikePos = ps.pos;
-                if (!playerOn(strikePos, 1.5)) {
+                if (!playerOn(strikePos)) {
                     LightningEntity bolt = EntityType.LIGHTNING_BOLT.create(sw);
                     if (bolt != null) {
                         bolt.setCosmetic(true);
@@ -360,16 +319,16 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         pendingStrikes.addAll(next);
     }
 
-    private void scheduleLightningLineTowards(PlayerEntity target, int nodes, double step, int tickDelayStep) {
+    private void scheduleLightningLineTowards(PlayerEntity target, int nodes, int tickDelayStep) {
         BlockPos start = safeStrikeAt(BlockPos.ofFloored(getX(), getY(), getZ()));
         Vec3d startV = new Vec3d(start.getX() + 0.5, start.getY(), start.getZ() + 0.5);
         BlockPos tgt = safeStrikeAt(target.getBlockPos());
         Vec3d dir = new Vec3d(tgt.getX() + 0.5 - startV.x, 0, tgt.getZ() + 0.5 - startV.z).normalize();
         int delay = 0;
         for (int i = 0; i < nodes; i++) {
-            Vec3d p = startV.add(dir.multiply(step * i));
+            Vec3d p = startV.add(dir.multiply(4.0 * i));
             BlockPos pos = safeStrikeAt(BlockPos.ofFloored(p.x, getY(), p.z));
-            if (!playerOn(pos, 1.5)) {
+            if (!playerOn(pos)) {
                 scheduleLightning(pos, TELEGRAPH_TICKS + delay);
                 delay += tickDelayStep;
             }
@@ -391,16 +350,9 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
             if (!st.isAir()) return st;
             p = p.down();
         }
-        return Blocks.COBBLESTONE.getDefaultState();
+        return Blocks.AIR.getDefaultState();
     }
 
-    private BlockPos randomPosInRadius(BlockPos center, int radius) {
-        double a = this.random.nextDouble() * Math.PI * 2.0;
-        int r = this.random.nextBetween(radius / 3, radius);
-        int x = center.getX() + MathHelper.floor(Math.cos(a) * r);
-        int z = center.getZ() + MathHelper.floor(Math.sin(a) * r);
-        return new BlockPos(x, center.getY(), z);
-    }
 
     private java.util.List<BlockState> pullDownColumnBlocks(ServerWorld sw, BlockPos pos, int scanUp, int maxPull) {
         java.util.ArrayList<BlockState> grabbed = new java.util.ArrayList<>();
@@ -415,16 +367,14 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
             if (st.getCollisionShape(sw, m).isEmpty()) continue;
             sw.setBlockState(m, Blocks.AIR.getDefaultState(), 3);
             var f = net.minecraft.entity.FallingBlockEntity.spawnFromBlock(sw, m, st);
-            if (f != null) {
-                f.dropItem = false;
-                try { f.setDestroyedOnLanding(); } catch (Throwable ignored) {}
-                double spread = 0.35;
-                f.setVelocity(
-                        (this.random.nextDouble() - 0.5) * spread,
-                        -0.2 - this.random.nextDouble() * 0.2,
-                        (this.random.nextDouble() - 0.5) * spread
-                );
-            }
+            f.dropItem = false;
+            try { f.setDestroyedOnLanding(); } catch (Throwable ignored) {}
+            double spread = 0.35;
+            f.setVelocity(
+                    (this.random.nextDouble() - 0.5) * spread,
+                    -0.2 - this.random.nextDouble() * 0.2,
+                    (this.random.nextDouble() - 0.5) * spread
+            );
             grabbed.add(st);
             pulled++;
         }
@@ -452,18 +402,18 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         }
     }
 
-    private void spawnGroundTelegraph(ServerWorld sw, BlockPos pos, double rx, double rz, int life) {
+    private void spawnGroundTelegraph(ServerWorld sw, BlockPos pos) {
         var e = ModEntities.GROUND_DECAL.create(sw);
         if (e == null) return;
         e.refreshPositionAndAngles(pos.getX() + 0.5, pos.getY() + 0.01, pos.getZ() + 0.5, 0, 0);
-        e.setup(0.95, life);
+        e.setup(0.95, ApostasyEntity.TELEGRAPH_TICKS);
         sw.spawnEntity(e);
     }
     private void tickGlowHoming() {
         if (!(this.getWorld() instanceof net.minecraft.server.world.ServerWorld sw)) return;
         if (glowShotCooldown > 0) { glowShotCooldown--; return; }
 
-        net.minecraft.entity.player.PlayerEntity target = getClosestTarget(64.0);
+        net.minecraft.entity.player.PlayerEntity target = getClosestTarget();
         if (target == null) return;
 
         java.util.List<net.minecraft.util.math.Vec3d> muzzles = getGlowMuzzles();
@@ -475,21 +425,20 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         net.kronoz.odyssey.entity.projectile.LaserProjectileEntity rocket =
                 net.kronoz.odyssey.init.ModEntities.LASER_PROJECTILE.create(sw);
         if (rocket != null) {
-            // small push so it immediately leaves the muzzle
             rocket.initHoming(this, target, mCenter, 0.6);
-            rocket.setOdysseyDamage(1.0f); // ½ heart
+            rocket.setOdysseyDamage(1.0f);
             sw.spawnEntity(rocket);
         }
 
-        glowShotCooldown = 10; // 0.5s at 20 TPS
+        glowShotCooldown = 10;
     }
 
     private java.util.List<net.minecraft.util.math.Vec3d> getGlowMuzzles() {
         double yawRad = net.minecraft.util.math.MathHelper.RADIANS_PER_DEGREE * (this.getYaw() % 360f);
         java.util.ArrayList<net.minecraft.util.math.Vec3d> out = new java.util.ArrayList<>(24);
-        out.addAll(buildRingMuzzles(2.4, yawRad, 8));
-        out.addAll(buildRingMuzzles(3.1, yawRad * 0.97, 8));
-        out.addAll(buildRingMuzzles(3.8, yawRad * 0.94, 8));
+        out.addAll(buildRingMuzzles(2.4, yawRad));
+        out.addAll(buildRingMuzzles(3.1, yawRad * 0.97));
+        out.addAll(buildRingMuzzles(3.8, yawRad * 0.94));
         return out;
     }
 
@@ -532,17 +481,17 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     private List<Vec3d> getRingsMuzzles() {
         double yawRad = MathHelper.RADIANS_PER_DEGREE * (this.getYaw() % 360f);
         List<Vec3d> out = new ArrayList<>(24);
-        out.addAll(buildRingMuzzles(RING1_R, yawRad, 8));
-        out.addAll(buildRingMuzzles(RING2_R, yawRad * 0.97, 8));
-        out.addAll(buildRingMuzzles(RING3_R, yawRad * 0.94, 8));
+        out.addAll(buildRingMuzzles(RING1_R, yawRad));
+        out.addAll(buildRingMuzzles(RING2_R, yawRad * 0.97));
+        out.addAll(buildRingMuzzles(RING3_R, yawRad * 0.94));
         return out;
     }
 
-    private List<Vec3d> buildRingMuzzles(double radius, double yawRad, int guns) {
-        List<Vec3d> list = new ArrayList<>(guns);
+    private List<Vec3d> buildRingMuzzles(double radius, double yawRad) {
+        List<Vec3d> list = new ArrayList<>(8);
         Vec3d center = this.getPos().add(0, RINGS_Y, 0);
-        for (int i = 0; i < guns; i++) {
-            double a = yawRad + (Math.PI * 2.0) * (i / (double) guns);
+        for (int i = 0; i < 8; i++) {
+            double a = yawRad + (Math.PI * 2.0) * (i / (double) 8);
             double x = center.x + MathHelper.cos((float) a) * radius;
             double z = center.z + MathHelper.sin((float) a) * radius;
             list.add(new Vec3d(x, center.y, z));

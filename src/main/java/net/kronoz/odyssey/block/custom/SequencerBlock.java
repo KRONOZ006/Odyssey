@@ -1,5 +1,6 @@
 package net.kronoz.odyssey.block.custom;
 
+import com.mojang.serialization.MapCodec;
 import net.kronoz.odyssey.Odyssey;
 import net.kronoz.odyssey.block.CollisionShapeHelper;
 import net.kronoz.odyssey.entity.SequencerBlockEntity;
@@ -14,11 +15,9 @@ import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
-import net.minecraft.registry.RegistryWrapper;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.DirectionProperty;
 import net.minecraft.state.property.Properties;
-import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.ItemActionResult;
 import net.minecraft.util.hit.BlockHitResult;
@@ -30,9 +29,6 @@ import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
-import com.mojang.serialization.MapCodec;
-
-import java.util.List;
 import java.util.Map;
 
 public class SequencerBlock extends BlockWithEntity {

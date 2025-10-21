@@ -1,6 +1,5 @@
 package net.kronoz.odyssey.entity.sentry;
 
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.entity.player.PlayerEntity;
 

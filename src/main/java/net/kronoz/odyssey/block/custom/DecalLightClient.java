@@ -13,7 +13,6 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.Identifier;
-import net.minecraft.world.World;
 
 import java.util.HashMap;
 import java.util.Iterator;

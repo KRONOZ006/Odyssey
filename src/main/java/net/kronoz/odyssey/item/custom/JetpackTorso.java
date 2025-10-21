@@ -1,7 +1,6 @@
 package net.kronoz.odyssey.item.custom;
 
 import net.kronoz.odyssey.item.client.renderer.JetpackRenderer;
-import net.kronoz.odyssey.item.client.renderer.XarisArmRenderer;
 import net.minecraft.client.render.item.BuiltinModelItemRenderer;
 import net.minecraft.item.Item;
 import org.jetbrains.annotations.NotNull;
@@ -9,9 +8,6 @@ import software.bernie.geckolib.animatable.GeoItem;
 import software.bernie.geckolib.animatable.client.GeoRenderProvider;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
-import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.PlayState;
-import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.function.Consumer;

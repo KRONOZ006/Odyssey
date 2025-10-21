@@ -1,8 +1,6 @@
 package net.kronoz.odyssey.entity.thrasher;
 
 import net.kronoz.odyssey.Odyssey;
-import net.kronoz.odyssey.entity.sentry.SentryEntity;
-import net.kronoz.odyssey.entity.sentry.SentryModel;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;

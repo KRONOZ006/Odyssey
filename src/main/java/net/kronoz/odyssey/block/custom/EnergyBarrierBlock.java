@@ -1,11 +1,8 @@
 package net.kronoz.odyssey.block.custom;
 
-import net.kronoz.odyssey.init.ModBlocks;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.HorizontalFacingBlock;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
@@ -18,8 +15,6 @@ import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
-
-import java.lang.reflect.Array;
 
 public class EnergyBarrierBlock extends Block {
     public static final IntProperty LIGHT_LEVEL = IntProperty.of("light_level", 5, 15);

@@ -9,11 +9,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.kronoz.odyssey.Odyssey;
 import net.kronoz.odyssey.block.CollisionShapeHelper;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.block.Waterloggable;
+import net.minecraft.block.*;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
@@ -36,7 +32,9 @@ import net.minecraft.world.WorldAccess;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Light2Block extends Block implements Waterloggable {

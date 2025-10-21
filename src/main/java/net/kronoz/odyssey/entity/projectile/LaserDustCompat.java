@@ -1,8 +1,8 @@
 package net.kronoz.odyssey.entity.projectile;
 
+import net.minecraft.particle.DustParticleEffect;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
-import net.minecraft.particle.DustParticleEffect;
 import org.joml.Vector3f;
 
 import java.lang.reflect.Constructor;

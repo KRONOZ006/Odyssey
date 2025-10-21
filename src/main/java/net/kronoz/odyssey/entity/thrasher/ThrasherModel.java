@@ -1,7 +1,6 @@
 package net.kronoz.odyssey.entity.thrasher;
 
 import net.kronoz.odyssey.Odyssey;
-import net.kronoz.odyssey.entity.sentry.SentryEntity;
 import net.minecraft.util.Identifier;
 import software.bernie.geckolib.animation.AnimationState;
 import software.bernie.geckolib.cache.object.GeoBone;

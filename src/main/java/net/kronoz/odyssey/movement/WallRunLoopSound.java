@@ -4,8 +4,8 @@ package net.kronoz.odyssey.movement;
 import net.kronoz.odyssey.init.ModSounds;
 import net.minecraft.client.sound.MovingSoundInstance;
 import net.minecraft.client.sound.SoundInstance;
-import net.minecraft.sound.SoundCategory;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.sound.SoundCategory;
 
 public final class WallRunLoopSound extends MovingSoundInstance {
     private final PlayerEntity player;

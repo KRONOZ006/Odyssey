@@ -1,9 +1,9 @@
 package net.kronoz.odyssey.entity.arcangel;
 
 import net.minecraft.util.Identifier;
+import software.bernie.geckolib.animation.AnimationState;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.model.GeoModel;
-import software.bernie.geckolib.animation.AnimationState;
 
 public class ArcangelModel extends GeoModel<ArcangelEntity> {
     @Override
@@ -23,8 +23,8 @@ public class ArcangelModel extends GeoModel<ArcangelEntity> {
 
     @Override
     public void setCustomAnimations(ArcangelEntity e, long id, AnimationState<ArcangelEntity> state) {
-        GeoBone full = getAnimationProcessor().getBone("full"); // horizontal yaw bone
-        GeoBone head = getAnimationProcessor().getBone("head"); // vertical pitch bone
+        GeoBone full = getAnimationProcessor().getBone("full");
+        GeoBone head = getAnimationProcessor().getBone("head");
 
         if (full != null) {
             full.setRotY((float) Math.toRadians(-e.getFullBodyYaw()));

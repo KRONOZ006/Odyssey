@@ -1,7 +1,7 @@
 package net.kronoz.odyssey.dialogue.net;
 
-import net.kronoz.odyssey.dialogue.net.s2c.CaptionPlayS2C;
 import net.kronoz.odyssey.dialogue.net.s2c.CaptionClearS2C;
+import net.kronoz.odyssey.dialogue.net.s2c.CaptionPlayS2C;
 
 public final class Packets2 {
     public static void initCommon() {

@@ -6,8 +6,8 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.projectile.ShulkerBulletEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.world.World;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
 
 public class LaserProjectileEntity extends ShulkerBulletEntity {
     private float odysseyDamage = 1.0f; // half-heart

@@ -1,8 +1,8 @@
 package net.kronoz.odyssey.cca;
 
 import net.kronoz.odyssey.Odyssey;
-import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.kronoz.odyssey.net.BodyModPackets;
+import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.player.PlayerEntity;

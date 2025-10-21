@@ -1,7 +1,6 @@
 // src/main/java/net/kronoz/odyssey/client/movement/MovementVisuals.java
 package net.kronoz.odyssey.movement;
 
-import net.kronoz.odyssey.movement.WallRun;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.util.math.Vec3d;
 

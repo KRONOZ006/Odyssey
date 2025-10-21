@@ -1,22 +1,18 @@
 package net.kronoz.odyssey.init;
 
-import com.google.gson.Gson;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
-import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
-import net.fabricmc.loader.api.FabricLoader;
 import net.kronoz.odyssey.hud.death.DeathUICutscene;
+import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.minecraft.command.CommandSource;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
-import net.kronoz.odyssey.systems.data.BodyPartRegistry;
-import java.nio.file.Path;
 import java.util.List;
 
 import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.argument;

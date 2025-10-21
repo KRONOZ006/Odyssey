@@ -3,7 +3,6 @@ package net.kronoz.odyssey.block.custom;
 import net.kronoz.odyssey.init.ModBlocks;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;

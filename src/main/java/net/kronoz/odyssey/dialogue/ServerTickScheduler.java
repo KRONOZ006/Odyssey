@@ -1,6 +1,7 @@
 package net.kronoz.odyssey.dialogue;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;

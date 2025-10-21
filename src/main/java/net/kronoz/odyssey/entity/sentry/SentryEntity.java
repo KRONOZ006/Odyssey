@@ -1,16 +1,12 @@
 package net.kronoz.odyssey.entity.sentry;
 
-import net.kronoz.odyssey.entity.sentinel.SentinelEntity;
-import net.kronoz.odyssey.init.ModParticles;
 import net.kronoz.odyssey.init.ModSounds;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.ai.control.MoveControl;
 import net.minecraft.entity.ai.goal.ActiveTargetGoal;
 import net.minecraft.entity.ai.goal.LookAroundGoal;
-import net.minecraft.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.entity.ai.pathing.EntityNavigation;
 import net.minecraft.entity.ai.pathing.MobNavigation;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
@@ -23,16 +19,7 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtDouble;
-import net.minecraft.particle.EntityEffectParticleEffect;
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.particle.ParticleType;
-import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
@@ -40,7 +27,6 @@ import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animatable.instance.SingletonAnimatableInstanceCache;
 import software.bernie.geckolib.animation.*;
-import software.bernie.geckolib.constant.DefaultAnimations;
 
 public class SentryEntity extends PathAwareEntity implements GeoEntity {
     private final AnimatableInstanceCache cache = new SingletonAnimatableInstanceCache(this);

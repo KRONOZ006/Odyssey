@@ -2,23 +2,18 @@ package net.kronoz.odyssey.entity.apostasy;
 
 import net.kronoz.odyssey.Odyssey;
 import net.kronoz.odyssey.hud.bosshud.BossHudClient;
+import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.ColorHelper;
-import net.minecraft.util.math.RotationAxis;
-import software.bernie.geckolib.model.GeoModel;
-import software.bernie.geckolib.renderer.GeoEntityRenderer;
 import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.cache.object.GeoCube;
-import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
-import net.minecraft.client.render.OverlayTexture;
 import software.bernie.geckolib.renderer.specialty.DynamicGeoEntityRenderer;
 
-import java.awt.Color;
+import java.awt.*;
 
 public class ApostasyRenderer extends DynamicGeoEntityRenderer<ApostasyEntity> {
 
