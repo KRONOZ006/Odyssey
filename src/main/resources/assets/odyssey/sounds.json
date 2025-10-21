@@ -63,5 +63,12 @@
         "name": "odyssey:arc_shoot"
       }
     ]
+  },
+  "slice": {
+    "sounds": [
+      {
+        "name": "odyssey:slice"
+      }
+    ]
   }
 }

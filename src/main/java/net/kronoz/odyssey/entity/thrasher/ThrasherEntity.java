@@ -1,8 +1,6 @@
 package net.kronoz.odyssey.entity.thrasher;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.*;
 import net.minecraft.entity.ai.control.MoveControl;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
@@ -15,15 +13,23 @@ import net.minecraft.util.math.Vec2f;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animatable.instance.SingletonAnimatableInstanceCache;
+import software.bernie.geckolib.animatable.GeoEntity;
 import software.bernie.geckolib.animation.*;
+import software.bernie.geckolib.animation.AnimationState;
 
 public class ThrasherEntity extends PathAwareEntity implements GeoEntity {
-    protected float jumpStrength = 10 ;
+    protected float jumpStrength = 10;
     protected boolean inAir;
+    private boolean slicing = false;
+    private int sliceAnimationTicks = 0;
+    private float seatOffset = 0f;
     private final AnimatableInstanceCache cache = new SingletonAnimatableInstanceCache(this);
+
+    public float spinSpeed = 0f;
+    public float spinAngle = 0f;
+
     public ThrasherEntity(EntityType<? extends PathAwareEntity> type, World world) {
         super(type, world);
         this.moveControl = new MoveControl(this);
@@ -31,13 +37,8 @@ public class ThrasherEntity extends PathAwareEntity implements GeoEntity {
     }
 
     @Nullable
-    public boolean isInAir() {
-        return this.inAir;
-    }
-
-    public void setInAir(boolean inAir) {
-        this.inAir = inAir;
-    }
+    public boolean isInAir() { return this.inAir; }
+    public void setInAir(boolean inAir) { this.inAir = inAir; }
 
     public static DefaultAttributeContainer.Builder createAttributes() {
         return PathAwareEntity.createMobAttributes()
@@ -48,36 +49,63 @@ public class ThrasherEntity extends PathAwareEntity implements GeoEntity {
                 .add(EntityAttributes.GENERIC_ARMOR, 6.0)
                 .add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, 10.0)
                 .add(EntityAttributes.GENERIC_STEP_HEIGHT, 1.0f);
-
     }
-
-
 
     @Override
     public void registerControllers(AnimatableManager.ControllerRegistrar reg) {
         reg.add(new AnimationController<>(this, "controller", 2, this::predicate));
     }
 
+    @Override
+    public void tick() {
+        super.tick();
+        if (slicing) {
+            sliceAnimationTicks++;
+            if (sliceAnimationTicks > 9) {
+                slicing = false;
+                sliceAnimationTicks = 0;
+            }
+        }
+    }
 
-    private PlayState predicate(AnimationState<ThrasherEntity> s) {
-        if (s.isMoving()) s.getController().setAnimation(RawAnimation.begin().then("walk", Animation.LoopType.LOOP));
+    public void triggerSliceAnimation() {
+        this.slicing = true;
+        this.sliceAnimationTicks = 0;
+    }
 
-        else s.getController().setAnimation(RawAnimation.begin().then("new", Animation.LoopType.LOOP));
+    private PlayState predicate(AnimationState<ThrasherEntity> state) {
+        if (slicing) {
+            state.getController().setAnimation(RawAnimation.begin().then("slice", Animation.LoopType.LOOP));
+            return PlayState.CONTINUE;
+        }
+        if (state.isMoving()) {
+            state.getController().setAnimation(RawAnimation.begin().then("walk", Animation.LoopType.LOOP));
+        } else {
+            state.getController().setAnimation(RawAnimation.begin().then("idle", Animation.LoopType.LOOP));
+        }
         return PlayState.CONTINUE;
+    }
 
+    public void syncAnimationToClients() {
+        if (this.getWorld().isClient) return;
+        this.getWorld().sendEntityStatus(this, (byte) 67);
     }
 
     @Override
-    public AnimatableInstanceCache getAnimatableInstanceCache() {
-        return this.cache;
+    public void handleStatus(byte status) {
+        if (status == 67) {
+            this.triggerSliceAnimation();
+        } else {
+            super.handleStatus(status);
+        }
     }
 
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() { return this.cache; }
 
     public void setJumpStrength(int strength) {
-
-            this.jumping = true;
-            this.jumpStrength = 0.4F + 0.4F * strength / 90.0F; // or your scaling
-
+        this.jumping = true;
+        this.jumpStrength = 0.4F + 0.4F * strength / 90.0F;
     }
 
     protected void putPlayerOnBack(PlayerEntity player) {
@@ -86,19 +114,14 @@ public class ThrasherEntity extends PathAwareEntity implements GeoEntity {
             player.setPitch(this.getPitch());
             player.startRiding(this);
         }
-
     }
 
     @Override
     public Vec3d getPassengerRidingPos(Entity passenger) {
-
         Vec3d base = this.getPos();
-
-
         double forwardOffset = -0.2D;
-        double heightOffset = 1.5D;
         double sideOffset = 0.0D;
-
+        double heightOffset = 1.5 + seatOffset;
 
         float yawRad = (float) Math.toRadians(-this.getYaw());
         double x = base.x + forwardOffset * Math.sin(yawRad) + sideOffset * Math.cos(yawRad);
@@ -108,11 +131,8 @@ public class ThrasherEntity extends PathAwareEntity implements GeoEntity {
         return new Vec3d(x, y, z);
     }
 
-
-
-
-
-
+    public void setSeatOffset(float offset) { this.seatOffset = offset; }
+    public float getSeatOffset() { return this.seatOffset; }
 
     @Override
     public void travel(Vec3d movementInput) {
@@ -120,79 +140,63 @@ public class ThrasherEntity extends PathAwareEntity implements GeoEntity {
             LivingEntity rider = (LivingEntity) this.getFirstPassenger();
 
             float targetYaw = rider.getYaw();
-            float lerpedYaw = lerpYaw(this.getYaw(), targetYaw, 0.05f); // 0.05 = heavy
+            float lerpedYaw = lerpYaw(this.getYaw(), targetYaw, 0.05f);
             this.setYaw(lerpedYaw);
-
 
             this.bodyYaw = lerpedYaw;
             this.headYaw = lerpedYaw;
 
             double speed = this.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED);
             double sideways = rider.sidewaysSpeed * 0.5 * speed;
-          double forward = rider.forwardSpeed * speed;
-         if (forward <= 0) forward *= 0.25;
+            double forward = rider.forwardSpeed * speed;
+            if (forward <= 0) forward *= 0.25;
 
-         if (this.isOnGround() && jumpStrength > 0) {
-               this.jump(0.5f, new Vec3d(sideways, 0, forward));
-          }
+            if (this.isOnGround() && jumpStrength > 0) {
+                this.jump(0.5f, new Vec3d(sideways, 0, forward));
+            }
 
-
-
-
-//
             Vec3d look = rider.getRotationVec(1f);
-            look = new Vec3d(rider.getYaw(), 0, rider.getYaw()).normalize(); // ignore Y
-        super.travel(look.multiply(speed));
+            look = new Vec3d(rider.getYaw(), 0, rider.getYaw()).normalize();
+            super.travel(look.multiply(speed));
 
         } else {
-           super.travel(movementInput);
-       }
+            super.travel(movementInput);
+        }
     }
 
-
-
     protected void jump(float strength, Vec3d movementInput) {
-        double d = (double)this.getJumpVelocity(strength);
         Vec3d vec3d = this.getVelocity();
         this.setVelocity(vec3d.x, 0, vec3d.z);
         this.setInAir(true);
         this.velocityDirty = true;
-        if (movementInput.z > (double)0.0F) {
-            float f = MathHelper.sin(this.getYaw() * ((float)Math.PI / 180F));
-            float g = MathHelper.cos(this.getYaw() * ((float)Math.PI / 180F));
-            this.setVelocity(this.getVelocity().add((double)(-0.4F * f * strength), (double)0.0F, (double)(0.4F * g * strength)));
+        if (movementInput.z > 0.0F) {
+            float f = MathHelper.sin(this.getYaw() * ((float) Math.PI / 180F));
+            float g = MathHelper.cos(this.getYaw() * ((float) Math.PI / 180F));
+            this.setVelocity(this.getVelocity().add(-0.4F * f * strength, 0.0, 0.4F * g * strength));
         }
-
     }
-
-
-
 
     protected void tickControlled(PlayerEntity controllingPlayer, Vec3d movementInput) {
         super.tickControlled(controllingPlayer, movementInput);
         Vec2f vec2f = this.getControlledRotation(controllingPlayer);
         this.setRotation(vec2f.y, vec2f.x);
         this.prevYaw = this.bodyYaw = this.headYaw = this.getYaw();
+
         if (this.isLogicalSideForUpdatingMovement()) {
-            if (movementInput.z <= (double)0.0F) {
-
-            }
-
             if (this.isOnGround()) {
                 this.setInAir(false);
                 if (this.jumpStrength > 0.0F && !this.isInAir()) {
                     this.jump(this.jumpStrength, movementInput);
                 }
-
                 this.jumpStrength = 0.0F;
             }
         }
 
         controllingPlayer.kill();
-
     }
+
     private float lerpYaw(float currentYaw, float targetYaw, float speed) {
-        float delta = MathHelper.wrapDegrees(targetYaw - currentYaw); // ensures -180..180
+        float delta = MathHelper.wrapDegrees(targetYaw - currentYaw);
         return currentYaw + delta * speed;
     }
 
@@ -201,40 +205,27 @@ public class ThrasherEntity extends PathAwareEntity implements GeoEntity {
     }
 
     protected Vec3d getControlledMovementInput(PlayerEntity controllingPlayer, Vec3d movementInput) {
-        if (this.isOnGround() && this.jumpStrength == 0.0F  && !this.jumping) {
+        if (this.isOnGround() && this.jumpStrength == 0.0F && !this.jumping) {
             return Vec3d.ZERO;
-        } else {
-            float f = controllingPlayer.sidewaysSpeed * 0.5F;
-            float g = controllingPlayer.forwardSpeed;
-            controllingPlayer.kill();
-            if (g <= 0.0F) {
-                g *= 0.25F;
-            }
-
-            return new Vec3d((double)f, (double)0.0F, (double)g);
         }
+        float f = controllingPlayer.sidewaysSpeed * 0.5F;
+        float g = controllingPlayer.forwardSpeed;
+        controllingPlayer.kill();
+        if (g <= 0.0F) g *= 0.25;
+        return new Vec3d(f, 0, g);
     }
-
-
-
 
     protected float getSaddledSpeed(PlayerEntity controllingPlayer) {
-        return (float)this.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED);
+        return (float) this.getAttributeValue(EntityAttributes.GENERIC_MOVEMENT_SPEED);
     }
 
-
+    @Override
     public ActionResult interactMob(PlayerEntity player, Hand hand) {
         if (!this.hasPassengers() && !this.isBaby()) {
-
-
-                this.putPlayerOnBack(player);
-                return ActionResult.success(this.getWorld().isClient);
-            }
-         else {
+            this.putPlayerOnBack(player);
+            return ActionResult.success(this.getWorld().isClient);
+        } else {
             return super.interactMob(player, hand);
         }
     }
-
-
 }
-

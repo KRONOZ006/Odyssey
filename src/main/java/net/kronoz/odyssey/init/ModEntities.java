@@ -9,6 +9,7 @@ import net.kronoz.odyssey.entity.arcangel.ArcangelEntity;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileEntity;
 import net.kronoz.odyssey.entity.sentinel.SentinelEntity;
 import net.kronoz.odyssey.entity.sentry.SentryEntity;
+import net.kronoz.odyssey.entity.souls.LoveEntity;
 import net.kronoz.odyssey.entity.thrasher.ThrasherEntity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityType;
@@ -54,6 +55,13 @@ public class ModEntities {
             Identifier.of(Odyssey.MODID, "thrasher"),
             EntityType.Builder.<ThrasherEntity>create(ThrasherEntity::new, SpawnGroup.MONSTER)
                     .dimensions(3.0f, 5.0f)
+                    .build());
+
+    public static final EntityType<LoveEntity> LOVE = Registry.register(
+            Registries.ENTITY_TYPE,
+            Identifier.of(Odyssey.MODID, "love"),
+            EntityType.Builder.<LoveEntity>create(LoveEntity::new, SpawnGroup.AMBIENT)
+                    .dimensions(3.0f, 5.0f)
                     .build()
     );
     public static final EntityType<LaserProjectileEntity> LASER_PROJECTILE =
@@ -91,6 +99,7 @@ public class ModEntities {
         FabricDefaultAttributeRegistry.register(SENTINEL, SentinelEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(ARCANGEL, ArcangelEntity.createAttributes());
         FabricDefaultAttributeRegistry.register(THRASHER, ThrasherEntity.createAttributes());
+        FabricDefaultAttributeRegistry.register(LOVE, LoveEntity.createAttributes());
 
     }
     public static void register() {

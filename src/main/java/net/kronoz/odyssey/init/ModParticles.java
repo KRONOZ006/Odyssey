@@ -10,9 +10,16 @@ import net.minecraft.util.Identifier;
 public class ModParticles {
     public static final SimpleParticleType SENTRY_SHIELD_FULL_PARTICLE =
             registerParticle("sentry_shield_full", FabricParticleTypes.simple(true));
+
+    public static final SimpleParticleType SLICE_PARTICLE =
+            registerParticle("slice_particle", FabricParticleTypes.simple(true));
+
     private static SimpleParticleType registerParticle(String name, SimpleParticleType particleType) {
         return Registry.register(Registries.PARTICLE_TYPE, Identifier.of(Odyssey.MODID, name), particleType);
     }
+
+
+
 
     public static void registerParticles() {
         Odyssey.LOGGER.info("Registering Particles for " + Odyssey.MODID);

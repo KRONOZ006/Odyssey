@@ -1,6 +1,8 @@
-package net.kronoz.odyssey.entity.thrasher;
+package net.kronoz.odyssey.entity.souls;
 
 import net.kronoz.odyssey.Odyssey;
+import net.kronoz.odyssey.entity.sentry.SentryEntity;
+import net.kronoz.odyssey.entity.sentry.SentryModel;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
@@ -12,9 +14,9 @@ import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.cache.object.GeoCube;
 import software.bernie.geckolib.renderer.specialty.DynamicGeoEntityRenderer;
 
-public class ThrasherRenderer extends DynamicGeoEntityRenderer<ThrasherEntity> {
-    public ThrasherRenderer(EntityRendererFactory.Context ctx) {
-        super(ctx, new ThrasherModel());
+public class LoveRenderer extends DynamicGeoEntityRenderer<LoveEntity> {
+    public LoveRenderer(EntityRendererFactory.Context ctx) {
+        super(ctx, new LoveModel());
         this.shadowRadius = 0.5f;
     }
 
@@ -31,24 +33,15 @@ public class ThrasherRenderer extends DynamicGeoEntityRenderer<ThrasherEntity> {
                                          int colour) {
 
       
-        boolean isEmissive =
-                bone.getName().equals("rightaxeb") ||
-                bone.getName().equals("leftaxeb") ||
-                bone.getName().equals("rightsawpart") ||
-                bone.getName().equals("leftsawpart") ||
-                bone.getName().equals("righttopbladeb") ||
-                bone.getName().equals("lefttopbladeb") ||
-                bone.getName().equals("rightbottombladeb") ||
-                bone.getName().equals("leftbottombladeb") ||
-                bone.getName().equals("rightslashb") ||
-                bone.getName().equals("leftslashb");
+        boolean isEmissive = bone.getName().equals("1") ||
 
+                bone.getName().equals("2");
 
 
         VertexConsumer vertexConsumer;
         if (isEmissive) {
             vertexConsumer = bufferSource.getBuffer(
-                    RenderLayer.getEyes(Identifier.of(Odyssey.MODID, "textures/entity/thrasher.png"))
+                    RenderLayer.getEyes(Identifier.of(Odyssey.MODID, "textures/entity/love.png"))
             );
             packedLight = 15728880;
         } else {
@@ -75,8 +68,8 @@ public class ThrasherRenderer extends DynamicGeoEntityRenderer<ThrasherEntity> {
     }
 
     @Override
-    public Identifier getTextureLocation(ThrasherEntity e) {
-        return ((ThrasherModel)this.getGeoModel()).getTextureResource(e);
+    public Identifier getTextureLocation(LoveEntity e) {
+        return ((LoveModel)this.getGeoModel()).getTextureResource(e);
     }
 
 

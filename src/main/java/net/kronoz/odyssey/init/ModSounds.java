@@ -16,6 +16,7 @@ public class ModSounds {
     public static final SoundEvent DASH_3 = registerSoundEvent("dash_3");
     public static final SoundEvent WALLRUN_LOOP = registerSoundEvent("wallrun_loop");
     public static final SoundEvent ARC_SHOOT = registerSoundEvent("arc_shoot");
+    public static final SoundEvent SLICE = registerSoundEvent("slice");
 
 
 

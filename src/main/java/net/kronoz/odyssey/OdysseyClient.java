@@ -23,6 +23,7 @@ import net.kronoz.odyssey.entity.projectile.LaserProjectileRenderer;
 import net.kronoz.odyssey.entity.sentinel.SentinelLightClient;
 import net.kronoz.odyssey.entity.sentinel.SentinelRenderer;
 import net.kronoz.odyssey.entity.sentry.SentryRenderer;
+import net.kronoz.odyssey.entity.souls.LoveRenderer;
 import net.kronoz.odyssey.entity.thrasher.ThrasherRenderer;
 import net.kronoz.odyssey.hud.bosshud.BossHudClient;
 import net.kronoz.odyssey.hud.death.DeathUICutscene;
@@ -33,6 +34,7 @@ import net.kronoz.odyssey.net.BossHudClearPayload;
 import net.kronoz.odyssey.net.BossHudUpdatePayload;
 import net.kronoz.odyssey.net.CineNetworking;
 import net.kronoz.odyssey.particle.SentryShieldFullParticle;
+import net.kronoz.odyssey.particle.SliceParticle;
 import net.kronoz.odyssey.systems.cam.ShakeEvents;
 import net.kronoz.odyssey.systems.cinematics.runtime.BootstrapScenes;
 import net.kronoz.odyssey.systems.cinematics.runtime.CutsceneManager;
@@ -132,6 +134,7 @@ public class OdysseyClient implements ClientModInitializer {
         BlockEntityRendererFactories.register(ModBlockEntities.SHELF1, Shelf1GeoBERenderer::new);
         EntityRendererRegistry.register(ModEntities.ARCANGEL, ArcangelRenderer::new);
         EntityRendererRegistry.register(ModEntities.THRASHER, ThrasherRenderer::new);
+        EntityRendererRegistry.register(ModEntities.LOVE, LoveRenderer::new);
 
         PayloadTypeRegistry.playS2C().register(BossHudUpdatePayload.ID, BossHudUpdatePayload.CODEC);
         PayloadTypeRegistry.playS2C().register(BossHudClearPayload.ID,  BossHudClearPayload.CODEC);
@@ -145,11 +148,16 @@ public class OdysseyClient implements ClientModInitializer {
             c.execute(BossHudClient::clear);
         });
         BossHudClient.register();
+
+
         ParticleFactoryRegistry.getInstance().register(ModParticles.SENTRY_SHIELD_FULL_PARTICLE, SentryShieldFullParticle.Factory::new);
+        ParticleFactoryRegistry.getInstance().register(ModParticles.SLICE_PARTICLE, SliceParticle.Factory::new);
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
             ppm.add(1, BLOOM);
             fogadded = false;
+
+
 
 
         });
