@@ -39,10 +39,7 @@ public class DevinityMachineBlock extends Block {
         builder.add(FACING);
     }
 
-    @Override
-    public BlockRenderType getRenderType(BlockState state) {
-        return BlockRenderType.MODEL;
-    }
+
 
     /**
      * Schedule a tick whenever the block is added or loaded.
@@ -65,38 +62,8 @@ public class DevinityMachineBlock extends Block {
         }
     }
 
-    @Override
-    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, net.minecraft.util.math.random.Random random) {
-        // Check if Apostasy already exists nearby
-        Box checkBox = new Box(pos).expand(2, 3, 2); // adjustable radius
-        boolean exists = !world.getEntitiesByClass(ApostasyEntity.class, checkBox, e -> true).isEmpty();
 
-        if (!exists) {
-            ApostasyEntity apostasy = ModEntities.APOSTASY.create(world);
-            if (apostasy != null) {
-                Direction facing = state.get(FACING);
-                float yaw = switch (facing) {
-                    case NORTH -> 180f;
-                    case SOUTH -> 0f;
-                    case WEST -> 90f;
-                    case EAST -> 270f;
-                    default -> 0.0f;
-                };
-                apostasy.refreshPositionAndAngles(
-                        pos.getX() + 0.5,
-                        pos.getY() + 1,
-                        pos.getZ() + 0.5,
-                        yaw,
-                        0
-                );
-                world.spawnEntity(apostasy);
-            }
-        }
-    }
 
-    /**
-     * Player interaction logic
-     */
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         if (world.isClient) return ActionResult.SUCCESS;
