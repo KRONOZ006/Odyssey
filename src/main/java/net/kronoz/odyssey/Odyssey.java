@@ -2,6 +2,7 @@ package net.kronoz.odyssey;
 
 import net.fabricmc.api.ModInitializer;
 import net.kronoz.odyssey.block.SequencerRegistry;
+import net.kronoz.odyssey.entity.thrasher.RollAttackHandler;
 import net.kronoz.odyssey.entity.thrasher.SliceAttackHandler;
 import net.kronoz.odyssey.init.*;
 import net.kronoz.odyssey.net.CineNetworking;
@@ -39,6 +40,7 @@ public class Odyssey implements ModInitializer {
         ModSounds.registerSounds();
         Registry.register(Registries.ENTITY_TYPE, Identifier.of(MODID, "arcangel"), ModEntities.ARCANGEL);
         SliceAttackHandler.registerTickHandler();
+
         ModMouseHandlers.init();
     }
 

@@ -74,6 +74,7 @@ public final class SliceAttackHandler {
         if (ridden instanceof ThrasherEntity thrasher) {
             thrasher.triggerSliceAnimation();
             thrasher.syncAnimationToClients();
+
         }
 
         int sliceNumber = Math.round(heat.currentHeat);

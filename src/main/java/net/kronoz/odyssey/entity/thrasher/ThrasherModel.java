@@ -20,12 +20,16 @@ public class ThrasherModel extends GeoModel<ThrasherEntity> {
         GeoBone seatBone = getAnimationProcessor().getBone("seat");
 
         super.setCustomAnimations(e,id, s);
-        GeoBone spinner = this.getAnimationProcessor().getBone("full");
-        if (spinner == null) return;
+        GeoBone spinnerRight = this.getAnimationProcessor().getBone("rightaxe");
+        GeoBone spinnerLeft = this.getAnimationProcessor().getBone("leftaxeb");
+        if (spinnerLeft == null) return;
+        if (spinnerRight == null) return;
 
         // Get velocity and movement direction
         Vec3d velocity = e.getVelocity();
         Vec3d facing = e.getRotationVec(1.0f);
+
+        e.setSeatOffset(seatBone.getPosY());
 
         // Dot product → how aligned velocity is with facing direction
         double forwardSpeed = velocity.dotProduct(facing);
@@ -46,7 +50,22 @@ public class ThrasherModel extends GeoModel<ThrasherEntity> {
         if (e.spinAngle > 360f || e.spinAngle < -360f) e.spinAngle = 0f;
 
         // Apply rotation to the bone (convert to radians)
-        spinner.setRotX((float) Math.toRadians(e.spinAngle));
+        spinnerRight.setRotX((float) Math.toRadians(e.spinAngle));
+        spinnerLeft.setRotX((float) Math.toRadians(e.spinAngle));
+
+
+
+        var bladeBoneLeft = getAnimationProcessor().getBone("leftaxeb");
+        var bladeBoneRight = getAnimationProcessor().getBone("rightaxeb");
+
+        if (bladeBoneRight != null)
+            bladeBoneRight.setHidden(!e.isSlicing());
+
+        if (bladeBoneLeft != null)
+            bladeBoneLeft.setHidden(!e.isSlicing());
+
     }
+
+
 
 }
