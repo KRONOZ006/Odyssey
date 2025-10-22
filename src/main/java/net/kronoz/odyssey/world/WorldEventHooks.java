@@ -8,5 +8,7 @@ public final class WorldEventHooks {
     public static void init() {
         ServerWorldEvents.LOAD.register((server, world) -> FixedStructurePlacer.onWorldLoaded(world));
         ServerTickEvents.END_SERVER_TICK.register(FixedStructurePlacer::tick);
+        ServerWorldEvents.LOAD.register((server, world) -> FixedStructurePlacerOverworld.onWorldLoaded(world));
+        ServerTickEvents.END_SERVER_TICK.register(FixedStructurePlacerOverworld::tick);
     }
 }
