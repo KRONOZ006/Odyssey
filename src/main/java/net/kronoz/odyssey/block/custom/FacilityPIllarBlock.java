@@ -62,3 +62,4 @@ public class FacilityPIllarBlock extends Block implements Waterloggable {
     @Override
     public BlockRenderType getRenderType(BlockState state) { return BlockRenderType.MODEL; }
 }
+
