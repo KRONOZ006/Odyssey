@@ -2,6 +2,9 @@ package net.kronoz.odyssey.world;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.block.Blocks;
+import net.minecraft.entity.ItemEntity;
+import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.registry.RegistryKeys;
@@ -19,8 +22,10 @@ import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.random.Random;
+import net.minecraft.world.Heightmap;
 import net.minecraft.world.PersistentState;
 import net.minecraft.world.PersistentStateManager;
 import net.minecraft.world.World;
@@ -40,7 +45,7 @@ public final class FixedStructurePlacerOverworld {
     };
 
     private static final BlockPos ORIGIN = new BlockPos(-120, 50, -120);
-    private static final RegistryKey<World> VOID_DIM =
+    private static final RegistryKey<World> OVERWORLD =
             RegistryKey.of(RegistryKeys.WORLD, Identifier.of("minecraft", "overworld"));
 
     private static final ArrayDeque<Runnable> JOBS = new ArrayDeque<>();
@@ -56,12 +61,15 @@ public final class FixedStructurePlacerOverworld {
     private FixedStructurePlacerOverworld() {}
 
     public static void onWorldLoaded(ServerWorld world) {
-        if (!world.getRegistryKey().equals(VOID_DIM)) return;
+        if (!world.getRegistryKey().equals(OVERWORLD)) return;
 
         PersistentStateManager psm = world.getPersistentStateManager();
         StructuresPlacedState state = psm.getOrCreate(StructuresPlacedState.TYPE, StructuresPlacedState.KEY);
         if (state.alreadyPlaced) {
-            LOGGER.info("[Odyssey] already placed");
+            if (state.hasSpawn()) {
+                world.setSpawnPos(new BlockPos(state.spawnX, state.spawnY, state.spawnZ), 0.0f);
+            }
+            LOGGER.info("[Odyssey] city already placed");
             return;
         }
 
@@ -101,6 +109,11 @@ public final class FixedStructurePlacerOverworld {
         LOGGER.info("[Odyssey] queued {} carve jobs", tiles.size());
     }
 
+    private static void enqueueCleanupThenPlacements(ServerWorld world) {
+        Box full = computeTilesAABB(TILES);
+        JOBS.add(new CleanupDroppedItemsTask(world, full));
+    }
+
     private static void enqueuePlacements(ServerWorld world) {
         if (PHASE != Phase.CARVING) return;
         PHASE = Phase.PLACING;
@@ -110,6 +123,8 @@ public final class FixedStructurePlacerOverworld {
             JOBS.add(() -> {
                 place(world, p.getLeft(), p.getRight());
                 if (--PLACES_LEFT == 0) {
+                    computeAndStoreCenterSpawn(world);
+                    teleportOnlinePlayersUp(world, 10); // bump players +10 after gen
                     PHASE = Phase.DONE;
                     markPlaced(world);
                     LOGGER.info("[Odyssey] placement phase done");
@@ -121,12 +136,12 @@ public final class FixedStructurePlacerOverworld {
 
     private static List<Pair<StructureTemplate, BlockPos>> findGrid3D(StructureTemplateManager stm, Identifier[] bases, BlockPos origin) {
         for (Identifier base : bases) {
-            var grid = collectGrid3D(stm, base, origin, false); // facility0_0_0
+            var grid = collectGrid3D(stm, base, origin, false);
             if (!grid.isEmpty()) {
                 LOGGER.info("[Odyssey] Using 3D grid w/o underscore for {}", base);
                 return grid;
             }
-            grid = collectGrid3D(stm, base, origin, true); // facility_0_0_0
+            grid = collectGrid3D(stm, base, origin, true);
             if (!grid.isEmpty()) {
                 LOGGER.info("[Odyssey] Using 3D grid with underscore for {}", base);
                 return grid;
@@ -190,7 +205,7 @@ public final class FixedStructurePlacerOverworld {
                 .setMirror(BlockMirror.NONE)
                 .setIgnoreEntities(false)
                 .addProcessor(WaterlogSanitizerProcessor.INSTANCE)
-                .addProcessor(RemoveStructureBlocksProcessor.INSTANCE); // <- remove STRUCTURE_BLOCKs
+                .addProcessor(RemoveStructureBlocksProcessor.INSTANCE);
 
         Random rng = world.getRandom();
         boolean ok = template.place(world, origin, origin, data, rng, 2);
@@ -248,28 +263,142 @@ public final class FixedStructurePlacerOverworld {
                 JOBS.add(this);
             } else {
                 if (--CARVES_LEFT == 0) {
-                    enqueuePlacements(world);
+                    enqueueCleanupThenPlacements(world);
                 }
             }
         }
     }
 
+    private static Box computeTilesAABB(List<Pair<StructureTemplate, BlockPos>> tiles) {
+        if (tiles.isEmpty()) return new Box(0,0,0,0,0,0);
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        for (var p : tiles) {
+            Vec3i s = p.getLeft().getSize();
+            BlockPos o = p.getRight();
+            minX = Math.min(minX, o.getX());
+            minY = Math.min(minY, o.getY());
+            minZ = Math.min(minZ, o.getZ());
+            maxX = Math.max(maxX, o.getX() + s.getX() - 1);
+            maxY = Math.max(maxY, o.getY() + s.getY() - 1);
+            maxZ = Math.max(maxZ, o.getZ() + s.getZ() - 1);
+        }
+        return new Box(minX, minY, minZ, maxX + 1, maxY + 1, maxZ + 1);
+    }
+
+    private static final class CleanupDroppedItemsTask implements Runnable {
+        private final ServerWorld world;
+        private final Box box;
+        private boolean done;
+
+        CleanupDroppedItemsTask(ServerWorld world, Box box) {
+            this.world = world;
+            this.box = box.expand(1.0);
+        }
+
+        @Override public void run() {
+            if (done) return;
+            var items = world.getEntitiesByClass(ItemEntity.class, box, e -> true);
+            int count = 0;
+            for (ItemEntity it : items) {
+                it.discard();
+                count++;
+            }
+            LOGGER.info("[Odyssey] removed {} dropped item entities in {}", count, box);
+            done = true;
+            enqueuePlacements(world);
+        }
+    }
+
+    private static void computeAndStoreCenterSpawn(ServerWorld world) {
+        Box aabb = computeTilesAABB(TILES);
+        int centerX = (int)Math.floor((aabb.minX + aabb.maxX) * 0.5);
+        int centerZ = (int)Math.floor((aabb.minZ + aabb.maxZ) * 0.5);
+
+        int topY = world.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, centerX, centerZ);
+        int minSafeY = (int)aabb.minY + 2;
+        if (topY < minSafeY) topY = minSafeY;
+        BlockPos spawn = new BlockPos(centerX, topY, centerZ);
+
+        PersistentStateManager psm = world.getPersistentStateManager();
+        StructuresPlacedState state = psm.getOrCreate(StructuresPlacedState.TYPE, StructuresPlacedState.KEY);
+        state.spawnX = spawn.getX();
+        state.spawnY = spawn.getY();
+        state.spawnZ = spawn.getZ();
+        state.markDirty();
+        psm.save();
+
+        world.setSpawnPos(spawn, 0.0f);
+        LOGGER.info("[Odyssey] computed center spawn at {}", spawn);
+    }
+
+    private static void teleportOnlinePlayersUp(ServerWorld overworld, int dy) {
+        var psm = overworld.getPersistentStateManager();
+        var state = psm.getOrCreate(StructuresPlacedState.TYPE, StructuresPlacedState.KEY);
+        if (!state.hasSpawn()) return;
+
+        int sx = state.spawnX;
+        int sz = state.spawnZ;
+
+        overworld.getChunkManager().getChunk(sx >> 4, sz >> 4, ChunkStatus.FULL, true);
+
+        int baseY = overworld.getTopY(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, sx, sz);
+        int y = Math.max(baseY, state.spawnY) + 5;
+
+        double tx = sx + 10.5;
+        double ty = y + 0.1;
+        double tz = sz + 10.5;
+
+        var server = overworld.getServer();
+        for (var player : server.getPlayerManager().getPlayerList()) {
+            if (player.getWorld().getRegistryKey() != OVERWORLD) continue;
+            player.fallDistance = 0.0f;
+            player.teleport(overworld, tx, ty, tz, player.getYaw(), player.getPitch());
+        }
+    }
+
+
+    // ---- Persistent state
+
     public static final class StructuresPlacedState extends PersistentState {
         public static final String KEY = "odyssey_fixed_structures";
         public static final Type<StructuresPlacedState> TYPE =
                 new Type<>(StructuresPlacedState::new, StructuresPlacedState::fromNbt, null);
+
         public boolean alreadyPlaced = false;
+        public int spawnX = Integer.MIN_VALUE;
+        public int spawnY = Integer.MIN_VALUE;
+        public int spawnZ = Integer.MIN_VALUE;
+
         public StructuresPlacedState() {}
+
+        public boolean hasSpawn() {
+            return spawnX != Integer.MIN_VALUE;
+        }
+
         public static StructuresPlacedState fromNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup lookup) {
             StructuresPlacedState s = new StructuresPlacedState();
             s.alreadyPlaced = nbt.getBoolean("alreadyPlaced");
+            if (nbt.contains("spawnX")) {
+                s.spawnX = nbt.getInt("spawnX");
+                s.spawnY = nbt.getInt("spawnY");
+                s.spawnZ = nbt.getInt("spawnZ");
+            }
             return s;
         }
+
         @Override public NbtCompound writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup lookup) {
             nbt.putBoolean("alreadyPlaced", alreadyPlaced);
+            if (hasSpawn()) {
+                nbt.putInt("spawnX", spawnX);
+                nbt.putInt("spawnY", spawnY);
+                nbt.putInt("spawnZ", spawnZ);
+            }
             return nbt;
         }
     }
+
+    // ---- Processors
 
     private static final class WaterlogSanitizerProcessor extends StructureProcessor {
         static final WaterlogSanitizerProcessor INSTANCE = new WaterlogSanitizerProcessor();

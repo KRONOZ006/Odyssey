@@ -31,16 +31,15 @@ public class CannedFoodItem extends Item {
     public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
         ItemStack stack = user.getStackInHand(hand);
 
-        // SOUP3: play ONLY the first time this player ever holds/uses the item (per world save)
-        if (!world.isClient) {
-            ServerWorld sw = (ServerWorld) world;
-            FirstHoldState state = FirstHoldState.get(sw);
-            if (!state.hasHeard(user.getUuid())) {
-                sw.playSound(null, user.getX(), user.getY(), user.getZ(),
-                        ModSounds.SOUP3, SoundCategory.PLAYERS, 1.0f, 1.0f);
-                state.markHeard(user.getUuid());
-            }
-        }
+        //if (!world.isClient) {
+        //    ServerWorld sw = (ServerWorld) world;
+        //    FirstHoldState state = FirstHoldState.get(sw);
+        //    if (!state.hasHeard(user.getUuid())) {
+        //        sw.playSound(null, user.getX(), user.getY(), user.getZ(),
+        //                ModSounds.SOUP3, SoundCategory.PLAYERS, 1.0f, 1.0f);
+        //        state.markHeard(user.getUuid());
+        //    }
+        //}
 
         user.setCurrentHand(hand); // start eating anim
         return TypedActionResult.consume(stack);
@@ -54,16 +53,16 @@ public class CannedFoodItem extends Item {
     @Override
     public ItemStack finishUsing(ItemStack stack, World world, LivingEntity user) {
         // On successful consume: 5% chance to play SOUP1 or SOUP2 (NEVER SOUP3 here)
-        if (!world.isClient) {
-            if (ThreadLocalRandom.current().nextDouble() < 0.05) {
-                boolean soup1 = ThreadLocalRandom.current().nextBoolean();
-                ((ServerWorld) world).playSound(
-                        null, user.getX(), user.getY(), user.getZ(),
-                        soup1 ? ModSounds.SOUP1 : ModSounds.SOUP2,
-                        SoundCategory.PLAYERS, 1.0f, 1.0f
-                );
-            }
-        }
+     //   if (!world.isClient) {
+     //       if (ThreadLocalRandom.current().nextDouble() < 0.05) {
+     //           boolean soup1 = ThreadLocalRandom.current().nextBoolean();
+     //           ((ServerWorld) world).playSound(
+     //                   null, user.getX(), user.getY(), user.getZ(),
+     //                   soup1 ? ModSounds.SOUP1 : ModSounds.SOUP2,
+     //                   SoundCategory.PLAYERS, 1.0f, 1.0f
+     //           );
+     //       }
+     //   }
 
         return super.finishUsing(stack, world, user);
     }

@@ -2,19 +2,16 @@ package net.kronoz.odyssey;
 
 import net.fabricmc.api.ModInitializer;
 import net.kronoz.odyssey.block.SequencerRegistry;
-import net.kronoz.odyssey.entity.thrasher.RollAttackHandler;
 import net.kronoz.odyssey.entity.thrasher.SliceAttackHandler;
 import net.kronoz.odyssey.init.*;
 import net.kronoz.odyssey.net.CineNetworking;
 import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.kronoz.odyssey.systems.dialogue.Dialogue;
+import net.kronoz.odyssey.world.FixedStructureCenterSpawn;
 import net.kronoz.odyssey.world.WorldEventHooks;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +36,7 @@ public class Odyssey implements ModInitializer {
         ModItemGroup.registerItemGroups();
         ModComponents.init();
         BodyPartRegistry.init();
+        FixedStructureCenterSpawn.init();
         ModNetworking.init();
         ModCommands.init();
         ModSounds.registerSounds();
