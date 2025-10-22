@@ -36,6 +36,7 @@ public class Odyssey implements ModInitializer {
         ModItemGroup.registerItemGroups();
         ModComponents.init();
         BodyPartRegistry.init();
+        FallDamageCanceller.init();
         FixedStructureCenterSpawn.init();
         ModNetworking.init();
         ModCommands.init();
