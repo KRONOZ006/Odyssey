@@ -11,15 +11,14 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.StructurePlacementData;
 import net.minecraft.structure.StructureTemplate;
 import net.minecraft.structure.StructureTemplateManager;
-import net.minecraft.state.property.Properties;
 import net.minecraft.structure.processor.StructureProcessor;
 import net.minecraft.structure.processor.StructureProcessorType;
+import net.minecraft.state.property.Properties;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.math.random.Random;
 import net.minecraft.world.PersistentState;
@@ -34,32 +33,35 @@ import java.util.*;
 public final class FixedStructurePlacer {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    private static final Identifier[] FIRST_IDS = new Identifier[] {
-            Identifier.of("odyssey", "test1"),
-            Identifier.of("odyssey", "test")
+    private static final Identifier[] BASES = new Identifier[] {
+            Identifier.of("odyssey", "facility")
     };
-    private static final Identifier SECOND_ID = Identifier.of("odyssey", "test2");
 
     private static final BlockPos ORIGIN = new BlockPos(0, 12, 0);
-    private static final RegistryKey<World> VOID_DIM = RegistryKey.of(RegistryKeys.WORLD, Identifier.of("odyssey", "void"));
+    private static final RegistryKey<World> VOID_DIM =
+            RegistryKey.of(RegistryKeys.WORLD, Identifier.of("odyssey", "void"));
 
     private static final ArrayDeque<Runnable> JOBS = new ArrayDeque<>();
     private static final int BLOCKS_PER_TICK = 40000;
+
+    private enum Phase { IDLE, CARVING, PLACING, DONE }
+    private static Phase PHASE = Phase.IDLE;
+    private static int CARVES_LEFT = 0;
+    private static int PLACES_LEFT = 0;
+
+    private static List<Pair<StructureTemplate, BlockPos>> TILES = List.of();
 
     private FixedStructurePlacer() {}
 
     public static void onWorldLoaded(ServerWorld world) {
         if (!world.getRegistryKey().equals(VOID_DIM)) return;
 
-        var rm = world.getServer().getResourceManager();
-        LOGGER.info("[Odyssey] namespaces={}", rm.getAllNamespaces());
-        LOGGER.info("[Odyssey] expect odyssey:structure/test1.nbt present={}", rm.getResource(Identifier.of("odyssey","structure/test1.nbt")).isPresent());
-        LOGGER.info("[Odyssey] expect odyssey:structure/test.nbt present={}",  rm.getResource(Identifier.of("odyssey","structure/test.nbt")).isPresent());
-        LOGGER.info("[Odyssey] expect odyssey:structure/test2.nbt present={}", rm.getResource(Identifier.of("odyssey","structure/test2.nbt")).isPresent());
-
         PersistentStateManager psm = world.getPersistentStateManager();
         StructuresPlacedState state = psm.getOrCreate(StructuresPlacedState.TYPE, StructuresPlacedState.KEY);
-        if (state.alreadyPlaced) { LOGGER.info("[Odyssey] already placed"); return; }
+        if (state.alreadyPlaced) {
+            LOGGER.info("[Odyssey] already placed");
+            return;
+        }
 
         enqueue(world);
     }
@@ -74,100 +76,87 @@ public final class FixedStructurePlacer {
     }
 
     private static void enqueue(ServerWorld world) {
+        if (PHASE != Phase.IDLE) return;
+
         StructureTemplateManager stm = world.getStructureTemplateManager();
-
-        List<Pair<StructureTemplate, BlockPos>> tiles1 = findTiles(stm, FIRST_IDS, ORIGIN);
-        if (tiles1.isEmpty()) {
-            LOGGER.error("[Odyssey] cannot find FIRST structure (tried odyssey:test1 then odyssey:test) under data/odyssey/structure/");
+        List<Pair<StructureTemplate, BlockPos>> tiles = findGrid3D(stm, BASES, ORIGIN);
+        if (tiles.isEmpty()) {
+            LOGGER.error("[Odyssey] No facility grid tiles found (expected facilityX_Y_Z.nbt or facility_X_Y_Z.nbt)");
             return;
         }
-        Vec3i total1 = totalBounds(tiles1, ORIGIN);
+        assertUniformTileSize(tiles);
+        forceChunks(world, tiles);
 
-        BlockPos secondOrigin = ORIGIN.add(total1.getX(), 0, 0);
-        List<Pair<StructureTemplate, BlockPos>> tiles2 = findTiles(stm, new Identifier[]{ SECOND_ID }, secondOrigin);
-        if (tiles2.isEmpty()) {
-            LOGGER.error("[Odyssey] cannot find SECOND structure (odyssey:test2) under data/odyssey/structure/");
-            return;
+        TILES = tiles;
+
+        CARVES_LEFT = tiles.size();
+        PHASE = Phase.CARVING;
+
+        for (var p : tiles) {
+            JOBS.add(new CarveTask(world, p.getRight(), p.getLeft().getSize(), 1));
         }
 
-        forceChunks(world, tiles1);
-        forceChunks(world, tiles2);
-
-        for (var p : tiles1) JOBS.add(new CarveTask(world, p.getRight(), p.getLeft().getSize(), 1));
-        for (var p : tiles2) JOBS.add(new CarveTask(world, p.getRight(), p.getLeft().getSize(), 1));
-        for (var p : tiles1) JOBS.add(() -> place(world, p.getLeft(), p.getRight()));
-        for (var p : tiles2) JOBS.add(() -> place(world, p.getLeft(), p.getRight()));
-        JOBS.add(() -> markPlaced(world));
-
-        LOGGER.info("[Odyssey] scheduled: tiles1={} tiles2={} secondOrigin={}", tiles1.size(), tiles2.size(), secondOrigin);
+        LOGGER.info("[Odyssey] queued {} carve jobs", tiles.size());
     }
 
-    private static List<Pair<StructureTemplate, BlockPos>> findTiles(StructureTemplateManager stm, Identifier[] ids, BlockPos origin) {
-        // 1) try single file for the first id that exists
-        for (Identifier id : ids) {
-            StructureTemplate single = getStrict(stm, id);
-            if (single != null) {
-                LOGGER.info("[Odyssey] using single template {}", id);
-                return List.of(new Pair<>(single, origin));
-            }
+    private static void enqueuePlacements(ServerWorld world) {
+        if (PHASE != Phase.CARVING) return;
+        PHASE = Phase.PLACING;
+        PLACES_LEFT = TILES.size();
+
+        for (var p : TILES) {
+            JOBS.add(() -> {
+                place(world, p.getLeft(), p.getRight());
+                if (--PLACES_LEFT == 0) {
+                    PHASE = Phase.DONE;
+                    markPlaced(world);
+                    LOGGER.info("[Odyssey] placement phase done");
+                }
+            });
         }
-        // 2) try 2D grid: <idPath>_x_z
-        for (Identifier id : ids) {
-            var grid2 = collectGrid2D(stm, id, origin);
-            if (!grid2.isEmpty()) {
-                LOGGER.info("[Odyssey] using 2D grid for {}", id);
-                return grid2;
+        LOGGER.info("[Odyssey] queued {} placement jobs", TILES.size());
+    }
+
+    private static List<Pair<StructureTemplate, BlockPos>> findGrid3D(StructureTemplateManager stm, Identifier[] bases, BlockPos origin) {
+        for (Identifier base : bases) {
+            var grid = collectGrid3D(stm, base, origin, false); // facility0_0_0
+            if (!grid.isEmpty()) {
+                LOGGER.info("[Odyssey] Using 3D grid w/o underscore for {}", base);
+                return grid;
             }
-        }
-        // 3) try 3D grid: <idPath>_x_y_z
-        for (Identifier id : ids) {
-            var grid3 = collectGrid3D(stm, id, origin);
-            if (!grid3.isEmpty()) {
-                LOGGER.info("[Odyssey] using 3D grid for {}", id);
-                return grid3;
+            grid = collectGrid3D(stm, base, origin, true); // facility_0_0_0
+            if (!grid.isEmpty()) {
+                LOGGER.info("[Odyssey] Using 3D grid with underscore for {}", base);
+                return grid;
             }
         }
         return List.of();
     }
 
-    private static StructureTemplate getStrict(StructureTemplateManager stm, Identifier id) {
+    private static StructureTemplate getTemplate(StructureTemplateManager stm, Identifier id) {
         StructureTemplate t = stm.getTemplate(id).orElse(null);
         if (t != null) return t;
-        Identifier underStructure = Identifier.of(id.getNamespace(), "structure/" + id.getPath());
-        return stm.getTemplate(underStructure).orElse(null);
+        Identifier s1 = Identifier.of(id.getNamespace(), "structure/" + id.getPath());
+        t = stm.getTemplate(s1).orElse(null);
+        if (t != null) return t;
+        Identifier s2 = Identifier.of(id.getNamespace(), "structures/" + id.getPath());
+        return stm.getTemplate(s2).orElse(null);
     }
 
-    private static List<Pair<StructureTemplate, BlockPos>> collectGrid2D(StructureTemplateManager stm, Identifier base, BlockPos origin) {
+    private static List<Pair<StructureTemplate, BlockPos>> collectGrid3D(StructureTemplateManager stm, Identifier base, BlockPos origin, boolean underscore) {
         List<Pair<StructureTemplate, BlockPos>> out = new ArrayList<>();
         Vec3i tile = null;
-        final int MAX = 256;
-        for (int gx = 0; gx < MAX; gx++) {
-            boolean anyInRow = false;
-            for (int gz = 0; gz < MAX; gz++) {
-                Identifier id = Identifier.of(base.getNamespace(), "structure/" + base.getPath() + "_" + gx + "_" + gz);
-                StructureTemplate t = stm.getTemplate(id).orElse(null);
-                if (t == null) { if (gz == 0) break; else continue; }
-                if (tile == null) tile = t.getSize();
-                BlockPos pos = origin.add(tile.getX()*gx, 0, tile.getZ()*gz);
-                out.add(new Pair<>(t, pos));
-                anyInRow = true;
-            }
-            if (!anyInRow) break;
-        }
-        return out;
-    }
-
-    private static List<Pair<StructureTemplate, BlockPos>> collectGrid3D(StructureTemplateManager stm, Identifier base, BlockPos origin) {
-        List<Pair<StructureTemplate, BlockPos>> out = new ArrayList<>();
-        Vec3i tile = null;
-        final int MAX = 64; // 64^3 is déjà massif
+        final int MAX = 128;
         for (int gx = 0; gx < MAX; gx++) {
             boolean anyX = false;
             for (int gy = 0; gy < MAX; gy++) {
                 boolean anyY = false;
                 for (int gz = 0; gz < MAX; gz++) {
-                    Identifier id = Identifier.of(base.getNamespace(), "structure/" + base.getPath() + "_" + gx + "_" + gy + "_" + gz);
-                    StructureTemplate t = stm.getTemplate(id).orElse(null);
+                    String name = underscore
+                            ? base.getPath() + "_" + gx + "_" + gy + "_" + gz
+                            : base.getPath() + gx + "_" + gy + "_" + gz;
+                    Identifier id = Identifier.of(base.getNamespace(), name);
+                    StructureTemplate t = getTemplate(stm, id);
                     if (t == null) { if (gz == 0) break; else continue; }
                     if (tile == null) tile = t.getSize();
                     BlockPos pos = origin.add(tile.getX()*gx, tile.getY()*gy, tile.getZ()*gz);
@@ -181,16 +170,16 @@ public final class FixedStructurePlacer {
         return out;
     }
 
-    private static Vec3i totalBounds(List<Pair<StructureTemplate, BlockPos>> tiles, BlockPos origin) {
-        int maxX=0,maxY=0,maxZ=0;
+    private static void assertUniformTileSize(List<Pair<StructureTemplate, BlockPos>> tiles) {
+        if (tiles.isEmpty()) return;
+        Vec3i s0 = tiles.get(0).getLeft().getSize();
         for (var p : tiles) {
             Vec3i s = p.getLeft().getSize();
-            BlockPos rel = p.getRight().subtract(origin);
-            maxX = Math.max(maxX, rel.getX()+s.getX());
-            maxY = Math.max(maxY, rel.getY()+s.getY());
-            maxZ = Math.max(maxZ, rel.getZ()+s.getZ());
+            if (!s.equals(s0)) {
+                throw new IllegalStateException("[Odyssey] Tile size mismatch: expected " + s0 + " but found " + s +
+                        " at " + p.getRight());
+            }
         }
-        return new Vec3i(maxX, maxY, maxZ);
     }
 
     private static void place(ServerWorld world, StructureTemplate template, BlockPos origin) {
@@ -198,9 +187,12 @@ public final class FixedStructurePlacer {
                 .setRotation(BlockRotation.NONE)
                 .setMirror(BlockMirror.NONE)
                 .setIgnoreEntities(false)
-                .addProcessor(WaterlogSanitizerProcessor.INSTANCE);
+                .addProcessor(WaterlogSanitizerProcessor.INSTANCE)
+                .addProcessor(RemoveStructureBlocksProcessor.INSTANCE); // <- remove STRUCTURE_BLOCKs
+
         Random rng = world.getRandom();
-        template.place(world, origin, origin, data, rng, 2);
+        boolean ok = template.place(world, origin, origin, data, rng, 2);
+        LOGGER.info("[Odyssey] placed {} at {} -> {}", template, origin, ok);
     }
 
     private static void markPlaced(ServerWorld world) {
@@ -229,6 +221,7 @@ public final class FixedStructurePlacer {
         private final ServerWorld world;
         private final int minX, minY, minZ, maxX, maxY, maxZ;
         private int x, y, z;
+        private boolean started;
 
         CarveTask(ServerWorld world, BlockPos origin, Vec3i size, int margin) {
             this.world = world;
@@ -242,13 +235,20 @@ public final class FixedStructurePlacer {
         }
 
         @Override public void run() {
+            if (!started) { started = true; }
             int left = BLOCKS_PER_TICK;
             while (left-- > 0 && y <= maxY) {
                 BlockPos p = new BlockPos(x, y, z);
                 if (!world.isAir(p)) world.setBlockState(p, Blocks.AIR.getDefaultState(), 2);
                 x++; if (x > maxX) { x = minX; z++; if (z > maxZ) { z = minZ; y++; } }
             }
-            if (y <= maxY) JOBS.add(this);
+            if (y <= maxY) {
+                JOBS.add(this);
+            } else {
+                if (--CARVES_LEFT == 0) {
+                    enqueuePlacements(world);
+                }
+            }
         }
     }
 
@@ -273,14 +273,32 @@ public final class FixedStructurePlacer {
         static final WaterlogSanitizerProcessor INSTANCE = new WaterlogSanitizerProcessor();
         private WaterlogSanitizerProcessor() {}
         @Override
-        public StructureTemplate.StructureBlockInfo process(WorldView world, BlockPos pos, BlockPos pivot,
-                                                            StructureTemplate.StructureBlockInfo original,
-                                                            StructureTemplate.StructureBlockInfo current,
-                                                            StructurePlacementData data) {
+        public StructureTemplate.StructureBlockInfo process(
+                WorldView world, BlockPos pos, BlockPos pivot,
+                StructureTemplate.StructureBlockInfo original,
+                StructureTemplate.StructureBlockInfo current,
+                StructurePlacementData data) {
             var st = current.state();
             if (st.getProperties().contains(Properties.WATERLOGGED)) {
                 st = st.with(Properties.WATERLOGGED, false);
                 return new StructureTemplate.StructureBlockInfo(current.pos(), st, current.nbt());
+            }
+            return current;
+        }
+        @Override protected StructureProcessorType<?> getType() { return StructureProcessorType.NOP; }
+    }
+
+    private static final class RemoveStructureBlocksProcessor extends StructureProcessor {
+        static final RemoveStructureBlocksProcessor INSTANCE = new RemoveStructureBlocksProcessor();
+        private RemoveStructureBlocksProcessor() {}
+        @Override
+        public StructureTemplate.StructureBlockInfo process(
+                WorldView world, BlockPos pos, BlockPos pivot,
+                StructureTemplate.StructureBlockInfo original,
+                StructureTemplate.StructureBlockInfo current,
+                StructurePlacementData data) {
+            if (current.state().isOf(Blocks.STRUCTURE_BLOCK)) {
+                return null;
             }
             return current;
         }
