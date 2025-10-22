@@ -1,6 +1,7 @@
 // src/main/java/net/kronoz/odyssey/movement/WallRun.java
 package net.kronoz.odyssey.movement;
 
+import net.kronoz.odyssey.init.ModBlocks;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
@@ -30,16 +31,8 @@ public final class WallRun {
     }
 
     private static boolean isWallRunnable(Block b) {
-        return b == Blocks.STONE ||
-                b == Blocks.STONE_BRICKS ||
-                b == Blocks.DEEPSLATE ||
-                b == Blocks.POLISHED_ANDESITE ||
-                b == Blocks.POLISHED_DEEPSLATE ||
-                b == Blocks.COBBLESTONE ||
-                b == Blocks.ANDESITE ||
-                b == Blocks.BRICKS ||
-                b == Blocks.IRON_BLOCK ||
-                b == Blocks.COPPER_BLOCK;
+        return b == ModBlocks.WALLRUN;
+
     }
 
     private static Vec3d findWallNormal(PlayerEntity p) {

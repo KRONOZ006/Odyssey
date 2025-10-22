@@ -1,0 +1,9 @@
+
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "odyssey:block/unholy_alter_top",
+    "bottom": "odyssey:block/unholy_alter_bottom",
+    "side": "odyssey:block/unholy_alter_side"
+  }
+}

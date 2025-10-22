@@ -11,9 +11,13 @@ import net.kronoz.odyssey.systems.dialogue.Dialogue;
 import net.kronoz.odyssey.world.WorldEventHooks;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 public class Odyssey implements ModInitializer {
     public static final String MODID = "odyssey";
@@ -40,8 +44,13 @@ public class Odyssey implements ModInitializer {
         ModSounds.registerSounds();
         Registry.register(Registries.ENTITY_TYPE, Identifier.of(MODID, "arcangel"), ModEntities.ARCANGEL);
         SliceAttackHandler.registerTickHandler();
+        ModItems.registerSpawnEggs();
+
+
 
         ModMouseHandlers.init();
     }
+
+
 
 }

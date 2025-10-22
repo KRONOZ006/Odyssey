@@ -42,6 +42,10 @@ public class ModItemGroup {
                         entries.add(ModBlocks.RAILING);
                         entries.add(ModBlocks.TERMINAL);
                         entries.add(ModBlocks.DVM);
+                        entries.add(ModBlocks.CAUTION);
+                        entries.add(ModBlocks.WALLRUN);
+                        entries.add(ModBlocks.UNHOLYALTER);
+
 
 
                     })

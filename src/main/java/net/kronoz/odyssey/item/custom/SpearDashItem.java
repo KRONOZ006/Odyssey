@@ -4,18 +4,23 @@ import net.kronoz.odyssey.item.client.renderer.JetpackRenderer;
 import net.kronoz.odyssey.item.client.renderer.SpearRenderer;
 import net.minecraft.client.render.item.BuiltinModelItemRenderer;
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.AttributeModifierSlot;
+import net.minecraft.component.type.AttributeModifiersComponent;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.SwordItem;
+import net.minecraft.item.ToolMaterial;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.stat.Stats;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
@@ -34,7 +39,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-public class SpearDashItem extends Item implements GeoItem {
+public class SpearDashItem extends SwordItem implements GeoItem {
 
     private static final String KEY_ACTIVE = "Active";
     private static final String KEY_EXPIRE = "Expire";
@@ -47,17 +52,55 @@ public class SpearDashItem extends Item implements GeoItem {
 
     private final AnimatableInstanceCache cache = new SingletonAnimatableInstanceCache(this);
 
-    public SpearDashItem(Settings settings) {
-        super(settings);
+    public SpearDashItem (ToolMaterial material, int attackDamage, float attackSpeed, Settings settings) {
+        super(material, withAttributes(settings, attackDamage, attackSpeed));
+    }
+    private static Settings withAttributes(Settings base, int attackDamage, float attackSpeed) {
+        AttributeModifiersComponent.Builder b = AttributeModifiersComponent.builder();
+
+        b.add(
+                net.minecraft.entity.attribute.EntityAttributes.GENERIC_ATTACK_DAMAGE,
+                new net.minecraft.entity.attribute.EntityAttributeModifier(
+                        Identifier.of("randomstuff", "avogaglaive_damage"),
+                        (double) attackDamage,
+                        net.minecraft.entity.attribute.EntityAttributeModifier.Operation.ADD_VALUE
+                ),
+                AttributeModifierSlot.MAINHAND
+        );
+
+        b.add(
+                net.minecraft.entity.attribute.EntityAttributes.GENERIC_ATTACK_SPEED,
+                new net.minecraft.entity.attribute.EntityAttributeModifier(
+                        Identifier.of("randomstuff", "avogaglaive_speed"),
+                        (double) attackSpeed,
+                        net.minecraft.entity.attribute.EntityAttributeModifier.Operation.ADD_VALUE
+                ),
+                AttributeModifierSlot.MAINHAND
+        );
+
+        return base.component(DataComponentTypes.ATTRIBUTE_MODIFIERS, b.build());
     }
 
-    // ======== NBT helpers ========
+
 
     private static NbtCompound getOrCreate(ItemStack stack) {
         NbtComponent comp = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.of(new NbtCompound()));
         NbtCompound tag = comp.copyNbt();
         if (tag == null) tag = new NbtCompound();
         return tag;
+    }
+
+    public static boolean isRenderActive(ItemStack stack) {
+        if (stack == null || stack.isEmpty()) return false;
+
+        NbtCompound tag = getOrCreate(stack);
+
+        if (!tag.contains(KEY_ACTIVE)) return false;
+        boolean active = tag.getBoolean(KEY_ACTIVE);
+
+        if (active) return true;
+
+        return false;
     }
 
     private static void save(ItemStack stack, NbtCompound tag) {

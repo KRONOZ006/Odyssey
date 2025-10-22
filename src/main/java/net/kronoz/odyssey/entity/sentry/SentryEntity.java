@@ -1,5 +1,6 @@
 package net.kronoz.odyssey.entity.sentry;
 
+import net.kronoz.odyssey.init.ModItems;
 import net.kronoz.odyssey.init.ModSounds;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
@@ -78,7 +79,7 @@ public class SentryEntity extends PathAwareEntity implements GeoEntity {
             this.playSound(ModSounds.ENERGY_SHIELD_HIT, 0.7f, 1.0f);
 
             if (attacker instanceof PlayerEntity player) {
-                axeHit = player.getMainHandStack().isIn(ItemTags.AXES);
+                axeHit = player.getMainHandStack().isOf(ModItems.SPEAR_DASH);
 
                     double x1 = this.getX();
                     double y1 = this.getY() + this.getHeight() / 2.0;

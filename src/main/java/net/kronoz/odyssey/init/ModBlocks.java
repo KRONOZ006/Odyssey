@@ -38,7 +38,12 @@ public class ModBlocks {
     public static final Block SEQUENCEB  = registerBlock("sequencer", new SequencerBlock(AbstractBlock.Settings.copy(Blocks.TUFF)));
     public static final Block SPEDBLOCK  = registerBlock("spedblock", new SpedLigtBlock(AbstractBlock.Settings.copy(Blocks.TUFF)));
     public static final Block CAUTION  = registerBlock("caution", new Block(AbstractBlock.Settings.copy(Blocks.TUFF)));
+
+    public static final Block WALLRUN = registerBlock("wallrun",
+            new Block(AbstractBlock.Settings.copy(Blocks.IRON_BLOCK).luminance(state -> 10).emissiveLighting((state, world, pos) -> true)));
     public static final Block ENERGY_EMITTER  = registerBlock("energy_emitter", new EnergyEmitterBlock(AbstractBlock.Settings.copy(Blocks.TUFF)));
+    public static final Block UNHOLYALTER = registerBlock("unholy_alter", new UnholyAlterBlock(AbstractBlock.Settings.copy(Blocks.BEDROCK)));
+    public static final Block TRANSFORMINGALTER = registerBlock("transforming_alter", new TransformingAlterBlock(AbstractBlock.Settings.copy(Blocks.BEDROCK)));
     public static final Block ENERGY_BARRIER  = registerBlock("energy_barrier", new EnergyBarrierBlock(AbstractBlock.Settings.create().nonOpaque().strength(-1.0f, 3600000f).pistonBehavior(PistonBehavior.BLOCK).emissiveLighting((state, world, pos) -> true)
             .strength(-1.0f).luminance(state -> state.get(EnergyBarrierBlock.LIGHT_LEVEL))));
     public static final Block SHELF1 = registerBlock("shelf1", new Shelf1Block(AbstractBlock.Settings.copy(Blocks.TUFF).nonOpaque()));

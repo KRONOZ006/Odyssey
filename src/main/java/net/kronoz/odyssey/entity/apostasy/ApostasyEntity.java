@@ -1,9 +1,14 @@
 package net.kronoz.odyssey.entity.apostasy;
 
+import foundry.veil.api.client.render.VeilRenderSystem;
+import foundry.veil.api.client.render.light.data.PointLightData;
+import foundry.veil.api.client.render.light.renderer.LightRenderHandle;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileEntity;
+import net.kronoz.odyssey.hud.death.DeathUICutscene;
 import net.kronoz.odyssey.init.ModEntities;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LightningEntity;
 import net.minecraft.entity.MovementType;
@@ -11,10 +16,21 @@ import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.data.DataTracker;
+import net.minecraft.entity.data.TrackedData;
+import net.minecraft.entity.data.TrackedDataHandlerRegistry;
+import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemGroup;
+import net.minecraft.item.SpawnEggItem;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.registry.Registries;
+import net.minecraft.registry.Registry;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -33,7 +49,7 @@ import java.util.List;
 
 public class ApostasyEntity extends PathAwareEntity implements software.bernie.geckolib.animatable.GeoEntity {
     // so much junk code it's insane
-    public enum Phase { P1, P2, P3, P4 }
+    public enum Phase {P1, P2, P3, P4}
 
     private static final double RING1_R = 2.4;
     private static final double RING2_R = 3.1;
@@ -82,8 +98,13 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     private static final class PendingStrike {
         final BlockPos pos;
         int ticks;
-        PendingStrike(BlockPos pos, int ticks) { this.pos = pos; this.ticks = ticks; }
+
+        PendingStrike(BlockPos pos, int ticks) {
+            this.pos = pos;
+            this.ticks = ticks;
+        }
     }
+
     private final List<PendingStrike> pendingStrikes = new ArrayList<>();
 
     private final software.bernie.geckolib.animatable.instance.AnimatableInstanceCache cache =
@@ -112,7 +133,10 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     }
 
     @Override
-    protected void initGoals() { this.goalSelector.add(0, new BrainGoal()); }
+    protected void initGoals() {
+        this.goalSelector.add(0, new BrainGoal());
+    }
+
     public void checkDespawn() {
         if (this.getWorld().getDifficulty() == Difficulty.PEACEFUL && this.isDisallowedInPeaceful()) {
             this.discard();
@@ -120,10 +144,21 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
             this.despawnCounter = 0;
         }
     }
+
     private class BrainGoal extends Goal {
-        BrainGoal() { setControls(EnumSet.of(Control.MOVE, Control.LOOK)); }
-        @Override public boolean canStart() { return true; }
-        @Override public void tick() { ApostasyEntity.this.tickBrain(); }
+        BrainGoal() {
+            setControls(EnumSet.of(Control.MOVE, Control.LOOK));
+        }
+
+        @Override
+        public boolean canStart() {
+            return true;
+        }
+
+        @Override
+        public void tick() {
+            ApostasyEntity.this.tickBrain();
+        }
     }
 
     private void tickBrain() {
@@ -162,13 +197,19 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     }
 
     private void handlePhase1(PlayerEntity target) {
-        if (ringShotCooldown-- <= 0) { ringShotCooldown = RING_SHOT_INTERVAL; fireRingsBurst(target); }
+        if (ringShotCooldown-- <= 0) {
+            ringShotCooldown = RING_SHOT_INTERVAL;
+            fireRingsBurst(target);
+        }
         if (this.random.nextFloat() < 0.10f) tryStartEyeBurst(target, 6);
         if (this.random.nextFloat() < 0.04f) tryShockwave(target);
     }
 
     private void handlePhase2(PlayerEntity target) {
-        if (hugeLaserCooldown-- <= 0) { hugeLaserCooldown = HUGE_LASER_INTERVAL; fireEyeHugeLaser(target); }
+        if (hugeLaserCooldown-- <= 0) {
+            hugeLaserCooldown = HUGE_LASER_INTERVAL;
+            fireEyeHugeLaser(target);
+        }
         if (this.random.nextFloat() < 0.14f) tryStartEyeBurst(target, 8);
         if (lightningCooldown-- <= 0) {
             lightningCooldown = P2_SINGLE_COOLDOWN;
@@ -184,12 +225,17 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         if (near && this.random.nextFloat() < 0.05f) {
             scheduleLightningLineTowards(target, 8, 5);
         }
-        if (this.random.nextFloat() < 0.03f && hugeLaserCooldown <= 0) { hugeLaserCooldown = 45; fireEyeHugeLaser(target); }
-        else if (hugeLaserCooldown > 0) hugeLaserCooldown--;
+        if (this.random.nextFloat() < 0.03f && hugeLaserCooldown <= 0) {
+            hugeLaserCooldown = 45;
+            fireEyeHugeLaser(target);
+        } else if (hugeLaserCooldown > 0) hugeLaserCooldown--;
     }
 
     private void handlePhase3(PlayerEntity target) {
-        if (hugeLaserCooldown-- <= 0) { hugeLaserCooldown = HUGE_LASER_INTERVAL; fireEyeHugeLaser(target); }
+        if (hugeLaserCooldown-- <= 0) {
+            hugeLaserCooldown = HUGE_LASER_INTERVAL;
+            fireEyeHugeLaser(target);
+        }
         if (this.random.nextFloat() < 0.14f) tryStartEyeBurst(target, 8);
         if (lightningCooldown-- <= 0) {
             lightningCooldown = P3_ZONE_COOLDOWN;
@@ -245,23 +291,65 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
 
         sw.spawnEntity(e);
     }
+
     @Override
     public boolean isInvulnerable() {
         return false;
     }
-    @Override public boolean isInvulnerableTo(DamageSource source) { return false; }
-    @Override public boolean isAttackable() { return false; }
 
-    @Override public boolean isPushable() { return false; }
-    @Override public void pushAwayFrom(net.minecraft.entity.Entity e) { }
-    @Override public void takeKnockback(double s, double x, double z) { }
-    @Override public void addVelocity(double x, double y, double z) { }
+    @Override
+    public boolean isInvulnerableTo(DamageSource source) {
+        return false;
+    }
+
+    @Override
+    public boolean isAttackable() {
+        return false;
+    }
+
+    @Override
+    public boolean isPushable() {
+        return false;
+    }
+
+    @Override
+    public void pushAwayFrom(net.minecraft.entity.Entity e) {
+    }
+
+    @Override
+    public void takeKnockback(double s, double x, double z) {
+    }
+
+    @Override
+    public void addVelocity(double x, double y, double z) {
+    }
+
     private BlockPos randomPosAround() {
         double a = this.random.nextDouble() * Math.PI * 2;
         int r = this.random.nextBetween(ApostasyEntity.PHASE3_MIN_R, ApostasyEntity.PHASE3_MAX_R);
         int x = MathHelper.floor(getX() + Math.cos(a) * r);
         int z = MathHelper.floor(getZ() + Math.sin(a) * r);
         return new BlockPos(x, getBlockY(), z);
+    }
+
+
+    private int duration = 40;
+    private boolean lightSpawned = false;
+    private PointLightData bodyLight;
+    private LightRenderHandle<PointLightData> bodyLightHandle;
+
+    private void spawnVeilLight() {
+        Vec3d pos = this.getPos();
+        bodyLight = new PointLightData()
+                .setPosition(pos.x, pos.y, pos.z)
+                .setRadius(200f)
+                .setBrightness(2 * this.age * 200)
+                .setColor(1f, 0.8f, 0.1f);
+        bodyLightHandle = VeilRenderSystem.renderer().getLightRenderer().addLight(bodyLight);
+
+        if (this.age > this.duration) {
+            freeLight();
+        }
     }
 
     private boolean playerOn(BlockPos pos) {
@@ -368,7 +456,10 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
             sw.setBlockState(m, Blocks.AIR.getDefaultState(), 3);
             var f = net.minecraft.entity.FallingBlockEntity.spawnFromBlock(sw, m, st);
             f.dropItem = false;
-            try { f.setDestroyedOnLanding(); } catch (Throwable ignored) {}
+            try {
+                f.setDestroyedOnLanding();
+            } catch (Throwable ignored) {
+            }
             double spread = 0.35;
             f.setVelocity(
                     (this.random.nextDouble() - 0.5) * spread,
@@ -409,9 +500,13 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         e.setup(0.95, ApostasyEntity.TELEGRAPH_TICKS);
         sw.spawnEntity(e);
     }
+
     private void tickGlowHoming() {
         if (!(this.getWorld() instanceof net.minecraft.server.world.ServerWorld sw)) return;
-        if (glowShotCooldown > 0) { glowShotCooldown--; return; }
+        if (glowShotCooldown > 0) {
+            glowShotCooldown--;
+            return;
+        }
 
         net.minecraft.entity.player.PlayerEntity target = getClosestTarget();
         if (target == null) return;
@@ -499,6 +594,8 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         return list;
     }
 
+    private boolean cutsceneActive = false;
+
     @Override
     public void tick() {
         super.tick();
@@ -515,11 +612,56 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         this.setNoGravity(true);
         this.noClip = false;
         lastTargetY = targetY;
+
+        if (this.getWorld().isClient) {
+            if (!lightSpawned) {
+                // Spawn the light and start cutscene
+                spawnVeilLight();
+                DeathUICutscene.start();
+
+                net.minecraft.entity.player.PlayerEntity target = getClosestTarget();
+                if (target != null) {
+                    // Duration in ticks (20 ticks = 1 second), amplifier 4 for max resistance
+                    target.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 30, 3, false, false, true));
+                    cutsceneActive = true;
+                }
+
+                lightSpawned = true; // ensures this block only runs once
+            }
+
+            // Increment age only once
+            age++;
+
+            // Remove invulnerability after cutscene duration
+            if (cutsceneActive && age >= this.duration) {
+                net.minecraft.entity.player.PlayerEntity target = getClosestTarget();
+
+                cutsceneActive = false;
+                freeLight(); // also remove Veil light
+            }
+
+
+        }
+    }
+
+    @Override
+    public void onRemoved() {
+        super.onRemoved();
+        freeLight();
+    }
+
+
+    private void freeLight() {
+        if (bodyLightHandle != null && bodyLightHandle.isValid()) {
+            bodyLightHandle.free();
+        }
+        bodyLightHandle = null;
+        bodyLight = null;
     }
 
     private double groundYAt(double x, double yRef, double z) {
         Vec3d start = new Vec3d(x, yRef + HOVER_SAMPLE_UP, z);
-        Vec3d end   = new Vec3d(x, yRef - HOVER_SAMPLE_DOWN, z);
+        Vec3d end = new Vec3d(x, yRef - HOVER_SAMPLE_DOWN, z);
         var hit = this.getWorld().raycast(new RaycastContext(start, end, RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, this));
         if (hit.getType() == HitResult.Type.BLOCK) return hit.getPos().y;
         return this.getWorld().getBottomY() + 1.0;
@@ -529,8 +671,11 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     public void kill() {
         super.kill();
     }
+
     @Override
-    public boolean isFireImmune() { return true; }
+    public boolean isFireImmune() {
+        return true;
+    }
 
     @Override
     public boolean damage(net.minecraft.entity.damage.DamageSource source, float amount) {
@@ -553,7 +698,10 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
 
     @Override
     public void readCustomDataFromNbt(NbtCompound nbt) {
-        try { phase = Phase.valueOf(nbt.getString("Phase")); } catch (Exception ignored) {}
+        try {
+            phase = Phase.valueOf(nbt.getString("Phase"));
+        } catch (Exception ignored) {
+        }
         ringShotCooldown = nbt.getInt("cdRing");
         hugeLaserCooldown = nbt.getInt("cdHuge");
         lightningCooldown = nbt.getInt("cdBolt");
@@ -562,6 +710,15 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
         if (nbt.contains("lastTY")) lastTargetY = nbt.getDouble("lastTY");
     }
 
-    @Override public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {}
-    @Override public software.bernie.geckolib.animatable.instance.AnimatableInstanceCache getAnimatableInstanceCache() { return cache; }
+
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+    }
+
+    @Override
+    public software.bernie.geckolib.animatable.instance.AnimatableInstanceCache getAnimatableInstanceCache() {
+        return cache;
+    }
+
 }
