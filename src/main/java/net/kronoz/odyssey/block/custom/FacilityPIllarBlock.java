@@ -2,13 +2,18 @@ package net.kronoz.odyssey.block.custom;
 
 import net.kronoz.odyssey.Odyssey;
 import net.kronoz.odyssey.block.CollisionShapeHelper;
-import net.minecraft.block.*;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockRenderType;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.ShapeContext;
+import net.minecraft.block.Waterloggable;
 import net.minecraft.fluid.FluidState;
 import net.minecraft.fluid.Fluids;
 import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.state.StateManager;
-import net.minecraft.state.property.BooleanProperty;
+import net.minecraft.state.property.Properties;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
@@ -16,36 +21,48 @@ import net.minecraft.world.WorldAccess;
 import org.jetbrains.annotations.Nullable;
 
 public class FacilityPIllarBlock extends Block implements Waterloggable {
-    public static final BooleanProperty WATERLOGGED = BooleanProperty.of("waterlogged"); // or Properties.WATERLOGGED
-
     private static final VoxelShape SHAPE =
             CollisionShapeHelper.loadUnrotatedCollisionFromModelJson(Odyssey.MODID, "facility_pillar");
 
     public FacilityPIllarBlock(Settings settings) {
         super(settings);
-        setDefaultState(getStateManager().getDefaultState().with(WATERLOGGED, false));
+        this.setDefaultState(this.getStateManager().getDefaultState()
+                .with(Properties.WATERLOGGED, false));
     }
 
     @Override
     protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        builder.add(WATERLOGGED);
+        builder.add(Properties.WATERLOGGED);
     }
 
     @Override
     public @Nullable BlockState getPlacementState(ItemPlacementContext ctx) {
-        boolean water = ctx.getWorld().getFluidState(ctx.getBlockPos()).getFluid() == Fluids.WATER;
-        return getDefaultState().with(WATERLOGGED, water);
+        FluidState fs = ctx.getWorld().getFluidState(ctx.getBlockPos());
+        return this.getDefaultState()
+                .with(Properties.WATERLOGGED, fs.getFluid() == Fluids.WATER);
     }
 
     @Override
     public FluidState getFluidState(BlockState state) {
-        return state.get(WATERLOGGED) ? Fluids.WATER.getStill(false) : super.getFluidState(state);
+        return state.get(Properties.WATERLOGGED) ? Fluids.WATER.getStill(false) : super.getFluidState(state);
     }
 
     @Override
-    public BlockState getStateForNeighborUpdate(BlockState state, net.minecraft.util.math.Direction dir, BlockState neighborState,
+    public boolean tryFillWithFluid(WorldAccess world, BlockPos pos, BlockState state, FluidState fluidState) {
+        if (!state.get(Properties.WATERLOGGED) && fluidState.getFluid() == Fluids.WATER) {
+            world.setBlockState(pos, state.with(Properties.WATERLOGGED, true), 3);
+            world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public BlockState getStateForNeighborUpdate(BlockState state, Direction dir, BlockState neighborState,
                                                 WorldAccess world, BlockPos pos, BlockPos neighborPos) {
-        if (state.get(WATERLOGGED)) world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+        if (state.get(Properties.WATERLOGGED)) {
+            world.scheduleFluidTick(pos, Fluids.WATER, Fluids.WATER.getTickRate(world));
+        }
         return super.getStateForNeighborUpdate(state, dir, neighborState, world, pos, neighborPos);
     }
 
@@ -60,6 +77,7 @@ public class FacilityPIllarBlock extends Block implements Waterloggable {
     }
 
     @Override
-    public BlockRenderType getRenderType(BlockState state) { return BlockRenderType.MODEL; }
+    public BlockRenderType getRenderType(BlockState state) {
+        return BlockRenderType.MODEL;
+    }
 }
-
