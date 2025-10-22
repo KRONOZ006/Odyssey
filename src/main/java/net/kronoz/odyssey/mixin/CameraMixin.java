@@ -1,24 +1,24 @@
 package net.kronoz.odyssey.mixin;
 
+import net.kronoz.odyssey.systems.cam.ScreenShake;
 import net.kronoz.odyssey.systems.cinematics.runtime.CameraOverrideController;
 import net.minecraft.client.render.Camera;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.BlockView;
+import org.joml.Vector3f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * On applique notre logique juste après la mise à jour vanilla de la caméra.
- * Avantage : la caméra suit le joueur (tête) et on ajoute nos offsets + yaw/pitch delta.
- */
 @Mixin(Camera.class)
 public abstract class CameraMixin {
 
+    @Shadow private float yaw;
+    @Shadow private float pitch;
     @Shadow protected abstract void setRotation(float yaw, float pitch);
     @Shadow protected abstract void setPos(double x, double y, double z);
     @Shadow public abstract Vec3d getPos();
@@ -30,7 +30,6 @@ public abstract class CameraMixin {
         CameraOverrideController ctrl = CameraOverrideController.I;
         if(!ctrl.active) return;
 
-        // Base (vanilla) après update()
         Vec3d basePos = this.getPos();
         float baseYaw = this.getYaw();
         float basePitch = this.getPitch();
@@ -46,10 +45,8 @@ public abstract class CameraMixin {
             return;
         }
 
-        // Mode ADDITIVE_FOLLOW : offsets locaux => espace monde selon yaw/pitch de base
         Vec3d local = new Vec3d(ctrl.offsetX, ctrl.offsetY, ctrl.offsetZ);
 
-        // Yaw (autour de Y). Yaw MC: sens horaire -> signe négatif
         float yawRad = (float) Math.toRadians(-baseYaw);
         double cosY = Math.cos(yawRad), sinY = Math.sin(yawRad);
         Vec3d ry = new Vec3d(
@@ -58,7 +55,6 @@ public abstract class CameraMixin {
                 local.x * sinY + local.z * cosY
         );
 
-        // Pitch (autour de X)
         float pitchRad = (float) Math.toRadians(basePitch);
         double cosX = Math.cos(pitchRad), sinX = Math.sin(pitchRad);
         Vec3d rxy = new Vec3d(
@@ -80,5 +76,30 @@ public abstract class CameraMixin {
 
         this.setRotation(finalYaw, finalPitch);
         this.setPos(fx, fy, fz);
+    }
+
+    @Inject(method = "update(Lnet/minecraft/world/BlockView;Lnet/minecraft/entity/Entity;ZZF)V",
+            at = @At("TAIL"))
+    private void odyssey$afterUpdate(BlockView area, Entity focusedEntity, boolean thirdPerson, boolean inverseView, float tickDelta, CallbackInfo ci) {
+        ScreenShake.update();
+
+        float shakeX = ScreenShake.getShakeX();
+        float shakeY = ScreenShake.getShakeY();
+
+        if (Math.abs(shakeX) < 1e-4f && Math.abs(shakeY) < 1e-4f) return;
+
+        float cy = MathHelper.cos((float) Math.toRadians(this.yaw));
+        float sy = MathHelper.sin((float) Math.toRadians(this.yaw));
+        float cp = MathHelper.cos((float) Math.toRadians(this.pitch));
+        float sp = MathHelper.sin((float) Math.toRadians(this.pitch));
+
+        Vector3f right = new Vector3f(cy, 0, -sy).normalize();
+        Vector3f up    = new Vector3f(-sy * sp, cp, -cy * sp).normalize();
+
+        Vector3f delta = new Vector3f(right).mul(shakeX).add(new Vector3f(up).mul(shakeY));
+
+        Camera self = (Camera) (Object) this;
+        CameraAccessor acc = (CameraAccessor) self;
+        acc.odyssey$setPos(self.getPos().x + delta.x, self.getPos().y + delta.y, self.getPos().z + delta.z);
     }
 }

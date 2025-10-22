@@ -1,6 +1,7 @@
 package net.kronoz.odyssey.item.client.renderer;
 
 import net.kronoz.odyssey.Odyssey;
+import net.kronoz.odyssey.item.custom.SpearDashItem;
 import net.kronoz.odyssey.item.custom.TomahawkItem;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
@@ -11,7 +12,7 @@ import software.bernie.geckolib.cache.object.GeoBone;
 import software.bernie.geckolib.model.DefaultedItemGeoModel;
 import software.bernie.geckolib.renderer.specialty.DynamicGeoItemRenderer;
 
-public class SpearRenderer extends DynamicGeoItemRenderer<TomahawkItem> {
+public class SpearRenderer extends DynamicGeoItemRenderer<SpearDashItem> {
 
     private static final Identifier MODEL_ID   = Identifier.of(Odyssey.MODID, "spear");
 
@@ -33,7 +34,7 @@ public class SpearRenderer extends DynamicGeoItemRenderer<TomahawkItem> {
     ) {
 
         ItemStack current = this.getCurrentItemStack();
-        if (!(current.getItem() instanceof TomahawkItem)) return false;
+        if (!(current.getItem() instanceof SpearDashItem)) return false;
         return false;
     }
 

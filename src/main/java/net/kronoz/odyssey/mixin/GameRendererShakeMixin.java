@@ -2,7 +2,9 @@ package net.kronoz.odyssey.mixin;
 
 import net.kronoz.odyssey.systems.cam.CameraSway;
 import net.kronoz.odyssey.systems.cam.RapidShake;
+import net.kronoz.odyssey.systems.cam.ScreenShake;
 import net.minecraft.client.render.GameRenderer;
+import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.RotationAxis;
 import org.spongepowered.asm.mixin.Mixin;
@@ -37,7 +39,6 @@ public class GameRendererShakeMixin {
         }
 
     }
-
 
     @Inject(method = "tiltViewWhenHurt", at = @At("TAIL"), require = 0)
     private void ant$rollInHurtTilt(MatrixStack matrices, float tickDelta, CallbackInfo ci) {

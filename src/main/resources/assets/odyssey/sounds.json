@@ -56,6 +56,30 @@
         "name": "odyssey:wallrun_loop"
       }
     ]
+  },"soup1": {
+    "sounds": [
+      {
+        "name": "odyssey:soup1"
+      }
+    ]
+  },"soup2": {
+    "sounds": [
+      {
+        "name": "odyssey:soup2"
+      }
+    ]
+  },"soup3": {
+    "sounds": [
+      {
+        "name": "odyssey:soup3"
+      }
+    ]
+  },"apostasy_theme": {
+    "sounds": [
+      {
+        "name": "odyssey:apostasy_theme"
+      }
+    ]
   },
   "arc_shoot": {
     "sounds": [

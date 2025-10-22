@@ -2,6 +2,8 @@ package net.kronoz.odyssey.entity.arcangel;
 
 import net.kronoz.odyssey.entity.apostasy.ApostasyEntity;
 import net.kronoz.odyssey.init.ModSounds;
+import net.kronoz.odyssey.systems.cam.ClientFx;
+import net.kronoz.odyssey.systems.cam.RapidShake;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
@@ -11,6 +13,7 @@ import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Box;
@@ -39,10 +42,14 @@ public class ArcangelEntity extends PathAwareEntity implements GeoEntity {
     private static final RawAnimation IDLE  = RawAnimation.begin().thenLoop("idle");
     private static final RawAnimation SHOOT = RawAnimation.begin().thenPlay("shoot");
 
-    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private boolean prevShootingClient;
 
-    private static final int SHOOT_DURATION_TICKS = 80;
-    private static final int DAMAGE_HIT_TICKS     = 50;
+    private final AnimatableInstanceCache cache = GeckoLibUtil.createInstanceCache(this);
+    private static final int SHAKE_DELAY_TICKS = 40; // 2.5s à 20 TPS
+
+    private int shakeDelayClient = -1;
+    private boolean shakeFiredThisShot = false;    private static final int SHOOT_DURATION_TICKS = 80;
+    private static final int DAMAGE_HIT_TICKS     = 60;
     private static final float ARCANGEL_DAMAGE    = 150.0f;
 
     private int shootingTicks;
@@ -128,7 +135,39 @@ public class ArcangelEntity extends PathAwareEntity implements GeoEntity {
             this.recoilRad *= 0.88f;
             if (this.recoilRad < 0.005f) this.recoilRad = 0f;
         }
+        if (this.getWorld().isClient) {
+            boolean now = this.dataTracker.get(SHOOTING);
 
+            if (now && !prevShootingClient) {
+                shakeDelayClient = SHAKE_DELAY_TICKS;
+                shakeFiredThisShot = false;
+            }
+
+            if (now && shakeDelayClient >= 0) {
+                if (shakeDelayClient-- == 0 && !shakeFiredThisShot) {
+                    net.kronoz.odyssey.systems.cam.ClientFx.rapidShakeStart(200.75f, 40);
+                    shakeFiredThisShot = true;
+                }
+            }
+
+            if (!now) {
+                shakeDelayClient = -1;
+                shakeFiredThisShot = false;
+            }
+
+            prevShootingClient = now;
+        }
+        if (!this.getWorld().isClient) {
+            if (this.dataTracker.get(SHOOTING)) {
+                if (shootingTicks == DAMAGE_HIT_TICKS) {
+                    ApostasyEntity target = resolveLockedTarget();
+                    if (target == null) target = findNearestApostasyUnlimited();
+                    if (target != null && target.isAlive()) {
+                        target.damage((this.getWorld()).getDamageSources().mobAttack(this), ARCANGEL_DAMAGE);
+                    }
+                }
+            }
+        }
         if (!this.getWorld().isClient) {
             if (this.dataTracker.get(SHOOTING)) {
                 if (!playedShootSfx) {

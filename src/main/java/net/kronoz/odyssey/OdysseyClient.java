@@ -17,6 +17,7 @@ import net.kronoz.odyssey.client.ClientElevatorAssist;
 import net.kronoz.odyssey.config.OdysseyConfig;
 import net.kronoz.odyssey.entity.*;
 import net.kronoz.odyssey.entity.apostasy.ApostasyRenderer;
+import net.kronoz.odyssey.entity.apostasy.ApostasyThemeClient;
 import net.kronoz.odyssey.entity.arcangel.ArcangelRenderer;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileEntity;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileRenderer;
@@ -77,6 +78,8 @@ public class OdysseyClient implements ClientModInitializer {
         WireWorldRenderer.init();
         WireClientMirror.init();
         ModKeybinds.init();
+        ApostasyThemeClient.init(ModSounds.APOSTASY_THEME);
+
         SimpleBlockLightManager.initClient();
         SentinelLightClient.initClient();
         ModEntityRenderers.register();

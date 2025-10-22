@@ -67,11 +67,6 @@ public class ShockwaveEntity extends Entity {
             return;
         }
 
-
-
-
-
-
         if (!this.getWorld().isClient) {
             float r = getCurrentRadius(0f);
             float inner = Math.max(0f, r - band);

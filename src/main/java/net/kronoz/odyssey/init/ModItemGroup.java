@@ -37,6 +37,7 @@ public class ModItemGroup {
                         entries.add(ModBlocks.FACILITY_TILES);
                         entries.add(ModBlocks.ENERGY_BARRIER);
                         entries.add(ModItems.SPEAR_DASH);
+                        entries.add(ModItems.SOUP1);
                         entries.add(ModBlocks.SHELF1);
                         entries.add(ModBlocks.RAILING);
                         entries.add(ModBlocks.TERMINAL);

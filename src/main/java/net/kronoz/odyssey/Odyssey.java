@@ -7,6 +7,7 @@ import net.kronoz.odyssey.init.*;
 import net.kronoz.odyssey.net.CineNetworking;
 import net.kronoz.odyssey.systems.data.BodyPartRegistry;
 import net.kronoz.odyssey.systems.dialogue.Dialogue;
+import net.kronoz.odyssey.world.WorldEventHooks;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.util.Identifier;
@@ -20,6 +21,7 @@ public class Odyssey implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        WorldEventHooks.init();
         CineNetworking.registerCommon();
         SequencerRegistry.init();
         ModEntities.init();

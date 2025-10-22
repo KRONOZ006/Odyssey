@@ -17,6 +17,10 @@ public class ModSounds {
     public static final SoundEvent WALLRUN_LOOP = registerSoundEvent("wallrun_loop");
     public static final SoundEvent ARC_SHOOT = registerSoundEvent("arc_shoot");
     public static final SoundEvent SLICE = registerSoundEvent("slice");
+    public static final SoundEvent APOSTASY_THEME = registerSoundEvent("apostasy_theme");
+    public static final SoundEvent SOUP1 = registerSoundEvent("soup1");
+    public static final SoundEvent SOUP2 = registerSoundEvent("soup2");
+    public static final SoundEvent SOUP3 = registerSoundEvent("soup3");
 
 
 
