@@ -8,7 +8,6 @@ import net.kronoz.odyssey.hud.death.DeathUICutscene;
 import net.kronoz.odyssey.init.ModEntities;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LightningEntity;
 import net.minecraft.entity.MovementType;
@@ -16,21 +15,12 @@ import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.PathAwareEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemGroup;
-import net.minecraft.item.SpawnEggItem;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -615,29 +605,24 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
 
         if (this.getWorld().isClient) {
             if (!lightSpawned) {
-                // Spawn the light and start cutscene
                 spawnVeilLight();
                 DeathUICutscene.start();
 
                 net.minecraft.entity.player.PlayerEntity target = getClosestTarget();
                 if (target != null) {
-                    // Duration in ticks (20 ticks = 1 second), amplifier 4 for max resistance
-                    target.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 30, 3, false, false, true));
                     cutsceneActive = true;
                 }
 
-                lightSpawned = true; // ensures this block only runs once
+                lightSpawned = true;
             }
 
-            // Increment age only once
             age++;
 
-            // Remove invulnerability after cutscene duration
             if (cutsceneActive && age >= this.duration) {
                 net.minecraft.entity.player.PlayerEntity target = getClosestTarget();
 
                 cutsceneActive = false;
-                freeLight(); // also remove Veil light
+                freeLight();
             }
 
 

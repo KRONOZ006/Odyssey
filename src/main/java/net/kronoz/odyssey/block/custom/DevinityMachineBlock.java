@@ -39,12 +39,11 @@ public class DevinityMachineBlock extends Block {
         builder.add(FACING);
     }
 
+    @Override
+    public BlockRenderType getRenderType(BlockState state) {
+        return BlockRenderType.MODEL;
+    }
 
-
-    /**
-     * Schedule a tick whenever the block is added or loaded.
-     * This ensures it works for player placement, WorldEdit, structure generation, etc.
-     */
     @Override
     public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
         super.onBlockAdded(state, world, pos, oldState, notify);
@@ -62,20 +61,43 @@ public class DevinityMachineBlock extends Block {
         }
     }
 
+    @Override
+    public void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, net.minecraft.util.math.random.Random random) {
+        Box checkBox = new Box(pos).expand(2, 3, 2);
+        boolean exists = !world.getEntitiesByClass(ApostasyEntity.class, checkBox, e -> true).isEmpty();
 
+        if (!exists) {
+            ApostasyEntity apostasy = ModEntities.APOSTASY.create(world);
+            if (apostasy != null) {
+                Direction facing = state.get(FACING);
+                float yaw = switch (facing) {
+                    case NORTH -> 180f;
+                    case SOUTH -> 0f;
+                    case WEST -> 90f;
+                    case EAST -> 270f;
+                    default -> 0.0f;
+                };
+                apostasy.refreshPositionAndAngles(
+                        pos.getX() + 0.5,
+                        pos.getY() + 1,
+                        pos.getZ() + 0.5,
+                        yaw,
+                        0
+                );
+                world.spawnEntity(apostasy);
+            }
+        }
+    }
 
-    /**
-     * Player interaction logic
-     */
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         if (world.isClient) return ActionResult.SUCCESS;
         if (!(player instanceof ServerPlayerEntity sp)) return ActionResult.SUCCESS;
         if (sp.isCreative() || sp.isSpectator()) return ActionResult.SUCCESS;
 
-        sp.damage(((ServerWorld) world).getDamageSources().magic(), 8f);
+        sp.damage((world).getDamageSources().magic(), 8f);
 
-        Box box = new Box(pos).expand(64); // area around block
+        Box box = new Box(pos).expand(64);
         ArcangelEntity nearest = world.getEntitiesByClass(ArcangelEntity.class, box, e -> true)
                 .stream()
                 .min(Comparator.comparingDouble(
