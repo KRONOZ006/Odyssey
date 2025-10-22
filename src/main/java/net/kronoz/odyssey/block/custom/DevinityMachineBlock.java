@@ -64,6 +64,9 @@ public class DevinityMachineBlock extends Block {
 
 
 
+    /**
+     * Player interaction logic
+     */
     @Override
     public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit) {
         if (world.isClient) return ActionResult.SUCCESS;
