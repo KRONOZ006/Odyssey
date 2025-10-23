@@ -68,7 +68,7 @@ void main() {
     // ===== Night values (analog horror) =====
     float stepLen = 0.2;                 // dense, short visibility
     vec3  fogCol  = vec3(0.25,0.25,0.30); // darker/colder
-    float base    = 0.07;                // base extinction
+    float base    = 0.03;                // base extinction
     float contrast= 0.35;                // chunkier noise
 
     bool isSky = (depth >= 0.9999);
@@ -86,7 +86,7 @@ void main() {
         float n = fbm(p * 0.20 + vec3(0.0, 0.0, GameTime * 0.15));
         n = pow(max(n, 1e-4), 1.6);
 
-        float density = base * (1.0 + (n - 0.5) * contrast);
+        float density = base * (0.5 + (n - 0.5) * contrast);
         if (isSky) density *= skyReduce;
         density *= 5.0; // subtle self-shadowing
 
