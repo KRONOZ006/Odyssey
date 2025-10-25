@@ -71,7 +71,7 @@ dependencies {
     modImplementation(runtimeOnly("io.github.spair:imgui-java-natives-macos:$imgui_version"))
     modImplementation(runtimeOnly("io.github.spair:imgui-java-natives-windows:$imgui_version"))
 
-    modImplementation(rootProject.files("src/main/resources/META-INF/jars/veil-fabric-1.21.1-2.3.2.jar"))
+    modImplementation(rootProject.files("src/main/resources/META-INF/jars/veil-fabric-1.21.1-2.4.0.jar"))
     modImplementation(rootProject.files("src/main/resources/META-INF/jars/geckolib-fabric-1.21.1-4.8.2.jar"))
     modImplementation(rootProject.files("src/main/resources/META-INF/jars/midnightlib-1.7.5-fabric+1.21.1.jar"))
     modImplementation(rootProject.files("src/main/resources/META-INF/jars/modmenu-11.0.3.jar"))
