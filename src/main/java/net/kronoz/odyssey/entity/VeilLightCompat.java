@@ -7,6 +7,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.kronoz.odyssey.config.OdysseyConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 
@@ -43,6 +44,11 @@ public final class VeilLightCompat {
                                           float r, float g, float b,
                                           float brightness, float radius,
                                           int remainingTicks) {
+        float maxBrightness = OdysseyConfig.effectiveMaxLightBrightness();
+        float maxRadius = OdysseyConfig.effectiveMaxPointRadius();
+        brightness = sanitize(brightness, 0.0f, maxBrightness);
+        radius = sanitize(radius, 0.0f, maxRadius);
+
         if (!rendererReady()) {
             if (brightness > 0f && radius > 0f && remainingTicks > 0) {
                 PENDING.put(id, new PendingUpdate(x, y, z, r, g, b, brightness, radius, remainingTicks));
@@ -59,11 +65,14 @@ public final class VeilLightCompat {
         PointLightData pl = DATA.get(id);
         LightRenderHandle<PointLightData> handle = HANDLES.get(id);
         boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
+        float cr = sanitize(r, 0.0f, 1.0f);
+        float cg = sanitize(g, 0.0f, 1.0f);
+        float cb = sanitize(b, 0.0f, 1.0f);
 
         if (pl == null || handle == null || !handle.isValid()) {
             pl = new PointLightData()
                     .setBrightness(brightness)
-                    .setColor(r, g, b)
+                    .setColor(cr, cg, cb)
                     .setRadius(radius)
                     .setOcclusionEnabled(nativeOcclusion);
             pl.setPosition((float) x, (float) y, (float) z);
@@ -72,7 +81,7 @@ public final class VeilLightCompat {
             HANDLES.put(id, handle);
         } else {
             pl.setBrightness(brightness);
-            pl.setColor(r, g, b);
+            pl.setColor(cr, cg, cb);
             pl.setRadius(radius);
             if (pl.isOcclusionEnabled() != nativeOcclusion) {
                 pl.setOcclusionEnabled(nativeOcclusion);
@@ -203,6 +212,19 @@ public final class VeilLightCompat {
     }
 
     private static void log(String s) {
+    }
+
+    private static float sanitize(float value, float min, float max) {
+        if (!Float.isFinite(value)) {
+            return min;
+        }
+        if (value < min) {
+            return min;
+        }
+        if (value > max) {
+            return max;
+        }
+        return value;
     }
 
     private VeilLightCompat() {}

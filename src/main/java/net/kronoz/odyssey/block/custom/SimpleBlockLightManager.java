@@ -182,22 +182,7 @@ public final class SimpleBlockLightManager {
     }
 
     private static void scanChunkForLights(ClientWorld world, ChunkPos cpos) {
-        int minY = world.getBottomY();
-        int maxY = world.getTopY();
-        int startX = cpos.getStartX();
-        int startZ = cpos.getStartZ();
-
-        for (int y = minY; y < maxY; y++) {
-            for (int x = 0; x < 16; x++) {
-                for (int z = 0; z < 16; z++) {
-                    BlockPos pos = new BlockPos(startX + x, y, startZ + z);
-                    BlockState st = world.getBlockState(pos);
-                    if (!st.isAir() && matches(st)) {
-                        requestAdd(pos);
-                    }
-                }
-            }
-        }
+        ClientBlockScanHelper.scanChunk(world, cpos, SimpleBlockLightManager::matches, (pos, state) -> requestAdd(pos));
     }
 
     private static void removeLightsInChunk(ChunkPos cpos) {

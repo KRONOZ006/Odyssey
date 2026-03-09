@@ -3,14 +3,12 @@ package net.kronoz.odyssey.entity.arcangel;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
-import foundry.veil.api.client.render.VeilRenderSystem;
-import foundry.veil.api.client.render.light.data.PointLightData;
-import foundry.veil.api.client.render.light.renderer.LightRenderHandle;
-
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 
 import net.kronoz.odyssey.Odyssey;
+import net.kronoz.odyssey.config.OdysseyConfig;
+import net.kronoz.odyssey.entity.VeilLightCompat;
 import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
@@ -29,15 +27,12 @@ public class ArcangelRenderer extends DynamicGeoEntityRenderer<ArcangelEntity> {
 
     private static final String LASER_BONE = "truelaser";
 
-    private final Int2ObjectMap<LightRenderHandle<PointLightData>> handles = new Int2ObjectOpenHashMap<>();
-    private final Int2ObjectMap<PointLightData> datas = new Int2ObjectOpenHashMap<>();
-
     private final Int2ObjectMap<float[]> lastBonePos = new Int2ObjectOpenHashMap<>();
     private final Int2ObjectMap<Boolean> boneSeenThisFrame = new Int2ObjectOpenHashMap<>();
 
-    private static final float L_R = 1.0f, L_G = 0.0f, L_B = 0.0f; // red
-    private static final float L_BRIGHT = 20.2f;
-    private static final float L_RADIUS = 70.5f;
+    private static final float L_R = 1.0f, L_G = 0.0f, L_B = 0.0f;
+    private static final float L_BRIGHT = 12.0f;
+    private static final float L_RADIUS = 56.0f;
 
     public ArcangelRenderer(net.minecraft.client.render.entity.EntityRendererFactory.Context ctx) {
         super(ctx, new ArcangelModel());
@@ -106,10 +101,9 @@ public class ArcangelRenderer extends DynamicGeoEntityRenderer<ArcangelEntity> {
     }
 
     private void applyVeilLightFor(ArcangelEntity e) {
-        var sys = VeilRenderSystem.renderer();
         boolean shooting = e.getDataTracker().get(ArcangelEntity.SHOOTING);
 
-        if (sys == null || sys.getLightRenderer() == null || !shooting) {
+        if (!shooting) {
             killLight(e);
             return;
         }
@@ -123,37 +117,13 @@ public class ArcangelRenderer extends DynamicGeoEntityRenderer<ArcangelEntity> {
         }
 
         float wx = pos[0], wy = pos[1], wz = pos[2];
-        boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
-
-        LightRenderHandle<PointLightData> h = handles.get(e.getId());
-        PointLightData d = datas.get(e.getId());
-
-        if (h == null || d == null || !h.isValid()) {
-            d = new PointLightData()
-                    .setBrightness(L_BRIGHT)
-                    .setColor(L_R, L_G, L_B)
-                    .setRadius(L_RADIUS)
-                    .setOcclusionEnabled(nativeOcclusion);
-            d.setPosition(wx, wy, wz);
-            h = sys.getLightRenderer().addLight(d);
-            handles.put(e.getId(), h);
-            datas.put(e.getId(), d);
-        } else {
-            d.setBrightness(L_BRIGHT);
-            d.setColor(L_R, L_G, L_B);
-            d.setRadius(L_RADIUS);
-            if (d.isOcclusionEnabled() != nativeOcclusion) {
-                d.setOcclusionEnabled(nativeOcclusion);
-            }
-            d.setPosition(wx, wy, wz);
-            h.markDirty();
-        }
+        float brightness = Math.min(L_BRIGHT, OdysseyConfig.effectiveMaxLightBrightness());
+        float radius = Math.min(L_RADIUS, OdysseyConfig.effectiveMaxPointRadius());
+        VeilLightCompat.updateWithLifetime(e.getId(), wx, wy, wz, L_R, L_G, L_B, brightness, radius, 4);
     }
 
     private void killLight(ArcangelEntity e) {
-        LightRenderHandle<PointLightData> h = handles.remove(e.getId());
-        if (h != null && h.isValid()) h.close();
-        datas.remove(e.getId());
+        VeilLightCompat.remove(e.getId(), "arcangel-no-laser");
         lastBonePos.remove(e.getId());
         boneSeenThisFrame.remove(e.getId());
     }

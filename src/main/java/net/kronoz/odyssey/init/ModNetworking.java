@@ -24,8 +24,11 @@ public final class ModNetworking {
                 var def = BodyPartRegistry.get(payload.partId);
                 if (def != null) {
                     var c = ModComponents.BODY.get(context.player());
-                    c.setPart(payload.slot, payload.partId);
-                    c.sync(context.player());
+                    var equipped = c.getEquipped().get(payload.slot);
+                    if (equipped == null || !equipped.equals(payload.partId)) {
+                        c.setPart(payload.slot, payload.partId);
+                        c.sync(context.player());
+                    }
                 }
             });
         });
@@ -51,8 +54,10 @@ public final class ModNetworking {
             if (server == null) return;
             server.execute(() -> {
                 var c = ModComponents.BODY.get(context.player());
-                c.clearSlot(payload.slot);
-                c.sync(context.player());
+                if (c.getEquipped().containsKey(payload.slot)) {
+                    c.clearSlot(payload.slot);
+                    c.sync(context.player());
+                }
             });
         });
 

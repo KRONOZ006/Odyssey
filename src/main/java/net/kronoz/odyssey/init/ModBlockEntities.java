@@ -14,7 +14,6 @@ public class ModBlockEntities {
 
     public static BlockEntityType<SlidingDoorBlockEntity> SLIDING_DOOR_BE;
     public static BlockEntityType<Shelf1BlockEntity> SHELF1;
-    public static final BlockEntityType<SequencerBlockEntity> SEQUENCER = Registry.register(Registries.BLOCK_ENTITY_TYPE, Identifier.of(Odyssey.MODID, "sequencer"), BlockEntityType.Builder.create((pos, state) -> new SequencerBlockEntity(pos, state, ModBlockEntities.SEQUENCER), ModBlocks.SEQUENCEB).build(null));
     public static final BlockEntityType<TerminalBlockEntity> TERMINAL = Registry.register(Registries.BLOCK_ENTITY_TYPE, Identifier.of("odyssey","terminal"), BlockEntityType.Builder.create(TerminalBlockEntity::new, ModBlocks.TERMINAL).build(null));
     public static final BlockEntityType<StasisPodBlockEntity> STASISPOD = Registry.register(Registries.BLOCK_ENTITY_TYPE, Identifier.of("odyssey","stasispod"), BlockEntityType.Builder.create(StasisPodBlockEntity::new, ModBlocks.STASISPOD).build(null));
     public static void register() {

@@ -25,12 +25,19 @@ public class BodyModComponentImpl implements BodyModComponent, AutoSyncedCompone
     @Override public Map<String, Identifier> getEquipped(){ return Collections.unmodifiableMap(equipped); }
 
     @Override public void setPart(String slot, Identifier partId) {
+        Identifier current = equipped.get(slot);
+        if (partId != null && partId.equals(current)) {
+            return;
+        }
         clearSlot(slot);
         equipped.put(slot, partId);
         applyAttr(slot, partId);
     }
 
     @Override public void clearSlot(String slot) {
+        if (!equipped.containsKey(slot)) {
+            return;
+        }
         removeAttr(slot);
         equipped.remove(slot);
     }

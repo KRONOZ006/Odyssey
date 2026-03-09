@@ -11,8 +11,13 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.entity.Entity;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Quaternionf;
+
+import java.util.Collections;
+import java.util.List;
 
 public final class SentinelLightClient {
     private SentinelLightClient() {}
@@ -55,15 +60,18 @@ public final class SentinelLightClient {
             if (w == null) { reset(); return; }
             if (VeilRenderSystem.renderer() == null || VeilRenderSystem.renderer().getLightRenderer() == null) return;
 
-            for (SentinelEntity e : w.getEntitiesByClass(SentinelEntity.class, mc.player != null ? mc.player.getBoundingBox().expand(256) : null, x -> true)) {
+            List<SentinelEntity> sentinels = querySentinels(w, mc);
+            for (SentinelEntity e : sentinels) {
                 int id = e.getId();
                 if (!HANDLES.containsKey(id)) addFor(e);
             }
 
             IntArrayList toRemove = new IntArrayList();
             for (int id : HANDLES.keySet()) {
-                SentinelEntity e = (SentinelEntity) w.getEntityById(id);
-                if (e == null || e.isRemoved()) toRemove.add(id);
+                Entity entity = w.getEntityById(id);
+                if (!(entity instanceof SentinelEntity sentinel) || sentinel.isRemoved()) {
+                    toRemove.add(id);
+                }
             }
             for (int i = 0; i < toRemove.size(); i++) removeFor(toRemove.getInt(i));
         });
@@ -75,7 +83,7 @@ public final class SentinelLightClient {
             if (w == null) return;
             boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
 
-            for (SentinelEntity e : w.getEntitiesByClass(SentinelEntity.class, mc.player != null ? mc.player.getBoundingBox().expand(256) : null, x -> true)) {
+            for (SentinelEntity e : querySentinels(w, mc)) {
                 Pair p = HANDLES.get(e.getId());
                 if (p == null) continue;
 
@@ -172,6 +180,15 @@ public final class SentinelLightClient {
             if (p.pointH != null && p.pointH.isValid()) p.pointH.close();
         }
         HANDLES.clear();
+    }
+
+    private static List<SentinelEntity> querySentinels(ClientWorld world, MinecraftClient client) {
+        Entity focus = client.getCameraEntity() != null ? client.getCameraEntity() : client.player;
+        if (focus == null) {
+            return Collections.emptyList();
+        }
+        Box queryBox = focus.getBoundingBox().expand(256.0);
+        return world.getEntitiesByClass(SentinelEntity.class, queryBox, Entity::isAlive);
     }
 }
 

@@ -53,6 +53,7 @@ public final class FixedStructurePlacerOverworld {
     private static final ArrayDeque<Runnable> JOBS = new ArrayDeque<>();
     private static final int TASKS_PER_TICK = Integer.getInteger("odyssey.structure.tasks_per_tick", 128);
     private static final int BLOCKS_PER_TICK = Integer.getInteger("odyssey.structure.blocks_per_tick", 300000);
+    private static final int GRID_PROBE_MAX = Integer.getInteger("odyssey.structure.grid_max", 48);
     private static final int CARVE_MARGIN = 1;
     private static final boolean VERBOSE_PLACEMENT_LOGS = Boolean.getBoolean("odyssey.structure.verbose");
 
@@ -176,17 +177,17 @@ public final class FixedStructurePlacerOverworld {
     private static List<Pair<StructureTemplate, BlockPos>> collectGrid3D(StructureTemplateManager stm, Identifier base, BlockPos origin, boolean underscore) {
         List<Pair<StructureTemplate, BlockPos>> out = new ArrayList<>();
         Vec3i tile = null;
-        final int MAX = 128;
-        for (int gx = 0; gx < MAX; gx++) {
+        java.util.Map<Identifier, StructureTemplate> cache = new java.util.HashMap<>();
+        for (int gx = 0; gx < GRID_PROBE_MAX; gx++) {
             boolean anyX = false;
-            for (int gy = 0; gy < MAX; gy++) {
+            for (int gy = 0; gy < GRID_PROBE_MAX; gy++) {
                 boolean anyY = false;
-                for (int gz = 0; gz < MAX; gz++) {
+                for (int gz = 0; gz < GRID_PROBE_MAX; gz++) {
                     String name = underscore
                             ? base.getPath() + "_" + gx + "_" + gy + "_" + gz
                             : base.getPath() + gx + "_" + gy + "_" + gz;
                     Identifier id = Identifier.of(base.getNamespace(), name);
-                    StructureTemplate t = getTemplate(stm, id);
+                    StructureTemplate t = cachedTemplate(stm, cache, id);
                     if (t == null) { if (gz == 0) break; else continue; }
                     if (tile == null) tile = t.getSize();
                     BlockPos pos = origin.add(tile.getX()*gx, tile.getY()*gy, tile.getZ()*gz);
@@ -198,6 +199,15 @@ public final class FixedStructurePlacerOverworld {
             if (!anyX) break;
         }
         return out;
+    }
+
+    private static StructureTemplate cachedTemplate(StructureTemplateManager stm, java.util.Map<Identifier, StructureTemplate> cache, Identifier id) {
+        if (cache.containsKey(id)) {
+            return cache.get(id);
+        }
+        StructureTemplate template = getTemplate(stm, id);
+        cache.put(id, template);
+        return template;
     }
 
     private static void assertUniformTileSize(List<Pair<StructureTemplate, BlockPos>> tiles) {

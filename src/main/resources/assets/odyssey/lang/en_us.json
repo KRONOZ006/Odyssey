@@ -28,7 +28,6 @@
   "block.odyssey.sliding_door": "Sliding Door",
   "block.odyssey.light_1": "Light",
   "block.odyssey.pyroxene": "Pyroxene",
-  "block.odyssey.sequencer": "Sequencer",
   "block.odyssey.spedblock": "Speed Block",
   "block.odyssey.caution": "Caution Sign",
   "block.odyssey.energy_emitter": "Energy Emitter",
@@ -69,7 +68,6 @@
   "sound.odyssey.arc_shoot": "Arc Shoot",
   "sound.odyssey.slice": "Slice",
 
-  "block.entity.odyssey.sequencer": "Sequencer",
   "block.entity.odyssey.terminal": "Terminal",
   "block.entity.odyssey.stasispod": "Stasis Pod",
   "block.entity.odyssey.elevator_be": "Elevator",

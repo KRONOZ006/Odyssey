@@ -1,8 +1,7 @@
 package net.kronoz.odyssey.entity.apostasy;
 
-import foundry.veil.api.client.render.VeilRenderSystem;
-import foundry.veil.api.client.render.light.data.PointLightData;
-import foundry.veil.api.client.render.light.renderer.LightRenderHandle;
+import net.kronoz.odyssey.config.OdysseyConfig;
+import net.kronoz.odyssey.entity.VeilLightCompat;
 import net.kronoz.odyssey.entity.projectile.LaserProjectileEntity;
 import net.kronoz.odyssey.hud.death.DeathUICutscene;
 import net.kronoz.odyssey.init.ModEntities;
@@ -325,22 +324,31 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
 
     private int duration = 40;
     private boolean lightSpawned = false;
-    private PointLightData bodyLight;
-    private LightRenderHandle<PointLightData> bodyLightHandle;
 
     private void spawnVeilLight() {
-        Vec3d pos = this.getPos();
-        bodyLight = new PointLightData()
-                .setPosition(pos.x, pos.y, pos.z)
-                .setRadius(200f)
-                .setBrightness(2 * this.age * 200)
-                .setColor(1f, 0.8f, 0.1f)
-                .setOcclusionEnabled(net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled());
-        bodyLightHandle = VeilRenderSystem.renderer().getLightRenderer().addLight(bodyLight);
+        updateVeilLight();
+    }
 
-        if (this.age > this.duration) {
-            freeLight();
+    private void updateVeilLight() {
+        if (!this.getWorld().isClient) {
+            return;
         }
+
+        float maxRadius = OdysseyConfig.effectiveMaxPointRadius();
+        float maxBrightness = OdysseyConfig.effectiveMaxLightBrightness();
+        float life = MathHelper.clamp(this.age / (float) Math.max(1, this.duration), 0.0f, 1.0f);
+        float pulse = 0.84f + 0.16f * MathHelper.sin(this.age * 0.24f);
+        float radius = Math.min(maxRadius, MathHelper.lerp(life, 72.0f, 44.0f) * pulse);
+        float brightness = Math.min(maxBrightness, MathHelper.lerp(life, 8.5f, 3.2f) * pulse);
+        Vec3d pos = this.getPos();
+        VeilLightCompat.updateWithLifetime(
+                this.getId(),
+                pos.x, pos.y + 1.2, pos.z,
+                1.0f, 0.8f, 0.1f,
+                Math.max(0.0f, brightness),
+                Math.max(0.5f, radius),
+                Math.max(1, this.duration - this.age)
+        );
     }
 
     private boolean playerOn(BlockPos pos) {
@@ -617,11 +625,9 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
                 lightSpawned = true;
             }
 
-            age++;
+            updateVeilLight();
 
             if (cutsceneActive && age >= this.duration) {
-                net.minecraft.entity.player.PlayerEntity target = getClosestTarget();
-
                 cutsceneActive = false;
                 freeLight();
             }
@@ -638,11 +644,7 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
 
 
     private void freeLight() {
-        if (bodyLightHandle != null && bodyLightHandle.isValid()) {
-            bodyLightHandle.free();
-        }
-        bodyLightHandle = null;
-        bodyLight = null;
+        VeilLightCompat.remove(this.getId(), "apostasy-ended");
     }
 
     private double groundYAt(double x, double yRef, double z) {

@@ -138,8 +138,12 @@ public final class ModCommands {
                                             Identifier id = net.minecraft.command.argument.IdentifierArgumentType.getIdentifier(ctx, "id");
                                             var def = BodyPartRegistry.get(id);
                                             if (def == null) return 0;
-                                            ModComponents.BODY.get(p).setPart(slot, id);
-                                            ModComponents.BODY.get(p).sync(p);
+                                            var component = ModComponents.BODY.get(p);
+                                            var current = component.getEquipped().get(slot);
+                                            if (current == null || !current.equals(id)) {
+                                                component.setPart(slot, id);
+                                                component.sync(p);
+                                            }
                                             return 1;
                                         }))))
                 .then(CommandManager.literal("clear")
@@ -147,8 +151,11 @@ public final class ModCommands {
                                 .executes(ctx -> {
                                     var p = ctx.getSource().getPlayer();
                                     String slot = StringArgumentType.getString(ctx, "slot");
-                                    ModComponents.BODY.get(p).clearSlot(slot);
-                                    ModComponents.BODY.get(p).sync(p);
+                                    var component = ModComponents.BODY.get(p);
+                                    if (component.getEquipped().containsKey(slot)) {
+                                        component.clearSlot(slot);
+                                        component.sync(p);
+                                    }
                                     return 1;
                                 })))
         );

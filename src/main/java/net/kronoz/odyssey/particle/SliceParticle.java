@@ -3,6 +3,7 @@ package net.kronoz.odyssey.particle;
 import foundry.veil.api.client.render.VeilRenderSystem;
 import foundry.veil.api.client.render.light.data.PointLightData;
 import foundry.veil.api.client.render.light.renderer.LightRenderHandle;
+import net.kronoz.odyssey.config.OdysseyConfig;
 import net.minecraft.client.particle.*;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.LivingEntity;
@@ -74,30 +75,46 @@ public class SliceParticle extends SpriteBillboardParticle {
         boolean alive = this.isAlive() && !this.dead;
         boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
         if (alive) {
+            var renderer = VeilRenderSystem.renderer();
+            if (renderer == null || renderer.getLightRenderer() == null) {
+                freeLight();
+                return;
+            }
+
+            float maxBrightness = OdysseyConfig.effectiveMaxLightBrightness();
+            float maxRadius = OdysseyConfig.effectiveMaxPointRadius();
             if (bodyLightHandle == null || !bodyLightHandle.isValid()) {
 
                 Vec3d p = new Vec3d(this.x, this.y, this.z);
                 bodyLight = new PointLightData()
-                        .setBrightness(BODY_LIGHT_BRIGHTNESS)
-                        .setColor(BODY_R, BODY_G, BODY_B )
-                        .setRadius(BODY_LIGHT_RADIUS)
+                        .setBrightness(Math.min(BODY_LIGHT_BRIGHTNESS, maxBrightness))
+                        .setColor(MathHelper.clamp(BODY_R, 0.0f, 1.0f), MathHelper.clamp(BODY_G, 0.0f, 1.0f), MathHelper.clamp(BODY_B, 0.0f, 1.0f))
+                        .setRadius(Math.min(BODY_LIGHT_RADIUS, maxRadius))
                         .setOcclusionEnabled(nativeOcclusion)
                         .setPosition(p.x, p.y, p.z);
-                bodyLightHandle = VeilRenderSystem.renderer().getLightRenderer().addLight(bodyLight);
+                bodyLightHandle = renderer.getLightRenderer().addLight(bodyLight);
             } else {
                 Vec3d p = new Vec3d(this.x, this.y, this.z);
 
 
 
 
-                float brightness = MathHelper.lerp(lifeProgress, BODY_LIGHT_BRIGHTNESS, 0.01f);
+                float brightness = MathHelper.clamp(
+                        MathHelper.lerp(lifeProgress, BODY_LIGHT_BRIGHTNESS, 0.01f),
+                        0.0f,
+                        maxBrightness
+                );
 
 
                 float r = 1.0f + lifeProgress * lifeProgress;
                 float g = 0.5f;
                 float b = 0.0f + lifeProgress;
 
-                float radius = MathHelper.lerp(lifeProgress, BODY_LIGHT_RADIUS, 20f);
+                float radius = MathHelper.clamp(
+                        MathHelper.lerp(lifeProgress, BODY_LIGHT_RADIUS, 20f),
+                        0.5f,
+                        maxRadius
+                );
 
                 bodyLight
                         .setBrightness(brightness)

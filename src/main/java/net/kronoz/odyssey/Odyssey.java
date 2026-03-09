@@ -1,7 +1,6 @@
 package net.kronoz.odyssey;
 
 import net.fabricmc.api.ModInitializer;
-import net.kronoz.odyssey.block.SequencerRegistry;
 import net.kronoz.odyssey.entity.thrasher.SliceAttackHandler;
 import net.kronoz.odyssey.init.*;
 import net.kronoz.odyssey.net.CineNetworking;
@@ -25,7 +24,6 @@ public class Odyssey implements ModInitializer {
     public void onInitialize() {
         WorldEventHooks.init();
         CineNetworking.registerCommon();
-        SequencerRegistry.init();
         ModEntities.init();
         ModBlockEntities.register();
         ModEntities.register();

@@ -1,8 +1,7 @@
 package net.kronoz.odyssey.entity.souls;
 
-import foundry.veil.api.client.render.VeilRenderSystem;
-import foundry.veil.api.client.render.light.data.PointLightData;
-import foundry.veil.api.client.render.light.renderer.LightRenderHandle;
+import net.kronoz.odyssey.config.OdysseyConfig;
+import net.kronoz.odyssey.entity.VeilLightCompat;
 import net.kronoz.odyssey.init.ModParticles;
 import net.kronoz.odyssey.systems.cinematics.api.Easing;
 import net.kronoz.odyssey.systems.cinematics.api.RotationTweener;
@@ -50,9 +49,6 @@ public class LoveEntity extends AnimalEntity implements GeoEntity {
     private static final float BODY_LIGHT_BRIGHTNESS = 1.5f;
     private static final float BODY_LIGHT_RADIUS     = 13f;
     private static final float BODY_R = 0.70f, BODY_G = 0.70f, BODY_B = 0.10f;
-
-    private PointLightData bodyLight;
-    private LightRenderHandle<PointLightData> bodyLightHandle;
 
     private int spawnAge = -1;
     private int maxLifeTicks = 0;
@@ -178,24 +174,17 @@ if (!tweener.isDone()) {
             setupAnimationStates();
             boolean alive = this.isAlive() && !this.isRemoved();
             if (alive) {
-                boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
-                if (bodyLightHandle == null || !bodyLightHandle.isValid()) {
-                    Vec3d p = this.getPos();
-                    bodyLight = new PointLightData()
-                            .setBrightness(BODY_LIGHT_BRIGHTNESS)
-                            .setColor(BODY_R, BODY_G, BODY_B)
-                            .setRadius(BODY_LIGHT_RADIUS)
-                            .setOcclusionEnabled(nativeOcclusion)
-                            .setPosition(p.x, p.y, p.z);
-                    bodyLightHandle = VeilRenderSystem.renderer().getLightRenderer().addLight(bodyLight);
-                } else {
-                    Vec3d p = this.getPos();
-                    if (bodyLight.isOcclusionEnabled() != nativeOcclusion) {
-                        bodyLight.setOcclusionEnabled(nativeOcclusion);
-                    }
-                    bodyLight.setPosition(p.x, p.y, p.z);
-                    bodyLightHandle.markDirty();
-                }
+                float maxBrightness = OdysseyConfig.effectiveMaxLightBrightness();
+                float maxRadius = OdysseyConfig.effectiveMaxPointRadius();
+                Vec3d p = this.getPos();
+                VeilLightCompat.updateWithLifetime(
+                        this.getId(),
+                        p.x, p.y, p.z,
+                        BODY_R, BODY_G, BODY_B,
+                        Math.min(BODY_LIGHT_BRIGHTNESS, maxBrightness),
+                        Math.min(BODY_LIGHT_RADIUS, maxRadius),
+                        20
+                );
             } else {
                 freeLight();
             }
@@ -220,11 +209,7 @@ if (!tweener.isDone()) {
     }
 
     private void freeLight() {
-        if (bodyLightHandle != null && bodyLightHandle.isValid()) {
-            bodyLightHandle.free();
-        }
-        bodyLightHandle = null;
-        bodyLight = null;
+        VeilLightCompat.remove(this.getId(), "love-ended");
     }
 
     @Override

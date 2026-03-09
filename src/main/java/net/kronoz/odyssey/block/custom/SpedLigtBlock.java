@@ -202,19 +202,7 @@ public class SpedLigtBlock extends Block {
             if (world == null || chunk == null) return;
             if (VeilRenderSystem.renderer() == null || VeilRenderSystem.renderer().getLightRenderer() == null) return;
             ChunkPos cpos = chunk.getPos();
-            int minY = world.getBottomY();
-            int maxY = world.getTopY();
-            int sx = cpos.getStartX();
-            int sz = cpos.getStartZ();
-            for (int y = minY; y < maxY; y++) {
-                for (int x = 0; x < 16; x++) {
-                    for (int z = 0; z < 16; z++) {
-                        BlockPos bp = new BlockPos(sx + x, y, sz + z);
-                        BlockState st = world.getBlockState(bp);
-                        if (st.getBlock() instanceof SpedLigtBlock) spawnLightsIfNeeded(world, bp);
-                    }
-                }
-            }
+            ClientBlockScanHelper.scanChunk(world, cpos, st -> st.getBlock() instanceof SpedLigtBlock, (bp, st) -> spawnLightsIfNeeded(world, bp));
         });
 
         ClientChunkEvents.CHUNK_UNLOAD.register((world, chunk) -> {
@@ -244,19 +232,7 @@ public class SpedLigtBlock extends Block {
                     for (int cz = (p.getZ() >> 4) - r; cz <= (p.getZ() >> 4) + r; cz++) {
                         if (w.getChunkManager().getChunk(cx, cz) == null) continue;
                         ChunkPos cpos = new ChunkPos(cx, cz);
-                        int minY = w.getBottomY();
-                        int maxY = w.getTopY();
-                        int sx = cpos.getStartX();
-                        int sz = cpos.getStartZ();
-                        for (int y = minY; y < maxY; y++) {
-                            for (int x = 0; x < 16; x++) {
-                                for (int z = 0; z < 16; z++) {
-                                    BlockPos bp = new BlockPos(sx + x, y, sz + z);
-                                    BlockState st = w.getBlockState(bp);
-                                    if (st.getBlock() instanceof SpedLigtBlock) spawnLightsIfNeeded(w, bp);
-                                }
-                            }
-                        }
+                        ClientBlockScanHelper.scanChunk(w, cpos, st -> st.getBlock() instanceof SpedLigtBlock, (bp, st) -> spawnLightsIfNeeded(w, bp));
                     }
                 }
                 rescanPending = false;

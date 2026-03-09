@@ -22,7 +22,9 @@ import net.minecraft.util.math.Box;
 import net.minecraft.world.World;
 
 public final class StructureSanctuaryGuard {
-    private static final int STRUCTURE_ENTITY_CLEANUP_INTERVAL = Integer.getInteger("odyssey.structure.cleanup_interval", 20);
+    private static final int STRUCTURE_ENTITY_CLEANUP_INTERVAL_ACTIVE = Integer.getInteger("odyssey.structure.cleanup_interval", 20);
+    private static final int STRUCTURE_ENTITY_CLEANUP_INTERVAL_IDLE = Integer.getInteger("odyssey.structure.cleanup_interval_idle", 160);
+    private static final double STRUCTURE_PLAYER_NEAR_MARGIN = Double.parseDouble(System.getProperty("odyssey.structure.cleanup_player_margin", "96"));
 
     private StructureSanctuaryGuard() {}
 
@@ -73,10 +75,15 @@ public final class StructureSanctuaryGuard {
         enforceSpawnSanctuary(world, state);
 
         if (!state.hasProtectedBounds()) return;
-        if (world.getTime() % STRUCTURE_ENTITY_CLEANUP_INTERVAL != 0) return;
 
         Box structureBox = state.protectedBoundsBox();
         if (structureBox.maxX <= structureBox.minX || structureBox.maxZ <= structureBox.minZ) return;
+        Box nearbyBox = structureBox.expand(STRUCTURE_PLAYER_NEAR_MARGIN);
+        boolean playerNearby = !world.getEntitiesByClass(PlayerEntity.class, nearbyBox, PlayerEntity::isAlive).isEmpty();
+        int cleanupInterval = playerNearby
+                ? Math.max(5, STRUCTURE_ENTITY_CLEANUP_INTERVAL_ACTIVE)
+                : Math.max(20, STRUCTURE_ENTITY_CLEANUP_INTERVAL_IDLE);
+        if (world.getTime() % cleanupInterval != 0) return;
 
         for (ItemEntity item : world.getEntitiesByClass(ItemEntity.class, structureBox, e -> true)) {
             item.discard();

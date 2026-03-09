@@ -15,6 +15,7 @@ import net.kronoz.odyssey.block.custom.SimpleBlockLightManager;
 import net.kronoz.odyssey.block.custom.StasisPodBERenderer;
 import net.kronoz.odyssey.client.ClientElevatorAssist;
 import net.kronoz.odyssey.client.ClientShadows;
+import net.kronoz.odyssey.client.OverworldSunLight;
 import net.kronoz.odyssey.config.OdysseyConfig;
 import net.kronoz.odyssey.entity.*;
 import net.kronoz.odyssey.entity.apostasy.ApostasyRenderer;
@@ -70,7 +71,9 @@ public class OdysseyClient implements ClientModInitializer {
     private static WallRunLoopSound current;
     private static final Identifier FOG = Identifier.of(Odyssey.MODID, "fog");
     private static final Identifier BLOOM = Identifier.of(Odyssey.MODID, "bloom");
-    private boolean fogadded = false;
+    private boolean fogAdded = false;
+    private boolean bloomAdded = false;
+    private int fogSyncTicks = 0;
 
     @Override
     public void onInitializeClient() {
@@ -82,6 +85,7 @@ public class OdysseyClient implements ClientModInitializer {
         ApostasyThemeClient.init(ModSounds.APOSTASY_THEME);
 
         ClientShadows.initClient();
+        OverworldSunLight.initClient();
         SimpleBlockLightManager.initClient();
         SentinelLightClient.initClient();
         ModEntityRenderers.register();
@@ -158,13 +162,10 @@ public class OdysseyClient implements ClientModInitializer {
         ParticleFactoryRegistry.getInstance().register(ModParticles.SENTRY_SHIELD_FULL_PARTICLE, SentryShieldFullParticle.Factory::new);
         ParticleFactoryRegistry.getInstance().register(ModParticles.SLICE_PARTICLE, SliceParticle.Factory::new);
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
-            var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
-            ppm.add(1, BLOOM);
-            fogadded = false;
-
-
-
-
+            fogAdded = false;
+            bloomAdded = false;
+            fogSyncTicks = 0;
+            syncPostProcessing(client, true);
         });
         BootstrapScenes.registerAll();
         CineNetworking.registerClient();
@@ -172,20 +173,8 @@ public class OdysseyClient implements ClientModInitializer {
 
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-
-
             if (client.player == null || client.world == null) return;
-
-            var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
-
-            boolean inVoid = client.world.getRegistryKey().getValue().equals(Identifier.of("odyssey:void"));
-            if (inVoid && !fogadded) {
-                ppm.add(2,FOG);
-                fogadded = true;
-            } else if (!inVoid && fogadded) {
-                ppm.remove(FOG);
-                fogadded = false;
-            }
+            syncPostProcessing(client, false);
         });
 
 
@@ -199,6 +188,51 @@ public class OdysseyClient implements ClientModInitializer {
             }
         });
     }
+
+    private void syncPostProcessing(MinecraftClient client, boolean force) {
+        if (client == null || VeilRenderSystem.renderer() == null) {
+            fogAdded = false;
+            bloomAdded = false;
+            return;
+        }
+
+        int fogQuality = OdysseyConfig.qualityLevel(OdysseyConfig.fogQuality);
+        int fogStride = Math.max(1, OdysseyConfig.effectiveFogUpdateStride() + Math.max(0, 2 - fogQuality));
+        if (!force) {
+            fogSyncTicks++;
+            if (fogSyncTicks % fogStride != 0) {
+                return;
+            }
+        }
+
+        var ppm = VeilRenderSystem.renderer().getPostProcessingManager();
+        boolean inVoid = client.world != null
+                && client.world.getRegistryKey().getValue().equals(Identifier.of("odyssey:void"));
+
+        int shaderQuality = OdysseyConfig.qualityLevel(OdysseyConfig.shaderQuality);
+        boolean bloomWanted = OdysseyConfig.enableBloom && shaderQuality > 0;
+        boolean fogWanted = OdysseyConfig.enableFogPost
+                && shaderQuality > 0
+                && fogQuality > 0
+                && (!OdysseyConfig.fogVoidOnly || inVoid);
+
+        if (bloomWanted && !bloomAdded) {
+            ppm.add(1, BLOOM);
+            bloomAdded = true;
+        } else if (!bloomWanted && bloomAdded) {
+            ppm.remove(BLOOM);
+            bloomAdded = false;
+        }
+
+        if (fogWanted && !fogAdded) {
+            ppm.add(2, FOG);
+            fogAdded = true;
+        } else if (!fogWanted && fogAdded) {
+            ppm.remove(FOG);
+            fogAdded = false;
+        }
+    }
+
     public static void update(ClientPlayerEntity p, WallRun.WallState s) {
         boolean active = s != null && s.active();
         var sm = MinecraftClient.getInstance().getSoundManager();

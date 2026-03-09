@@ -1,8 +1,6 @@
 package net.kronoz.odyssey.entity;
 
-import foundry.veil.api.client.render.VeilRenderSystem;
-import foundry.veil.api.client.render.light.data.PointLightData;
-import foundry.veil.api.client.render.light.renderer.LightRenderHandle;
+import net.kronoz.odyssey.config.OdysseyConfig;
 import net.kronoz.odyssey.init.ModEntities;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
@@ -28,9 +26,6 @@ public class ShockwaveEntity extends Entity {
     private static final float BODY_LIGHT_BRIGHTNESS = 3.5f;
     private static final float BODY_LIGHT_RADIUS     = 30f;
     private static final float BODY_R = 1.00f, BODY_G = 1.00f, BODY_B = 0.00f;
-
-    private PointLightData bodyLight;
-    private LightRenderHandle<PointLightData> bodyLightHandle;
 
     public ShockwaveEntity(EntityType<? extends ShockwaveEntity> type, World world) {
         super(type, world);
@@ -61,7 +56,7 @@ public class ShockwaveEntity extends Entity {
     public void tick() {
         super.tick();
 
-        if (this.age++ >= this.duration) {
+        if (this.age >= this.duration) {
             freeLight();
             this.discard();
             return;
@@ -98,47 +93,30 @@ public class ShockwaveEntity extends Entity {
 
         if (this.getWorld().isClient) {
             boolean alive = this.isAlive() && !this.isRemoved();
-
             if (!alive) {
                 freeLight();
             } else {
                 Vec3d p = this.getPos();
-                boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
-
-                if (bodyLightHandle != null && !bodyLightHandle.isValid()) {
-                    freeLight();
-                }
-
-                if (bodyLightHandle == null) {
-                    bodyLight = new PointLightData()
-                            .setBrightness(BODY_LIGHT_BRIGHTNESS)
-                            .setColor(BODY_R, BODY_G, BODY_B)
-                            .setRadius(BODY_LIGHT_RADIUS)
-                            .setOcclusionEnabled(nativeOcclusion)
-                            .setPosition(p.x, p.y, p.z);
-                    bodyLightHandle = VeilRenderSystem.renderer().getLightRenderer().addLight(bodyLight);
-                }
+                float maxRadius = OdysseyConfig.effectiveMaxPointRadius();
+                float maxBrightness = OdysseyConfig.effectiveMaxLightBrightness();
 
                 float lifeProgress = (float)this.age / (float)this.duration;
+                float radiusScale = Math.max(0.35f, getCurrentRadius(0f) / Math.max(1.0f, this.maxRadius));
+                float radius = MathHelper.lerp(lifeProgress, BODY_LIGHT_RADIUS, 10f) * radiusScale;
+                float r = 1.0f;
+                float g = MathHelper.lerp(lifeProgress, 1.0f, 0.3f);
+                float b = MathHelper.lerp(lifeProgress, 0.0f, 0.6f);
+                float brightness = MathHelper.lerp(lifeProgress, BODY_LIGHT_BRIGHTNESS, 0.35f);
 
-                float radius = MathHelper.lerp(lifeProgress, BODY_LIGHT_RADIUS, 20f) * (getCurrentRadius(0f) / maxRadius);
-                float r = 1.0f + lifeProgress * lifeProgress;
-                float g = 0.5f;
-                float b = 0.0f + lifeProgress;
-                float brightness = MathHelper.lerp(lifeProgress, BODY_LIGHT_BRIGHTNESS, 0.1f);
-
-                bodyLight
-                        .setBrightness(brightness * brightness)
-                        .setColor(r, g, b)
-                        .setRadius(radius * radius)
-                        .setPosition(p.x, p.y, p.z);
-                if (bodyLight.isOcclusionEnabled() != nativeOcclusion) {
-                    bodyLight.setOcclusionEnabled(nativeOcclusion);
-                }
-
-                if (bodyLightHandle != null && bodyLightHandle.isValid()) {
-                    bodyLightHandle.markDirty();
-                }
+                int remaining = Math.max(1, this.duration - this.age);
+                VeilLightCompat.updateWithLifetime(
+                        this.getId(),
+                        p.x, p.y, p.z,
+                        r, g, b,
+                        Math.min(Math.max(brightness, 0.0f), maxBrightness),
+                        Math.min(Math.max(radius, 0.5f), maxRadius),
+                        remaining
+                );
             }
         }
 
@@ -160,11 +138,7 @@ public class ShockwaveEntity extends Entity {
 
 
     private void freeLight() {
-        if (bodyLightHandle != null && bodyLightHandle.isValid()) {
-            bodyLightHandle.free();
-        }
-        bodyLightHandle = null;
-        bodyLight = null;
+        VeilLightCompat.remove(this.getId(), "shockwave-ended");
     }
 
 

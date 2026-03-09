@@ -20,7 +20,8 @@
     "LightningEntityRendererMixin",
     "ModelLoaderMixin",
     "PlayerEntityModelMixin",
-    "shadows.VoxelShadowGridMixin"
+    "shadows.VoxelShadowGridMixin",
+    "shadows.VoxelShadowGridEntityMixin"
   ],
   "injectors": {
     "defaultRequire": 1

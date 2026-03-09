@@ -9,6 +9,7 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.kronoz.odyssey.config.OdysseyConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
@@ -56,6 +57,8 @@ public final class DecalLightClient {
                               float r, float g, float b,
                               float brightness, float radius) {
         if (!RenderSystem.isOnRenderThread()) return;
+        brightness = sanitize(brightness, 0.0f, OdysseyConfig.effectiveMaxLightBrightness());
+        radius = sanitize(radius, 0.0f, OdysseyConfig.effectiveMaxPointRadius());
         if (brightness <= 0f || radius <= 0f) { remove(id); return; }
 
         var renderer = (VeilRenderSystem.renderer() != null) ? VeilRenderSystem.renderer().getLightRenderer() : null;
@@ -64,11 +67,14 @@ public final class DecalLightClient {
         PointLightData pl = DATA.get(id);
         LightRenderHandle<PointLightData> handle = HANDLES.get(id);
         boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
+        float cr = sanitize(r, 0.0f, 1.0f);
+        float cg = sanitize(g, 0.0f, 1.0f);
+        float cb = sanitize(b, 0.0f, 1.0f);
 
         if (pl == null || handle == null || !handle.isValid()) {
             pl = new PointLightData()
                     .setBrightness(brightness)
-                    .setColor(r, g, b)
+                    .setColor(cr, cg, cb)
                     .setRadius(radius)
                     .setOcclusionEnabled(nativeOcclusion);
             pl.setPosition((float) x, (float) y, (float) z);
@@ -79,7 +85,7 @@ public final class DecalLightClient {
         }
 
         pl.setBrightness(brightness);
-        pl.setColor(r, g, b);
+        pl.setColor(cr, cg, cb);
         pl.setRadius(radius);
         if (pl.isOcclusionEnabled() != nativeOcclusion) {
             pl.setOcclusionEnabled(nativeOcclusion);
@@ -125,5 +131,18 @@ public final class DecalLightClient {
     }
 
     private DecalLightClient() {}
+
+    private static float sanitize(float value, float min, float max) {
+        if (!Float.isFinite(value)) {
+            return min;
+        }
+        if (value < min) {
+            return min;
+        }
+        if (value > max) {
+            return max;
+        }
+        return value;
+    }
 }
 

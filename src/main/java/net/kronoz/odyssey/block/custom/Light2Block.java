@@ -231,14 +231,7 @@ public class Light2Block extends Block implements Waterloggable {
             if (world == null || chunk == null) return;
             if (VeilRenderSystem.renderer() == null || VeilRenderSystem.renderer().getLightRenderer() == null) return;
             ChunkPos cpos = chunk.getPos();
-            int minY = world.getBottomY(), maxY = world.getTopY(), sx = cpos.getStartX(), sz = cpos.getStartZ();
-            for (int y = minY; y < maxY; y++)
-                for (int x = 0; x < 16; x++)
-                    for (int z = 0; z < 16; z++) {
-                        BlockPos bp = new BlockPos(sx + x, y, sz + z);
-                        BlockState st = world.getBlockState(bp);
-                        if (st.getBlock() instanceof Light2Block) spawnLightsIfNeeded(world, bp);
-                    }
+            ClientBlockScanHelper.scanChunk(world, cpos, st -> st.getBlock() instanceof Light2Block, (bp, st) -> spawnLightsIfNeeded(world, bp));
         });
         ClientChunkEvents.CHUNK_UNLOAD.register((world, chunk) -> {
             if (world == null || chunk == null) return;
@@ -260,14 +253,7 @@ public class Light2Block extends Block implements Waterloggable {
                     for (int cz = (p.getZ() >> 4) - r; cz <= (p.getZ() >> 4) + r; cz++) {
                         if (w.getChunkManager().getChunk(cx, cz) == null) continue;
                         ChunkPos cp = new ChunkPos(cx, cz);
-                        int minY = w.getBottomY(), maxY = w.getTopY(), sx = cp.getStartX(), sz = cp.getStartZ();
-                        for (int y = minY; y < maxY; y++)
-                            for (int x = 0; x < 16; x++)
-                                for (int z = 0; z < 16; z++) {
-                                    BlockPos bp = new BlockPos(sx + x, y, sz + z);
-                                    BlockState st = w.getBlockState(bp);
-                                    if (st.getBlock() instanceof Light2Block) spawnLightsIfNeeded(w, bp);
-                                }
+                        ClientBlockScanHelper.scanChunk(w, cp, st -> st.getBlock() instanceof Light2Block, (bp, st) -> spawnLightsIfNeeded(w, bp));
                     }
                 rescanPending = false;
             }

@@ -242,14 +242,7 @@ public class TerminalBlock extends Block {
             if (world == null || chunk == null) return;
             if (VeilRenderSystem.renderer() == null || VeilRenderSystem.renderer().getLightRenderer() == null) return;
             ChunkPos cpos = chunk.getPos();
-            int minY = world.getBottomY(), maxY = world.getTopY(), sx = cpos.getStartX(), sz = cpos.getStartZ();
-            for (int y = minY; y < maxY; y++)
-                for (int x = 0; x < 16; x++)
-                    for (int z = 0; z < 16; z++) {
-                        BlockPos bp = new BlockPos(sx + x, y, sz + z);
-                        BlockState st = world.getBlockState(bp);
-                        if (st.getBlock() instanceof TerminalBlock) spawnLightsIfNeeded(world, bp, st);
-                    }
+            ClientBlockScanHelper.scanChunk(world, cpos, st -> st.getBlock() instanceof TerminalBlock, (bp, st) -> spawnLightsIfNeeded(world, bp, st));
         });
         ClientChunkEvents.CHUNK_UNLOAD.register((world, chunk) -> {
             if (world == null || chunk == null) return;
@@ -271,14 +264,7 @@ public class TerminalBlock extends Block {
                     for (int cz = (p.getZ() >> 4) - r; cz <= (p.getZ() >> 4) + r; cz++) {
                         if (w.getChunkManager().getChunk(cx, cz) == null) continue;
                         ChunkPos cp = new ChunkPos(cx, cz);
-                        int minY = w.getBottomY(), maxY = w.getTopY(), sx = cp.getStartX(), sz = cp.getStartZ();
-                        for (int y = minY; y < maxY; y++)
-                            for (int x = 0; x < 16; x++)
-                                for (int z = 0; z < 16; z++) {
-                                    BlockPos bp = new BlockPos(sx + x, y, sz + z);
-                                    BlockState st = w.getBlockState(bp);
-                                    if (st.getBlock() instanceof TerminalBlock) spawnLightsIfNeeded(w, bp, st);
-                                }
+                        ClientBlockScanHelper.scanChunk(w, cp, st -> st.getBlock() instanceof TerminalBlock, (bp, st) -> spawnLightsIfNeeded(w, bp, st));
                     }
                 rescanPending = false;
             }
