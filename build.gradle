@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version '1.11-SNAPSHOT'
+    id 'fabric-loom' version '1.15-SNAPSHOT'
     id 'maven-publish'
 }
 
@@ -56,11 +56,6 @@ dependencies {
     include "org.ladysnake.cardinal-components-api:cardinal-components-entity:${project.cca_version}"
     include "org.ladysnake.cardinal-components-api:cardinal-components-world:${project.cca_version}"
 
-
-
-    modImplementation(api("gg.moonflower:molang-compiler:${molang_compiler_version}"))
-    modImplementation(api("io.github.ocelot:glsl-processor:${glsl_processor_version}"))
-
     modImplementation(api("io.github.spair:imgui-java-binding:$imgui_version"))
     modImplementation(api("io.github.spair:imgui-java-lwjgl3:$imgui_version")) {
         exclude group: 'org.lwjgl'
@@ -71,7 +66,9 @@ dependencies {
     modImplementation(runtimeOnly("io.github.spair:imgui-java-natives-macos:$imgui_version"))
     modImplementation(runtimeOnly("io.github.spair:imgui-java-natives-windows:$imgui_version"))
 
-    modImplementation(rootProject.files("src/main/resources/META-INF/jars/veil-fabric-1.21.1-2.4.0.jar"))
+    modImplementation(rootProject.files("src/main/resources/META-INF/jars/veil-fabric-1.21.1-3.3.2.jar"))
+    modImplementation(rootProject.files("src/main/resources/META-INF/jars/molang-compiler-3.1.1.19.jar"))
+    modImplementation(rootProject.files("src/main/resources/META-INF/jars/glsl-processor-0.2.3.jar"))
     modImplementation(rootProject.files("src/main/resources/META-INF/jars/geckolib-fabric-1.21.1-4.8.2.jar"))
     modImplementation(rootProject.files("src/main/resources/META-INF/jars/midnightlib-1.7.5-fabric+1.21.1.jar"))
     modImplementation(rootProject.files("src/main/resources/META-INF/jars/modmenu-11.0.3.jar"))

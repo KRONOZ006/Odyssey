@@ -19,7 +19,8 @@
     "ItemRendererMixin",
     "LightningEntityRendererMixin",
     "ModelLoaderMixin",
-    "PlayerEntityModelMixin"
+    "PlayerEntityModelMixin",
+    "shadows.VoxelShadowGridMixin"
   ],
   "injectors": {
     "defaultRequire": 1

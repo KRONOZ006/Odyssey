@@ -18,7 +18,9 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
 
 public class TransformingAlterBlock extends Block {
@@ -29,8 +31,11 @@ public class TransformingAlterBlock extends Block {
     private static final double TY = 147.0;
     private static final double TZ = 183.5;
     private static final long PROTECT_TICKS = 50 * 20; // 50 seconds at 20 TPS
+    private static final long TELEPORT_COOLDOWN_TICKS = 20;
 
     private static final Map<ServerPlayerEntity, Long> FALL_PROTECT = new WeakHashMap<>();
+    private static final Map<ServerPlayerEntity, Long> TELEPORT_COOLDOWN = new WeakHashMap<>();
+    private static final Set<ServerPlayerEntity> TELEPORT_LOCK = Collections.newSetFromMap(new WeakHashMap<>());
 
     public TransformingAlterBlock(Settings settings) {
         super(settings);
@@ -57,7 +62,7 @@ public class TransformingAlterBlock extends Block {
         ServerWorld dest = sp.getServer().getWorld(VOID_DIM);
         if (dest == null) return ActionResult.CONSUME;
 
-        doTeleport(sp, dest);
+        queueTeleport(sp, dest);
         return ActionResult.SUCCESS;
     }
 
@@ -69,12 +74,57 @@ public class TransformingAlterBlock extends Block {
         ServerWorld dest = sp.getServer().getWorld(VOID_DIM);
         if (dest == null) return;
 
-        doTeleport(sp, dest);
+        queueTeleport(sp, dest);
     }
 
-    private static void doTeleport(ServerPlayerEntity sp, ServerWorld dest) {
+    private static void queueTeleport(ServerPlayerEntity sp, ServerWorld dest) {
+        if (sp == null || dest == null || sp.isRemoved()) {
+            return;
+        }
+
+        long now = sp.getServerWorld().getTime();
+        Long cooldownUntil = TELEPORT_COOLDOWN.get(sp);
+        if (cooldownUntil != null && now < cooldownUntil) {
+            return;
+        }
+        if (TELEPORT_LOCK.contains(sp)) {
+            return;
+        }
+
+        // Avoid self-teleport loops if this block also exists in destination.
+        if (sp.getWorld() == dest && sp.squaredDistanceTo(TX, TY, TZ) < 4.0) {
+            return;
+        }
+
+        TELEPORT_LOCK.add(sp);
+        TELEPORT_COOLDOWN.put(sp, now + TELEPORT_COOLDOWN_TICKS);
+        sp.getServer().execute(() -> {
+            try {
+                doTeleportNow(sp, dest);
+            } finally {
+                TELEPORT_LOCK.remove(sp);
+            }
+        });
+    }
+
+    private static void doTeleportNow(ServerPlayerEntity sp, ServerWorld dest) {
+        if (sp == null || dest == null || sp.isRemoved() || sp.getServer() == null) {
+            return;
+        }
+        if (sp.getWorld() == dest && sp.squaredDistanceTo(TX, TY, TZ) < 4.0) {
+            return;
+        }
+
         sp.fallDistance = 0.0f;
-        sp.teleport(dest, TX, TY, TZ, sp.getYaw(), sp.getPitch());
+        if (sp.getWorld() == dest) {
+            sp.teleport(TX, TY, TZ, false);
+        } else {
+            sp.teleport(dest, TX, TY, TZ, sp.getYaw(), sp.getPitch());
+        }
+        if (sp.isRemoved()) {
+            return;
+        }
+        sp.fallDistance = 0.0f;
         sp.addStatusEffect(new StatusEffectInstance(StatusEffects.LEVITATION, 40, 0, false, false));
 
         FALL_PROTECT.put(sp, dest.getTime() + PROTECT_TICKS);

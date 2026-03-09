@@ -157,14 +157,16 @@ public class AlarmBlock extends Block implements Waterloggable {
                 .setColor(CLR_R, CLR_G, CLR_B)
                 .setSize(AL_SIZE_X, AL_SIZE_Y)
                 .setAngle(AL_ANGLE)
-                .setDistance(AL_DIST);
+                .setDistance(AL_DIST)
+                .setOcclusionEnabled(net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled());
         al.getPosition().set(c.x, c.y, c.z);
         al.getOrientation().set(ORIENTATION_DOWN);
 
         PointLightData pl = new PointLightData()
                 .setBrightness(5.0f)
                 .setColor(CLR_R, CLR_G, CLR_B)
-                .setRadius(PL_RADIUS);
+                .setRadius(PL_RADIUS)
+                .setOcclusionEnabled(net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled());
         pl.setPosition((float) c.x, (float) c.y, (float) c.z);
 
         LightRenderHandle<AreaLightData> ah = VeilRenderSystem.renderer().getLightRenderer().addLight(al);
@@ -246,3 +248,4 @@ public class AlarmBlock extends Block implements Waterloggable {
         });
     }
 }
+

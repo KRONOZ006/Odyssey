@@ -57,11 +57,6 @@ public class GroundDecalRenderer extends EntityRenderer<GroundDecalEntity> {
 
         matrices.pop();
 
-        float Lr = 1.0f, Lg = 0.0f, Lb = 0.0f;
-        float brightness = 0.2f * (1.0f - t);
-        float radius = 4.0f + 6.0f * t;
-        VeilLightCompat.update(e.getId(), e.getX(), e.getY() + 0.2, e.getZ(), Lr, Lg, Lb, brightness, radius);
-
         super.render(e, yaw, tickDelta, matrices, buffers, packedLight);
     }
 

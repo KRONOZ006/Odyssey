@@ -14,6 +14,7 @@ import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.kronoz.odyssey.block.custom.SimpleBlockLightManager;
 import net.kronoz.odyssey.block.custom.StasisPodBERenderer;
 import net.kronoz.odyssey.client.ClientElevatorAssist;
+import net.kronoz.odyssey.client.ClientShadows;
 import net.kronoz.odyssey.config.OdysseyConfig;
 import net.kronoz.odyssey.entity.*;
 import net.kronoz.odyssey.entity.apostasy.ApostasyRenderer;
@@ -80,6 +81,7 @@ public class OdysseyClient implements ClientModInitializer {
         ModKeybinds.init();
         ApostasyThemeClient.init(ModSounds.APOSTASY_THEME);
 
+        ClientShadows.initClient();
         SimpleBlockLightManager.initClient();
         SentinelLightClient.initClient();
         ModEntityRenderers.register();

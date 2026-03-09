@@ -22,8 +22,15 @@ public final class VeilLightCompat {
     private static final Map<Integer, PointLightData> DATA = new HashMap<>();
     private static final Map<Integer, Integer> IDLE_TTL = new HashMap<>();
     private static final Map<Integer, Integer> ABS_REMAINING = new HashMap<>();
+    private static final Map<Integer, PendingUpdate> PENDING = new HashMap<>();
 
     private static final int RESET_TTL_TICKS = 60;
+
+    private record PendingUpdate(double x, double y, double z,
+                                 float r, float g, float b,
+                                 float brightness, float radius,
+                                 int remainingTicks) {
+    }
 
     public static void initClient() {
         ClientPlayConnectionEvents.JOIN.register((h, s, c) -> clearAll("join"));
@@ -36,28 +43,40 @@ public final class VeilLightCompat {
                                           float r, float g, float b,
                                           float brightness, float radius,
                                           int remainingTicks) {
-        var renderer = VeilRenderSystem.renderer();
-        if (renderer == null || renderer.getLightRenderer() == null) {
+        if (!rendererReady()) {
+            if (brightness > 0f && radius > 0f && remainingTicks > 0) {
+                PENDING.put(id, new PendingUpdate(x, y, z, r, g, b, brightness, radius, remainingTicks));
+            }
             return;
         }
 
         if (brightness <= 0f || radius <= 0f || remainingTicks <= 0) {
+            PENDING.remove(id);
             return;
         }
 
+        PENDING.remove(id);
         PointLightData pl = DATA.get(id);
         LightRenderHandle<PointLightData> handle = HANDLES.get(id);
+        boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
 
         if (pl == null || handle == null || !handle.isValid()) {
-            pl = new PointLightData().setBrightness(brightness).setColor(r, g, b).setRadius(radius);
+            pl = new PointLightData()
+                    .setBrightness(brightness)
+                    .setColor(r, g, b)
+                    .setRadius(radius)
+                    .setOcclusionEnabled(nativeOcclusion);
             pl.setPosition((float) x, (float) y, (float) z);
-            handle = renderer.getLightRenderer().addLight(pl);
+            handle = VeilRenderSystem.renderer().getLightRenderer().addLight(pl);
             DATA.put(id, pl);
             HANDLES.put(id, handle);
         } else {
             pl.setBrightness(brightness);
             pl.setColor(r, g, b);
             pl.setRadius(radius);
+            if (pl.isOcclusionEnabled() != nativeOcclusion) {
+                pl.setOcclusionEnabled(nativeOcclusion);
+            }
             pl.setPosition((float) x, (float) y, (float) z);
             handle.markDirty();
         }
@@ -81,6 +100,7 @@ public final class VeilLightCompat {
         DATA.remove(id);
         IDLE_TTL.remove(id);
         ABS_REMAINING.remove(id);
+        PENDING.remove(id);
     }
 
     private static void tick(MinecraftClient mc) {
@@ -88,6 +108,47 @@ public final class VeilLightCompat {
         if (world == null) {
             clearAll("no-world");
             return;
+        }
+
+        if (rendererReady() && !PENDING.isEmpty()) {
+            Iterator<Map.Entry<Integer, PendingUpdate>> pendingIt = PENDING.entrySet().iterator();
+            while (pendingIt.hasNext()) {
+                var entry = pendingIt.next();
+                PendingUpdate pending = entry.getValue();
+                if (pending == null || pending.remainingTicks() <= 0 || pending.brightness() <= 0f || pending.radius() <= 0f) {
+                    pendingIt.remove();
+                    continue;
+                }
+                updateWithLifetime(
+                        entry.getKey(),
+                        pending.x(), pending.y(), pending.z(),
+                        pending.r(), pending.g(), pending.b(),
+                        pending.brightness(), pending.radius(),
+                        pending.remainingTicks()
+                );
+                pendingIt.remove();
+            }
+        } else if (!PENDING.isEmpty()) {
+            Iterator<Map.Entry<Integer, PendingUpdate>> pendingIt = PENDING.entrySet().iterator();
+            while (pendingIt.hasNext()) {
+                var entry = pendingIt.next();
+                PendingUpdate pending = entry.getValue();
+                if (pending == null) {
+                    pendingIt.remove();
+                    continue;
+                }
+                int next = pending.remainingTicks() - 1;
+                if (next <= 0) {
+                    pendingIt.remove();
+                } else {
+                    entry.setValue(new PendingUpdate(
+                            pending.x(), pending.y(), pending.z(),
+                            pending.r(), pending.g(), pending.b(),
+                            pending.brightness(), pending.radius(),
+                            next
+                    ));
+                }
+            }
         }
 
         Iterator<Map.Entry<Integer, LightRenderHandle<PointLightData>>> it = HANDLES.entrySet().iterator();
@@ -134,6 +195,11 @@ public final class VeilLightCompat {
         DATA.clear();
         IDLE_TTL.clear();
         ABS_REMAINING.clear();
+        PENDING.clear();
+    }
+
+    private static boolean rendererReady() {
+        return VeilRenderSystem.renderer() != null && VeilRenderSystem.renderer().getLightRenderer() != null;
     }
 
     private static void log(String s) {
@@ -141,3 +207,4 @@ public final class VeilLightCompat {
 
     private VeilLightCompat() {}
 }
+

@@ -123,6 +123,7 @@ public class ArcangelRenderer extends DynamicGeoEntityRenderer<ArcangelEntity> {
         }
 
         float wx = pos[0], wy = pos[1], wz = pos[2];
+        boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
 
         LightRenderHandle<PointLightData> h = handles.get(e.getId());
         PointLightData d = datas.get(e.getId());
@@ -131,7 +132,8 @@ public class ArcangelRenderer extends DynamicGeoEntityRenderer<ArcangelEntity> {
             d = new PointLightData()
                     .setBrightness(L_BRIGHT)
                     .setColor(L_R, L_G, L_B)
-                    .setRadius(L_RADIUS);
+                    .setRadius(L_RADIUS)
+                    .setOcclusionEnabled(nativeOcclusion);
             d.setPosition(wx, wy, wz);
             h = sys.getLightRenderer().addLight(d);
             handles.put(e.getId(), h);
@@ -140,6 +142,9 @@ public class ArcangelRenderer extends DynamicGeoEntityRenderer<ArcangelEntity> {
             d.setBrightness(L_BRIGHT);
             d.setColor(L_R, L_G, L_B);
             d.setRadius(L_RADIUS);
+            if (d.isOcclusionEnabled() != nativeOcclusion) {
+                d.setOcclusionEnabled(nativeOcclusion);
+            }
             d.setPosition(wx, wy, wz);
             h.markDirty();
         }
@@ -153,3 +158,4 @@ public class ArcangelRenderer extends DynamicGeoEntityRenderer<ArcangelEntity> {
         boneSeenThisFrame.remove(e.getId());
     }
 }
+

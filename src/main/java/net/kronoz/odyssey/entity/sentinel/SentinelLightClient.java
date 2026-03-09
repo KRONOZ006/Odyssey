@@ -73,6 +73,7 @@ public final class SentinelLightClient {
             if (mc == null) return;
             ClientWorld w = mc.world;
             if (w == null) return;
+            boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
 
             for (SentinelEntity e : w.getEntitiesByClass(SentinelEntity.class, mc.player != null ? mc.player.getBoundingBox().expand(256) : null, x -> true)) {
                 Pair p = HANDLES.get(e.getId());
@@ -104,14 +105,28 @@ public final class SentinelLightClient {
                 float brightnessPL = e.isSpotted() ? PL_BRIGHTNESS_VISIBLE : PL_BRIGHTNESS_HIDDEN;
 
                 if (p.areaD != null) {
-                    p.areaD.setBrightness(brightnessAL).setColor(CLR_R, CLR_G, CLR_B).setSize(AL_SIZE_X, AL_SIZE_Y).setAngle(AL_ANGLE).setDistance(AL_DISTANCE);
+                    p.areaD
+                            .setBrightness(brightnessAL)
+                            .setColor(CLR_R, CLR_G, CLR_B)
+                            .setSize(AL_SIZE_X, AL_SIZE_Y)
+                            .setAngle(AL_ANGLE)
+                            .setDistance(AL_DISTANCE);
+                    if (p.areaD.isOcclusionEnabled() != nativeOcclusion) {
+                        p.areaD.setOcclusionEnabled(nativeOcclusion);
+                    }
                     p.areaD.getPosition().set((float)eyePos.x, (float)eyePos.y, (float)eyePos.z);
                     p.areaD.getOrientation().set(q);
                     if (p.areaH != null && p.areaH.isValid()) p.areaH.markDirty();
                 }
 
                 if (p.pointD != null) {
-                    p.pointD.setBrightness(brightnessPL).setColor(CLR_R, CLR_G, CLR_B).setRadius(PL_RADIUS);
+                    p.pointD
+                            .setBrightness(brightnessPL)
+                            .setColor(CLR_R, CLR_G, CLR_B)
+                            .setRadius(PL_RADIUS);
+                    if (p.pointD.isOcclusionEnabled() != nativeOcclusion) {
+                        p.pointD.setOcclusionEnabled(nativeOcclusion);
+                    }
                     p.pointD.setPosition((float)eyePos.x, (float)eyePos.y, (float)eyePos.z);
                     if (p.pointH != null && p.pointH.isValid()) p.pointH.markDirty();
                 }
@@ -122,19 +137,22 @@ public final class SentinelLightClient {
     private static void addFor(SentinelEntity e) {
         if (VeilRenderSystem.renderer() == null || VeilRenderSystem.renderer().getLightRenderer() == null) return;
         Pair p = new Pair();
+        boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
 
         AreaLightData al = new AreaLightData()
                 .setBrightness(AL_BRIGHTNESS_HIDDEN)
                 .setColor(CLR_R, CLR_G, CLR_B)
                 .setSize(AL_SIZE_X, AL_SIZE_Y)
                 .setAngle(AL_ANGLE)
-                .setDistance(AL_DISTANCE);
+                .setDistance(AL_DISTANCE)
+                .setOcclusionEnabled(nativeOcclusion);
         LightRenderHandle<AreaLightData> ah = VeilRenderSystem.renderer().getLightRenderer().addLight(al);
 
         PointLightData pl = new PointLightData()
                 .setBrightness(PL_BRIGHTNESS_HIDDEN)
                 .setColor(CLR_R, CLR_G, CLR_B)
-                .setRadius(PL_RADIUS);
+                .setRadius(PL_RADIUS)
+                .setOcclusionEnabled(nativeOcclusion);
         LightRenderHandle<PointLightData> ph = VeilRenderSystem.renderer().getLightRenderer().addLight(pl);
 
         p.areaD = al; p.areaH = ah; p.pointD = pl; p.pointH = ph;
@@ -156,3 +174,4 @@ public final class SentinelLightClient {
         HANDLES.clear();
     }
 }
+

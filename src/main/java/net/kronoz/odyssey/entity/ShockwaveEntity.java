@@ -103,6 +103,7 @@ public class ShockwaveEntity extends Entity {
                 freeLight();
             } else {
                 Vec3d p = this.getPos();
+                boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
 
                 if (bodyLightHandle != null && !bodyLightHandle.isValid()) {
                     freeLight();
@@ -113,6 +114,7 @@ public class ShockwaveEntity extends Entity {
                             .setBrightness(BODY_LIGHT_BRIGHTNESS)
                             .setColor(BODY_R, BODY_G, BODY_B)
                             .setRadius(BODY_LIGHT_RADIUS)
+                            .setOcclusionEnabled(nativeOcclusion)
                             .setPosition(p.x, p.y, p.z);
                     bodyLightHandle = VeilRenderSystem.renderer().getLightRenderer().addLight(bodyLight);
                 }
@@ -130,6 +132,9 @@ public class ShockwaveEntity extends Entity {
                         .setColor(r, g, b)
                         .setRadius(radius * radius)
                         .setPosition(p.x, p.y, p.z);
+                if (bodyLight.isOcclusionEnabled() != nativeOcclusion) {
+                    bodyLight.setOcclusionEnabled(nativeOcclusion);
+                }
 
                 if (bodyLightHandle != null && bodyLightHandle.isValid()) {
                     bodyLightHandle.markDirty();
@@ -189,3 +194,4 @@ public class ShockwaveEntity extends Entity {
 
     public double getYOffset() { return yOffset; }
 }
+

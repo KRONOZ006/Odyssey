@@ -145,14 +145,16 @@ public class SpedLigtBlock extends Block {
                 .setColor(CLR_R, CLR_G, CLR_B)
                 .setSize(AL_SIZE_X, AL_SIZE_Y)
                 .setAngle(AL_ANGLE)
-                .setDistance(AL_DISTANCE);
+                .setDistance(AL_DISTANCE)
+                .setOcclusionEnabled(net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled());
         al.getPosition().set(c.x, c.y, c.z);
         al.getOrientation().set(ORIENTATION_DOWN);
 
         PointLightData pl = new PointLightData()
                 .setBrightness(PL_BRIGHTNESS)
                 .setColor(CLR_R, CLR_G, CLR_B)
-                .setRadius(PL_RADIUS);
+                .setRadius(PL_RADIUS)
+                .setOcclusionEnabled(net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled());
         pl.setPosition((float) c.x, (float) c.y, (float) c.z);
 
         LightRenderHandle<AreaLightData> ah =
@@ -259,6 +261,40 @@ public class SpedLigtBlock extends Block {
                 }
                 rescanPending = false;
             }
+
+            if (rendererReady && client.world != null) {
+                for (BlockPos pos : AREA_DATA.keySet().toArray(new BlockPos[0])) {
+                    ensureLightAlive(client.world, pos);
+                }
+            }
         });
     }
+
+    private static boolean ensureLightAlive(World world, BlockPos pos) {
+        if (world == null || pos == null) {
+            return false;
+        }
+        BlockState state = world.getBlockState(pos);
+        if (state.isAir() || !(state.getBlock() instanceof SpedLigtBlock)) {
+            removeLightsIfAny(pos);
+            return false;
+        }
+
+        LightRenderHandle<AreaLightData> ah = AREA_HANDLES.get(pos);
+        LightRenderHandle<PointLightData> ph = POINT_HANDLES.get(pos);
+        boolean valid = ah != null && ah.isValid()
+                && ph != null && ph.isValid()
+                && AREA_DATA.containsKey(pos)
+                && POINT_DATA.containsKey(pos);
+        if (valid) {
+            return true;
+        }
+
+        removeLightsIfAny(pos);
+        spawnLightsIfNeeded(world, pos);
+        LightRenderHandle<AreaLightData> rebuiltAh = AREA_HANDLES.get(pos);
+        LightRenderHandle<PointLightData> rebuiltPh = POINT_HANDLES.get(pos);
+        return rebuiltAh != null && rebuiltAh.isValid() && rebuiltPh != null && rebuiltPh.isValid();
+    }
 }
+

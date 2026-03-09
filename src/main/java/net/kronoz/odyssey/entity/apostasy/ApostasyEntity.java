@@ -334,7 +334,8 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
                 .setPosition(pos.x, pos.y, pos.z)
                 .setRadius(200f)
                 .setBrightness(2 * this.age * 200)
-                .setColor(1f, 0.8f, 0.1f);
+                .setColor(1f, 0.8f, 0.1f)
+                .setOcclusionEnabled(net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled());
         bodyLightHandle = VeilRenderSystem.renderer().getLightRenderer().addLight(bodyLight);
 
         if (this.age > this.duration) {
@@ -707,3 +708,4 @@ public class ApostasyEntity extends PathAwareEntity implements software.bernie.g
     }
 
 }
+

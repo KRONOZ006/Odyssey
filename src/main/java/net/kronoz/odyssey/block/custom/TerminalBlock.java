@@ -161,14 +161,16 @@ public class TerminalBlock extends Block {
                 .setColor(CLR_R, CLR_G, CLR_B)
                 .setSize(AL_SIZE_X, AL_SIZE_Y)
                 .setAngle(AL_ANGLE)
-                .setDistance(AL_DIST);
+                .setDistance(AL_DIST)
+                .setOcclusionEnabled(net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled());
         al.getPosition().set(x, y, z);
         al.getOrientation().set(orient);
 
         PointLightData pl = new PointLightData()
                 .setBrightness(BASE_BRIGHTNESS)
                 .setColor(CLR_R, CLR_G, CLR_B)
-                .setRadius(PL_RADIUS);
+                .setRadius(PL_RADIUS)
+                .setOcclusionEnabled(net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled());
         pl.setPosition((float)x, (float)y, (float)z);
 
         var lr = VeilRenderSystem.renderer().getLightRenderer();
@@ -368,3 +370,4 @@ public class TerminalBlock extends Block {
     private static float clamp01(float v) { return v < 0f ? 0f : (v > 1f ? 1f : v); }
     private static float smoothstep01(float x) { x = clamp01(x); return x * x * (3f - 2f * x); }
 }
+

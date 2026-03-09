@@ -10,5 +10,6 @@ public final class WorldEventHooks {
         ServerTickEvents.END_SERVER_TICK.register(FixedStructurePlacer::tick);
         ServerWorldEvents.LOAD.register((server, world) -> FixedStructurePlacerOverworld.onWorldLoaded(world));
         ServerTickEvents.END_SERVER_TICK.register(FixedStructurePlacerOverworld::tick);
+        StructureSanctuaryGuard.init();
     }
 }

@@ -32,22 +32,27 @@ public final class FixedStructureCenterSpawn {
         ServerWorld overworld = server.getWorld(World.OVERWORLD);
         if (overworld == null) return;
 
-        var psm = overworld.getPersistentStateManager();
-        var state = psm.getOrCreate(FixedStructurePlacerOverworld.StructuresPlacedState.TYPE,
-                                    FixedStructurePlacerOverworld.StructuresPlacedState.KEY);
-        if (state.hasSpawn()) {
-            overworld.setSpawnPos(new BlockPos(state.spawnX, state.spawnY, state.spawnZ), 0.0f);
-        }
+        var state = FixedStructurePlacerOverworld.getState(overworld);
+        BlockPos spawn = FixedStructurePlacerOverworld.FORCED_SPAWN;
+        state.spawnX = spawn.getX();
+        state.spawnY = spawn.getY();
+        state.spawnZ = spawn.getZ();
+        state.markDirty();
+        overworld.getPersistentStateManager().save();
+
+        overworld.setSpawnPos(spawn, 0.0f);
     }
 
     private static void teleportToSavedCenter(MinecraftServer server, ServerPlayerEntity player, boolean giveLevitation) {
         ServerWorld overworld = server.getWorld(World.OVERWORLD);
         if (overworld == null) return;
 
-        var psm = overworld.getPersistentStateManager();
-        var state = psm.getOrCreate(FixedStructurePlacerOverworld.StructuresPlacedState.TYPE,
-                                    FixedStructurePlacerOverworld.StructuresPlacedState.KEY);
-        if (!state.hasSpawn()) return;
+        var state = FixedStructurePlacerOverworld.getState(overworld);
+        state.spawnX = FixedStructurePlacerOverworld.FORCED_SPAWN.getX();
+        state.spawnY = FixedStructurePlacerOverworld.FORCED_SPAWN.getY();
+        state.spawnZ = FixedStructurePlacerOverworld.FORCED_SPAWN.getZ();
+        state.markDirty();
+        overworld.getPersistentStateManager().save();
 
         double x = state.spawnX + 0.5;
         double y = state.spawnY + 0.1;

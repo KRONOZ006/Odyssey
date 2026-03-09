@@ -42,12 +42,16 @@ public final class FixedStructurePlacer {
             RegistryKey.of(RegistryKeys.WORLD, Identifier.of("odyssey", "void"));
 
     private static final ArrayDeque<Runnable> JOBS = new ArrayDeque<>();
-    private static final int BLOCKS_PER_TICK = 40000;
+    private static final int TASKS_PER_TICK = Integer.getInteger("odyssey.structure.tasks_per_tick", 128);
+    private static final int BLOCKS_PER_TICK = Integer.getInteger("odyssey.structure.blocks_per_tick", 300000);
+    private static final int CARVE_MARGIN = 1;
+    private static final boolean VERBOSE_PLACEMENT_LOGS = Boolean.getBoolean("odyssey.structure.verbose");
 
     private enum Phase { IDLE, CARVING, PLACING, DONE }
     private static Phase PHASE = Phase.IDLE;
     private static int CARVES_LEFT = 0;
     private static int PLACES_LEFT = 0;
+    private static long ENQUEUE_NANOS = 0L;
 
     private static List<Pair<StructureTemplate, BlockPos>> TILES = List.of();
 
@@ -67,7 +71,7 @@ public final class FixedStructurePlacer {
     }
 
     public static void tick(MinecraftServer server) {
-        int steps = 64;
+        int steps = TASKS_PER_TICK;
         while (steps-- > 0) {
             Runnable r = JOBS.poll();
             if (r == null) break;
@@ -78,6 +82,7 @@ public final class FixedStructurePlacer {
     private static void enqueue(ServerWorld world) {
         if (PHASE != Phase.IDLE) return;
 
+        ENQUEUE_NANOS = System.nanoTime();
         StructureTemplateManager stm = world.getStructureTemplateManager();
         List<Pair<StructureTemplate, BlockPos>> tiles = findGrid3D(stm, BASES, ORIGIN);
         if (tiles.isEmpty()) {
@@ -88,15 +93,19 @@ public final class FixedStructurePlacer {
         forceChunks(world, tiles);
 
         TILES = tiles;
-
-        CARVES_LEFT = tiles.size();
         PHASE = Phase.CARVING;
-
-        for (var p : tiles) {
-            JOBS.add(new CarveTask(world, p.getRight(), p.getLeft().getSize(), 1));
+        Bounds carveBounds = computeBounds(tiles, CARVE_MARGIN);
+        if (shouldCarve(world, carveBounds)) {
+            CARVES_LEFT = 1;
+            JOBS.add(new CarveTask(world, carveBounds));
+            LOGGER.info("[Odyssey] queued carve bounds ({}, {}, {}) -> ({}, {}, {})",
+                    carveBounds.minX, carveBounds.minY, carveBounds.minZ,
+                    carveBounds.maxX, carveBounds.maxY, carveBounds.maxZ);
+        } else {
+            CARVES_LEFT = 0;
+            LOGGER.info("[Odyssey] carve skipped (area already mostly air)");
+            enqueuePlacements(world);
         }
-
-        LOGGER.info("[Odyssey] queued {} carve jobs", tiles.size());
     }
 
     private static void enqueuePlacements(ServerWorld world) {
@@ -110,7 +119,8 @@ public final class FixedStructurePlacer {
                 if (--PLACES_LEFT == 0) {
                     PHASE = Phase.DONE;
                     markPlaced(world);
-                    LOGGER.info("[Odyssey] placement phase done");
+                    long elapsedMs = (System.nanoTime() - ENQUEUE_NANOS) / 1_000_000L;
+                    LOGGER.info("[Odyssey] placement phase done in {} ms", elapsedMs);
                 }
             });
         }
@@ -192,7 +202,9 @@ public final class FixedStructurePlacer {
 
         Random rng = world.getRandom();
         boolean ok = template.place(world, origin, origin, data, rng, 2);
-        LOGGER.info("[Odyssey] placed {} at {} -> {}", template, origin, ok);
+        if (VERBOSE_PLACEMENT_LOGS) {
+            LOGGER.info("[Odyssey] placed {} at {} -> {}", template, origin, ok);
+        }
     }
 
     private static void markPlaced(ServerWorld world) {
@@ -205,41 +217,89 @@ public final class FixedStructurePlacer {
     }
 
     private static void forceChunks(ServerWorld world, List<Pair<StructureTemplate, BlockPos>> tiles) {
+        Set<Long> requested = new HashSet<>();
         for (var p : tiles) {
             Vec3i s = p.getLeft().getSize();
             BlockPos o = p.getRight();
             int minX = o.getX() - 1, minZ = o.getZ() - 1, maxX = o.getX() + s.getX(), maxZ = o.getZ() + s.getZ();
             for (int cx = (minX >> 4); cx <= (maxX >> 4); cx++) {
                 for (int cz = (minZ >> 4); cz <= (maxZ >> 4); cz++) {
-                    world.getChunkManager().getChunk(cx, cz, ChunkStatus.FULL, true);
+                    long key = (((long) cx) << 32) ^ (cz & 0xffffffffL);
+                    if (requested.add(key)) {
+                        world.getChunkManager().getChunk(cx, cz, ChunkStatus.FULL, true);
+                    }
                 }
             }
+        }
+    }
+
+    private static Bounds computeBounds(List<Pair<StructureTemplate, BlockPos>> tiles, int margin) {
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+        for (var p : tiles) {
+            Vec3i size = p.getLeft().getSize();
+            BlockPos origin = p.getRight();
+            minX = Math.min(minX, origin.getX() - margin);
+            minY = Math.min(minY, origin.getY() - margin);
+            minZ = Math.min(minZ, origin.getZ() - margin);
+            maxX = Math.max(maxX, origin.getX() + size.getX() + margin - 1);
+            maxY = Math.max(maxY, origin.getY() + size.getY() + margin - 1);
+            maxZ = Math.max(maxZ, origin.getZ() + size.getZ() + margin - 1);
+        }
+        return new Bounds(minX, minY, minZ, maxX, maxY, maxZ);
+    }
+
+    private static boolean shouldCarve(ServerWorld world, Bounds bounds) {
+        if (bounds.isEmpty()) return false;
+
+        final int step = 8;
+        final int sampleCap = 4096;
+        int samples = 0;
+        int solids = 0;
+        BlockPos.Mutable cursor = new BlockPos.Mutable();
+
+        for (int y = bounds.minY; y <= bounds.maxY && samples < sampleCap; y += step) {
+            for (int x = bounds.minX; x <= bounds.maxX && samples < sampleCap; x += step) {
+                for (int z = bounds.minZ; z <= bounds.maxZ && samples < sampleCap; z += step) {
+                    cursor.set(x, y, z);
+                    if (!world.isAir(cursor)) solids++;
+                    samples++;
+                }
+            }
+        }
+
+        if (samples == 0) return false;
+        return ((float) solids / (float) samples) > 0.05f;
+    }
+
+    private record Bounds(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+        boolean isEmpty() {
+            return minX > maxX || minY > maxY || minZ > maxZ;
         }
     }
 
     private static final class CarveTask implements Runnable {
         private final ServerWorld world;
         private final int minX, minY, minZ, maxX, maxY, maxZ;
+        private final BlockPos.Mutable cursor = new BlockPos.Mutable();
         private int x, y, z;
-        private boolean started;
 
-        CarveTask(ServerWorld world, BlockPos origin, Vec3i size, int margin) {
+        CarveTask(ServerWorld world, Bounds bounds) {
             this.world = world;
-            this.minX = origin.getX() - margin;
-            this.minY = origin.getY() - margin;
-            this.minZ = origin.getZ() - margin;
-            this.maxX = origin.getX() + size.getX() + margin - 1;
-            this.maxY = origin.getY() + size.getY() + margin - 1;
-            this.maxZ = origin.getZ() + size.getZ() + margin - 1;
+            this.minX = bounds.minX;
+            this.minY = bounds.minY;
+            this.minZ = bounds.minZ;
+            this.maxX = bounds.maxX;
+            this.maxY = bounds.maxY;
+            this.maxZ = bounds.maxZ;
             this.x = minX; this.y = minY; this.z = minZ;
         }
 
         @Override public void run() {
-            if (!started) { started = true; }
             int left = BLOCKS_PER_TICK;
             while (left-- > 0 && y <= maxY) {
-                BlockPos p = new BlockPos(x, y, z);
-                if (!world.isAir(p)) world.setBlockState(p, Blocks.AIR.getDefaultState(), 2);
+                cursor.set(x, y, z);
+                if (!world.isAir(cursor)) world.setBlockState(cursor, Blocks.AIR.getDefaultState(), 2);
                 x++; if (x > maxX) { x = minX; z++; if (z > maxZ) { z = minZ; y++; } }
             }
             if (y <= maxY) {

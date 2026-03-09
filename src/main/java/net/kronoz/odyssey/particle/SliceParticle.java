@@ -72,6 +72,7 @@ public class SliceParticle extends SpriteBillboardParticle {
 
         this.alpha = MathHelper.lerp(lifeProgress, 1f, 0.1f);
         boolean alive = this.isAlive() && !this.dead;
+        boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
         if (alive) {
             if (bodyLightHandle == null || !bodyLightHandle.isValid()) {
 
@@ -80,6 +81,7 @@ public class SliceParticle extends SpriteBillboardParticle {
                         .setBrightness(BODY_LIGHT_BRIGHTNESS)
                         .setColor(BODY_R, BODY_G, BODY_B )
                         .setRadius(BODY_LIGHT_RADIUS)
+                        .setOcclusionEnabled(nativeOcclusion)
                         .setPosition(p.x, p.y, p.z);
                 bodyLightHandle = VeilRenderSystem.renderer().getLightRenderer().addLight(bodyLight);
             } else {
@@ -102,6 +104,9 @@ public class SliceParticle extends SpriteBillboardParticle {
                         .setColor(r, g, b)
                         .setRadius(radius)
                         .setPosition(p.x, p.y, p.z);
+                if (bodyLight.isOcclusionEnabled() != nativeOcclusion) {
+                    bodyLight.setOcclusionEnabled(nativeOcclusion);
+                }
                 bodyLightHandle.markDirty();
             }
         } else {
@@ -141,3 +146,4 @@ public class SliceParticle extends SpriteBillboardParticle {
         }
     }
 }
+

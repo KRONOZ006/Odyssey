@@ -63,12 +63,14 @@ public final class DecalLightClient {
 
         PointLightData pl = DATA.get(id);
         LightRenderHandle<PointLightData> handle = HANDLES.get(id);
+        boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
 
         if (pl == null || handle == null || !handle.isValid()) {
             pl = new PointLightData()
                     .setBrightness(brightness)
                     .setColor(r, g, b)
-                    .setRadius(radius);
+                    .setRadius(radius)
+                    .setOcclusionEnabled(nativeOcclusion);
             pl.setPosition((float) x, (float) y, (float) z);
             handle = renderer.addLight(pl);
             DATA.put(id, pl);
@@ -79,6 +81,9 @@ public final class DecalLightClient {
         pl.setBrightness(brightness);
         pl.setColor(r, g, b);
         pl.setRadius(radius);
+        if (pl.isOcclusionEnabled() != nativeOcclusion) {
+            pl.setOcclusionEnabled(nativeOcclusion);
+        }
         pl.setPosition((float) x, (float) y, (float) z);
         handle.markDirty();
     }
@@ -121,3 +126,4 @@ public final class DecalLightClient {
 
     private DecalLightClient() {}
 }
+

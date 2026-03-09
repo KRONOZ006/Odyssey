@@ -89,14 +89,20 @@ public final class SimpleBlockLightManager {
                 Map.Entry<BlockPos, LightRenderHandle<AreaLightData>> e = it.next();
                 BlockPos pos = e.getKey();
                 BlockState st = mc.world.getBlockState(pos);
-                if (st.isAir() || !matches(st)) {
-                    LightRenderHandle<AreaLightData> ah = e.getValue();
+                LightRenderHandle<AreaLightData> ah = e.getValue();
+                LightRenderHandle<PointLightData> ph = POINT_HANDLES.get(pos);
+                boolean invalidHandles = ah == null || !ah.isValid() || ph == null || !ph.isValid();
+                boolean missingData = !AREA_DATA.containsKey(pos) || !POINT_DATA.containsKey(pos);
+                if (invalidHandles || missingData || st.isAir() || !matches(st)) {
                     if (ah != null && ah.isValid()) ah.close();
                     AREA_DATA.remove(pos);
-                    LightRenderHandle<PointLightData> ph = POINT_HANDLES.remove(pos);
-                    if (ph != null && ph.isValid()) ph.close();
+                    LightRenderHandle<PointLightData> removedPh = POINT_HANDLES.remove(pos);
+                    if (removedPh != null && removedPh.isValid()) removedPh.close();
                     POINT_DATA.remove(pos);
                     it.remove();
+                    if (!st.isAir() && matches(st)) {
+                        PENDING_ADD.add(pos);
+                    }
                 }
             }
         });
@@ -104,6 +110,7 @@ public final class SimpleBlockLightManager {
         WorldRenderEvents.BEFORE_ENTITIES.register(ctx -> {
             MinecraftClient mc = MinecraftClient.getInstance();
             if (mc == null) return;
+            boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
 
             for (BlockPos pos : AREA_DATA.keySet()) {
                 Vec3d c = blockCenter(pos);
@@ -112,12 +119,18 @@ public final class SimpleBlockLightManager {
                 if (al != null) {
                     al.getPosition().set(c.x, c.y, c.z);
                     al.getOrientation().set(ORIENTATION);
+                    if (al.isOcclusionEnabled() != nativeOcclusion) {
+                        al.setOcclusionEnabled(nativeOcclusion);
+                    }
                     LightRenderHandle<AreaLightData> ah = AREA_HANDLES.get(pos);
                     if (ah != null && ah.isValid()) ah.markDirty();
                 }
 
                 PointLightData pl = POINT_DATA.get(pos);
                 if (pl != null) {
+                    if (pl.isOcclusionEnabled() != nativeOcclusion) {
+                        pl.setOcclusionEnabled(nativeOcclusion);
+                    }
                     pl.setPosition((float)c.x, (float)c.y, (float)c.z);
                     LightRenderHandle<PointLightData> ph = POINT_HANDLES.get(pos);
                     if (ph != null && ph.isValid()) ph.markDirty();
@@ -205,7 +218,8 @@ public final class SimpleBlockLightManager {
                 .setColor(CLR_R, CLR_G, CLR_B)
                 .setSize(AL_SIZE_X, AL_SIZE_Y)
                 .setAngle(AL_ANGLE)
-                .setDistance(AL_DISTANCE);
+                .setDistance(AL_DISTANCE)
+                .setOcclusionEnabled(net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled());
 
         Vec3d c = blockCenter(pos);
         al.getPosition().set(c.x, c.y, c.z);
@@ -214,7 +228,8 @@ public final class SimpleBlockLightManager {
         PointLightData pl = new PointLightData()
                 .setBrightness(PL_BRIGHTNESS)
                 .setColor(CLR_R, CLR_G, CLR_B)
-                .setRadius(PL_RADIUS);
+                .setRadius(PL_RADIUS)
+                .setOcclusionEnabled(net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled());
         pl.setPosition((float)c.x, (float)c.y, (float)c.z);
 
         if (VeilRenderSystem.renderer() == null || VeilRenderSystem.renderer().getLightRenderer() == null) {
@@ -247,3 +262,4 @@ public final class SimpleBlockLightManager {
         return new Vec3d(pos.getX() + 0.5, pos.getY() + 0.8, pos.getZ() + 0.5);
     }
 }
+

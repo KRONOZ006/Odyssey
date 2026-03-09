@@ -178,16 +178,21 @@ if (!tweener.isDone()) {
             setupAnimationStates();
             boolean alive = this.isAlive() && !this.isRemoved();
             if (alive) {
+                boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
                 if (bodyLightHandle == null || !bodyLightHandle.isValid()) {
                     Vec3d p = this.getPos();
                     bodyLight = new PointLightData()
                             .setBrightness(BODY_LIGHT_BRIGHTNESS)
                             .setColor(BODY_R, BODY_G, BODY_B)
                             .setRadius(BODY_LIGHT_RADIUS)
+                            .setOcclusionEnabled(nativeOcclusion)
                             .setPosition(p.x, p.y, p.z);
                     bodyLightHandle = VeilRenderSystem.renderer().getLightRenderer().addLight(bodyLight);
                 } else {
                     Vec3d p = this.getPos();
+                    if (bodyLight.isOcclusionEnabled() != nativeOcclusion) {
+                        bodyLight.setOcclusionEnabled(nativeOcclusion);
+                    }
                     bodyLight.setPosition(p.x, p.y, p.z);
                     bodyLightHandle.markDirty();
                 }
@@ -283,3 +288,4 @@ if (!tweener.isDone()) {
         hitboxSize = nbt.contains("HitboxSize") ? nbt.getDouble("HitboxSize") : hitboxSize;
     }
 }
+

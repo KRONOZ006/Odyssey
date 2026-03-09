@@ -43,11 +43,13 @@ public final class ExpandingVeilLight {
 
         State s = new State(pos);
         Vec3d c = new Vec3d(pos.getX() + 0.5, pos.getY() + 0.8, pos.getZ() + 0.5);
+        boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
 
         PointLightData pl = new PointLightData()
                 .setBrightness(BRIGHTNESS)
                 .setColor(CLR_R, CLR_G, CLR_B)
-                .setRadius(START_RADIUS);
+                .setRadius(START_RADIUS)
+                .setOcclusionEnabled(nativeOcclusion);
         pl.setPosition((float) c.x, (float) c.y, (float) c.z);
 
         LightRenderHandle<PointLightData> h =
@@ -80,12 +82,18 @@ public final class ExpandingVeilLight {
                     ACTIVE.remove(s.pos);
                     continue;
                 }
+                boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
                 long nanos = System.nanoTime() - s.startNanos;
                 dt = nanos / 1_000_000_000.0;
                 float t = (float)Math.min(1.0, dt / DURATION_S);
 
                 float radius = lerp(START_RADIUS, END_RADIUS, t);
-                s.data.setRadius(radius);
+                s.data
+                        .setRadius(radius)
+                        .setBrightness(BRIGHTNESS);
+                if (s.data.isOcclusionEnabled() != nativeOcclusion) {
+                    s.data.setOcclusionEnabled(nativeOcclusion);
+                }
                 s.handle.markDirty();
 
                 if (t >= 1.0f) {
@@ -109,3 +117,4 @@ public final class ExpandingVeilLight {
         return a + (b - a) * t;
     }
 }
+
