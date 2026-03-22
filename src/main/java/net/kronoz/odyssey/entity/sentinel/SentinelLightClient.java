@@ -9,14 +9,15 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.kronoz.odyssey.config.OdysseyConfig;
+import net.kronoz.odyssey.light.VeilNativeOcclusionMode;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
-import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Quaternionf;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 
 public final class SentinelLightClient {
@@ -60,10 +61,14 @@ public final class SentinelLightClient {
             if (w == null) { reset(); return; }
             if (VeilRenderSystem.renderer() == null || VeilRenderSystem.renderer().getLightRenderer() == null) return;
 
-            List<SentinelEntity> sentinels = querySentinels(w, mc);
+            List<SentinelEntity> sentinels = querySentinels(w);
             for (SentinelEntity e : sentinels) {
                 int id = e.getId();
-                if (!HANDLES.containsKey(id)) addFor(e);
+                Pair existing = HANDLES.get(id);
+                if (existing == null || !isPairValid(existing)) {
+                    removeFor(id);
+                    addFor(e);
+                }
             }
 
             IntArrayList toRemove = new IntArrayList();
@@ -81,19 +86,39 @@ public final class SentinelLightClient {
             if (mc == null) return;
             ClientWorld w = mc.world;
             if (w == null) return;
-            boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
+            boolean nativeOcclusion = OdysseyConfig.occlusionEnabled && VeilNativeOcclusionMode.isNativeEnabled();
 
-            for (SentinelEntity e : querySentinels(w, mc)) {
-                Pair p = HANDLES.get(e.getId());
-                if (p == null) continue;
+            IntArrayList knownIds = new IntArrayList(HANDLES.size());
+            for (int id : HANDLES.keySet()) {
+                knownIds.add(id);
+            }
+
+            IntArrayList stale = new IntArrayList();
+            for (int i = 0; i < knownIds.size(); i++) {
+                int id = knownIds.getInt(i);
+                Entity entity = w.getEntityById(id);
+                if (!(entity instanceof SentinelEntity e) || !e.isAlive() || e.isRemoved()) {
+                    stale.add(id);
+                    continue;
+                }
+
+                Pair p = HANDLES.get(id);
+                if (p == null) {
+                    stale.add(id);
+                    continue;
+                }
+                if (!isPairValid(p)) {
+                    removeFor(id);
+                    addFor(e);
+                    p = HANDLES.get(id);
+                    if (p == null || !isPairValid(p)) {
+                        continue;
+                    }
+                }
 
                 float bodyYawRad = (float)Math.toRadians(e.getYaw());
                 float eyeYawRadWorld = bodyYawRad + (-e.getEyeYaw());
                 float eyePitchRadWorld = e.getEyePitch();
-
-                float fx = (float)(Math.cos(eyePitchRadWorld) * -Math.sin(eyeYawRadWorld));
-                float fy = (float)(Math.sin(eyePitchRadWorld));
-                float fz = (float)(Math.cos(eyePitchRadWorld) * Math.cos(eyeYawRadWorld));
 
                 float sx = (float)Math.cos(bodyYawRad);
                 float sz = (float)Math.sin(bodyYawRad);
@@ -139,13 +164,17 @@ public final class SentinelLightClient {
                     if (p.pointH != null && p.pointH.isValid()) p.pointH.markDirty();
                 }
             }
+
+            for (int i = 0; i < stale.size(); i++) {
+                removeFor(stale.getInt(i));
+            }
         });
     }
 
     private static void addFor(SentinelEntity e) {
         if (VeilRenderSystem.renderer() == null || VeilRenderSystem.renderer().getLightRenderer() == null) return;
         Pair p = new Pair();
-        boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
+        boolean nativeOcclusion = OdysseyConfig.occlusionEnabled && VeilNativeOcclusionMode.isNativeEnabled();
 
         AreaLightData al = new AreaLightData()
                 .setBrightness(AL_BRIGHTNESS_HIDDEN)
@@ -182,13 +211,26 @@ public final class SentinelLightClient {
         HANDLES.clear();
     }
 
-    private static List<SentinelEntity> querySentinels(ClientWorld world, MinecraftClient client) {
-        Entity focus = client.getCameraEntity() != null ? client.getCameraEntity() : client.player;
-        if (focus == null) {
-            return Collections.emptyList();
+    private static boolean isPairValid(Pair pair) {
+        if (pair == null) {
+            return false;
         }
-        Box queryBox = focus.getBoundingBox().expand(256.0);
-        return world.getEntitiesByClass(SentinelEntity.class, queryBox, Entity::isAlive);
+        return pair.areaD != null
+                && pair.pointD != null
+                && pair.areaH != null
+                && pair.areaH.isValid()
+                && pair.pointH != null
+                && pair.pointH.isValid();
+    }
+
+    private static List<SentinelEntity> querySentinels(ClientWorld world) {
+        List<SentinelEntity> sentinels = new ArrayList<>();
+        for (Entity entity : world.getEntities()) {
+            if (entity instanceof SentinelEntity sentinel && sentinel.isAlive() && !sentinel.isRemoved()) {
+                sentinels.add(sentinel);
+            }
+        }
+        return sentinels;
     }
 }
 

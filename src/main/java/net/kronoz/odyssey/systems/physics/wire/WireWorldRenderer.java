@@ -10,7 +10,8 @@ public final class WireWorldRenderer {
         WorldRenderEvents.AFTER_ENTITIES.register(ctx -> {
             MatrixStack ms = ctx.matrixStack();
             VertexConsumerProvider.Immediate buffers = MinecraftClient.getInstance().getBufferBuilders().getEntityVertexConsumers();
-            WireToolState.renderAll(ms, buffers, 0x00F000F0);
+            WireClientMirror.renderAll(ms, buffers, 0x00F000F0);
+            WireToolState.renderPreview(ms, buffers);
             buffers.draw();
         });
     }

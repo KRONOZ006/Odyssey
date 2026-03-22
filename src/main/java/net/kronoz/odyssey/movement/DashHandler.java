@@ -2,6 +2,7 @@
 package net.kronoz.odyssey.movement;
 
 import net.kronoz.odyssey.net.DashC2SPayload;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.Vec3d;
 
@@ -18,6 +19,8 @@ public final class DashHandler {
     private static final double MAX_VH = 2.4;
 
     public static void onDashPacket(ServerPlayerEntity p, DashC2SPayload pl) {
+        if (!hasDashUnlock(p)) return;
+
         long now = System.currentTimeMillis();
         if (now - CD.getOrDefault(p.getUuid(), 0L) < COOLDOWN_MS) return;
 
@@ -46,5 +49,9 @@ public final class DashHandler {
 
         CD.put(p.getUuid(), now);
         p.getItemCooldownManager().set(net.minecraft.item.Items.AIR, (int)(COOLDOWN_MS / 50));
+    }
+
+    public static boolean hasDashUnlock(PlayerEntity player) {
+        return AbilityRequirements.canDash(player);
     }
 }

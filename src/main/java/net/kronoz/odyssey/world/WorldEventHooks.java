@@ -2,6 +2,7 @@ package net.kronoz.odyssey.world;
 
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerWorldEvents;
+import net.kronoz.odyssey.systems.reset.ResetZoneSystem;
 
 public final class WorldEventHooks {
     private WorldEventHooks() {}
@@ -11,5 +12,6 @@ public final class WorldEventHooks {
         ServerWorldEvents.LOAD.register((server, world) -> FixedStructurePlacerOverworld.onWorldLoaded(world));
         ServerTickEvents.END_SERVER_TICK.register(FixedStructurePlacerOverworld::tick);
         StructureSanctuaryGuard.init();
+        ResetZoneSystem.init();
     }
 }

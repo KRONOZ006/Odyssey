@@ -1,6 +1,7 @@
 package net.kronoz.odyssey.mixin;
 
 import net.kronoz.odyssey.client.bridge.WallRunAccess;
+import net.kronoz.odyssey.movement.MovementVisuals;
 import net.kronoz.odyssey.movement.WallRun;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
@@ -31,33 +32,64 @@ public abstract class PlayerEntityModelMixin<T extends LivingEntity> {
         if (!(entity instanceof AbstractClientPlayerEntity p)) return;
         if (!(p instanceof WallRunAccess acc)) return;
         WallRun.WallState st = acc.odyssey$getWallState();
-        if (st == null || !st.active() || st.normal == null) return;
+        float poseWeight = MovementVisuals.wallPoseWeight();
+        if ((st == null || !st.active() || st.normal == null) && poseWeight <= 0.001f) return;
 
         PlayerEntityModel<?> m = (PlayerEntityModel<?>)(Object)this;
+        boolean wallOnRight;
+        if (st != null && st.active() && st.normal != null) {
+            Vec3d look = p.getRotationVec(1).multiply(1, 0, 1);
+            if (look.lengthSquared() < 1e-6) look = new Vec3d(1, 0, 0);
+            Vec3d right = new Vec3d(look.z, 0, -look.x).normalize();
+            wallOnRight = right.dotProduct(st.normal) >= 0.0;
+        } else {
+            wallOnRight = MovementVisuals.wallPoseSide() >= 0.0f;
+        }
 
-        Vec3d look = p.getRotationVec(1).multiply(1, 0, 1);
-        if (look.lengthSquared() < 1e-6) look = new Vec3d(1, 0, 0);
-        Vec3d right = new Vec3d(look.z, 0, -look.x).normalize();
-        boolean wallOnRight = right.dotProduct(st.normal) >= 0.0;
+        float blend = Math.max(0.0f, Math.min(1.0f, poseWeight));
 
         if (wallOnRight) {
-            m.head.pitch = H_P;  m.head.yaw = H_Y;  m.head.roll = H_R;
-            m.body.pitch = B_P;  m.body.yaw = B_Y;  m.body.roll = B_R;
+            blendPart(m.head.pitch, H_P, blend, value -> m.head.pitch = value);
+            blendPart(m.head.yaw, H_Y, blend, value -> m.head.yaw = value);
+            blendPart(m.head.roll, H_R, blend, value -> m.head.roll = value);
+            blendPart(m.body.pitch, B_P, blend, value -> m.body.pitch = value);
+            blendPart(m.body.yaw, B_Y, blend, value -> m.body.yaw = value);
+            blendPart(m.body.roll, B_R, blend, value -> m.body.roll = value);
 
-            m.rightArm.pitch = LA_P; m.rightArm.yaw = LA_Y; m.rightArm.roll = LA_R;
-            m.leftArm.pitch  = RA_P; m.leftArm.yaw  = RA_Y; m.leftArm.roll  = RA_R;
+            blendPart(m.rightArm.pitch, LA_P, blend, value -> m.rightArm.pitch = value);
+            blendPart(m.rightArm.yaw, LA_Y, blend, value -> m.rightArm.yaw = value);
+            blendPart(m.rightArm.roll, LA_R, blend, value -> m.rightArm.roll = value);
+            blendPart(m.leftArm.pitch, RA_P, blend, value -> m.leftArm.pitch = value);
+            blendPart(m.leftArm.yaw, RA_Y, blend, value -> m.leftArm.yaw = value);
+            blendPart(m.leftArm.roll, RA_R, blend, value -> m.leftArm.roll = value);
 
-            m.rightLeg.pitch = RL_P; m.rightLeg.yaw = RL_Y; m.rightLeg.roll = LL_R;
-            m.leftLeg.pitch  = LL_P; m.leftLeg.yaw  = LL_Y; m.leftLeg.roll  = RL_R;
+            blendPart(m.rightLeg.pitch, RL_P, blend, value -> m.rightLeg.pitch = value);
+            blendPart(m.rightLeg.yaw, RL_Y, blend, value -> m.rightLeg.yaw = value);
+            blendPart(m.rightLeg.roll, LL_R, blend, value -> m.rightLeg.roll = value);
+            blendPart(m.leftLeg.pitch, LL_P, blend, value -> m.leftLeg.pitch = value);
+            blendPart(m.leftLeg.yaw, LL_Y, blend, value -> m.leftLeg.yaw = value);
+            blendPart(m.leftLeg.roll, RL_R, blend, value -> m.leftLeg.roll = value);
         } else {
-            m.head.pitch =  H_P;  m.head.yaw = -H_Y;  m.head.roll = -H_R;
-            m.body.pitch =  B_P;  m.body.yaw =  B_Y;  m.body.roll = -B_R;
+            blendPart(m.head.pitch, H_P, blend, value -> m.head.pitch = value);
+            blendPart(m.head.yaw, -H_Y, blend, value -> m.head.yaw = value);
+            blendPart(m.head.roll, -H_R, blend, value -> m.head.roll = value);
+            blendPart(m.body.pitch, B_P, blend, value -> m.body.pitch = value);
+            blendPart(m.body.yaw, B_Y, blend, value -> m.body.yaw = value);
+            blendPart(m.body.roll, -B_R, blend, value -> m.body.roll = value);
 
-            m.rightArm.pitch = RA_P; m.rightArm.yaw = -RA_Y; m.rightArm.roll = -RA_R;
-            m.leftArm.pitch  = LA_P; m.leftArm.yaw  = -LA_Y; m.leftArm.roll  = -LA_R;
+            blendPart(m.rightArm.pitch, RA_P, blend, value -> m.rightArm.pitch = value);
+            blendPart(m.rightArm.yaw, -RA_Y, blend, value -> m.rightArm.yaw = value);
+            blendPart(m.rightArm.roll, -RA_R, blend, value -> m.rightArm.roll = value);
+            blendPart(m.leftArm.pitch, LA_P, blend, value -> m.leftArm.pitch = value);
+            blendPart(m.leftArm.yaw, -LA_Y, blend, value -> m.leftArm.yaw = value);
+            blendPart(m.leftArm.roll, -LA_R, blend, value -> m.leftArm.roll = value);
 
-            m.rightLeg.pitch = LL_P; m.rightLeg.yaw = -LL_Y; m.rightLeg.roll = -RL_R;
-            m.leftLeg.pitch  = RL_P; m.leftLeg.yaw  = -RL_Y; m.leftLeg.roll  = -LL_R;
+            blendPart(m.rightLeg.pitch, LL_P, blend, value -> m.rightLeg.pitch = value);
+            blendPart(m.rightLeg.yaw, -LL_Y, blend, value -> m.rightLeg.yaw = value);
+            blendPart(m.rightLeg.roll, -RL_R, blend, value -> m.rightLeg.roll = value);
+            blendPart(m.leftLeg.pitch, RL_P, blend, value -> m.leftLeg.pitch = value);
+            blendPart(m.leftLeg.yaw, -RL_Y, blend, value -> m.leftLeg.yaw = value);
+            blendPart(m.leftLeg.roll, -LL_R, blend, value -> m.leftLeg.roll = value);
         }
 
         m.hat.copyTransform(m.head);
@@ -66,5 +98,13 @@ public abstract class PlayerEntityModelMixin<T extends LivingEntity> {
         m.leftSleeve.copyTransform(m.leftArm);
         m.rightPants.copyTransform(m.rightLeg);
         m.leftPants.copyTransform(m.leftLeg);
+    }
+
+    private interface FloatSetter {
+        void set(float value);
+    }
+
+    private static void blendPart(float current, float target, float blend, FloatSetter setter) {
+        setter.set(current + (target - current) * blend);
     }
 }

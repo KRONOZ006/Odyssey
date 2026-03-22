@@ -23,6 +23,7 @@ public class ModItemGroup {
                         entries.add(ModItems.XARIS);
                         entries.add(ModItems.WIRE_TOOL);
                         entries.add(ModItems.WIRE_CUTTER_TOOL);
+                        entries.add(ModItems.RESET_LINK_TOOL);
                         entries.add(ModItems.JETPACK);
                         entries.add(ModBlocks.LIGHT1);
                         entries.add(ModBlocks.LARGE_FACILITY_PILLAR_BLOCK);
@@ -44,6 +45,8 @@ public class ModItemGroup {
                         entries.add(ModBlocks.DVM);
                         entries.add(ModBlocks.CAUTION);
                         entries.add(ModBlocks.WALLRUN);
+                        entries.add(ModBlocks.RESET_ZONE);
+                        entries.add(ModBlocks.RESPAWN_POINT);
                         entries.add(ModBlocks.UNHOLYALTER);
 
 

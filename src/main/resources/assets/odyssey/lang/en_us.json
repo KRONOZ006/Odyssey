@@ -6,6 +6,7 @@
   "item.odyssey.jetpack": "Jetpack",
   "item.odyssey.wire_tool": "Wire Tool",
   "item.odyssey.wire_cutter_tool": "Wire Cutter",
+  "item.odyssey.reset_link_tool": "Reset Link Tool",
   "item.odyssey.spear": "Spear",
   "item.odyssey.stasispod": "Stasis Pod",
   "item.odyssey.railing": "Railing",
@@ -38,6 +39,8 @@
   "block.odyssey.dvm": "Devinity Machine",
   "block.odyssey.terminal": "Terminal",
   "block.odyssey.map_block": "Map Block",
+  "block.odyssey.reset_zone": "Reset Zone",
+  "block.odyssey.respawn_point": "Respawn Point",
 
   "entity.odyssey.sentinel": "Sentinel",
   "entity.odyssey.sentry": "Sentry",

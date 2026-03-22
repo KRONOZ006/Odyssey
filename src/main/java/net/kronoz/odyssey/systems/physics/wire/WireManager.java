@@ -9,7 +9,9 @@ import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public final class WireManager {
@@ -19,7 +21,8 @@ public final class WireManager {
     private static final Map<UUID, WireDef> DEFS = new HashMap<>();
 
     public static void ensure(UUID id, WireDef def, Vec3d a, Vec3d b){
-        if (!SIMS.containsKey(id)) {
+        WireDef existingDef = DEFS.get(id);
+        if (!SIMS.containsKey(id) || existingDef == null || !sameDefinition(existingDef, def)) {
             SIMS.put(id, new WireSim(def, a, b, def.halfWidth));
             DEFS.put(id, def);
         }
@@ -29,6 +32,17 @@ public final class WireManager {
     public static WireDef getDef(UUID id){ return DEFS.get(id); }
     public static void remove(UUID id){ SIMS.remove(id); DEFS.remove(id); }
     public static void clearAllClient(){ SIMS.clear(); DEFS.clear(); }
+    public static void syncToIds(Set<UUID> liveIds) {
+        if (liveIds == null) {
+            clearAllClient();
+            return;
+        }
+        Set<UUID> stale = new HashSet<>(SIMS.keySet());
+        stale.removeAll(liveIds);
+        for (UUID id : stale) {
+            remove(id);
+        }
+    }
 
     public static void ensureFromRecordClient(WireRecord r){
         WireDef def = WireDef.defaultCable(r.defId);
@@ -163,5 +177,19 @@ public final class WireManager {
         vc.overlay(overlay);
         vc.light(light);
         vc.normal(entry,(float)n.x,(float)n.y,(float)n.z);
+    }
+
+    private static boolean sameDefinition(WireDef a, WireDef b) {
+        return a == b
+                || (a.texture.equals(b.texture)
+                && a.segments == b.segments
+                && Math.abs(a.halfWidth - b.halfWidth) < 1.0E-5f
+                && Math.abs(a.baseSlack - b.baseSlack) < 1.0E-5f
+                && Math.abs(a.sagPerMeter - b.sagPerMeter) < 1.0E-5f
+                && a.substeps == b.substeps
+                && a.iters == b.iters
+                && Math.abs(a.gravity - b.gravity) < 1.0E-5f
+                && Math.abs(a.bendK - b.bendK) < 1.0E-5f
+                && a.collidePasses == b.collidePasses);
     }
 }

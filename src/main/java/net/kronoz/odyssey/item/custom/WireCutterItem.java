@@ -7,11 +7,13 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
+import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
-import java.util.UUID;
+import java.util.Comparator;
+import java.util.List;
 
 public class WireCutterItem extends Item {
     public WireCutterItem(Settings settings) {
@@ -28,63 +30,78 @@ public class WireCutterItem extends Item {
         HitResult hr = user.raycast(reach, 1.0f, false);
         Vec3d hit = hr.getPos();
 
-        WireRecord victim = null;
-        double bestD = Double.MAX_VALUE;
-        for (WireRecord r : WireStorage.get(sw).all()) {
-            Vec3d a = WireToolMath.anchorCenter(r.a);
-            Vec3d b = WireToolMath.anchorCenter(r.b);
-            double d = pointSegmentDistance(hit, a, b);
-            double radius = 0.15;
-            var sim = WireManager.get(r.id);
-            if (sim != null) radius = Math.max(radius, sim.getHalfWidth() * 1.75);
-            if (d < bestD && d <= radius) {
-                bestD = d;
-                victim = r;
+        WireStorage storage = WireStorage.get(sw);
+
+        if (hr.getType() == HitResult.Type.BLOCK && hr instanceof BlockHitResult bhr) {
+            List<WireRecord> attached = storage.attachedTo(bhr.getBlockPos());
+            if (!attached.isEmpty()) {
+                int removed = removeAttached(sw, storage, attached, hit, user.isSneaking());
+                if (removed > 0) {
+                    return TypedActionResult.success(user.getStackInHand(hand));
+                }
             }
         }
 
+        WireRecord victim = nearestBySegment(storage, hit);
         if (victim == null) {
             return TypedActionResult.pass(user.getStackInHand(hand));
         }
 
-        Vec3d A = WireToolMath.anchorCenter(victim.a);
-        Vec3d B = WireToolMath.anchorCenter(victim.b);
-        double t = clamp01(projectParam(hit, A, B));
-        Vec3d mid = A.lerp(B, t);
-
-        WireAnchor ghost = WireToolMath.ghostAt(mid);
-
-        UUID id1 = UUID.randomUUID();
-        UUID id2 = UUID.randomUUID();
-
-        WireRecord r1 = new WireRecord(
-                id1, victim.defId,
-                victim.a, victim.aPinned,
-                ghost, false
-        );
-        WireRecord r2 = new WireRecord(
-                id2, victim.defId,
-                ghost, false,
-                victim.b, victim.bPinned
-        );
-
-        WireStorage st = WireStorage.get(sw);
-        st.remove(victim.id);
-        st.put(r1);
-        st.put(r2);
-
-        Vec3d pA = WireToolMath.anchorCenter(r1.a);
-        Vec3d pG = WireToolMath.anchorCenter(r1.b);
-        WireManager.remove(victim.id);
-        WireManager.ensure(r1.id, WireDef.defaultCable(victim.defId), pA, pG);
-        WireManager.get(r1.id).setPinned(r1.aPinned, r1.bPinned);
-
-        Vec3d pG2 = WireToolMath.anchorCenter(r2.a);
-        Vec3d pB = WireToolMath.anchorCenter(r2.b);
-        WireManager.ensure(r2.id, WireDef.defaultCable(victim.defId), pG2, pB);
-        WireManager.get(r2.id).setPinned(r2.aPinned, r2.bPinned);
-
+        storage.remove(victim.id);
+        WireNetworking.broadcastRemove(sw, victim.id);
         return TypedActionResult.success(user.getStackInHand(hand));
+    }
+
+    private static int removeAttached(ServerWorld world, WireStorage storage, List<WireRecord> attached, Vec3d hit, boolean removeAll) {
+        if (attached.isEmpty()) {
+            return 0;
+        }
+        if (removeAll) {
+            int removed = 0;
+            for (WireRecord record : attached) {
+                storage.remove(record.id);
+                WireNetworking.broadcastRemove(world, record.id);
+                removed++;
+            }
+            return removed;
+        }
+
+        WireRecord closest = attached.stream()
+                .min(Comparator.comparingDouble(record -> anchorDistanceForTarget(record, hit)))
+                .orElse(null);
+        if (closest == null) {
+            return 0;
+        }
+
+        storage.remove(closest.id);
+        WireNetworking.broadcastRemove(world, closest.id);
+        return 1;
+    }
+
+    private static double anchorDistanceForTarget(WireRecord record, Vec3d hit) {
+        Vec3d a = WireToolMath.anchorCenter(record.a);
+        Vec3d b = WireToolMath.anchorCenter(record.b);
+        return Math.min(a.squaredDistanceTo(hit), b.squaredDistanceTo(hit));
+    }
+
+    private static WireRecord nearestBySegment(WireStorage storage, Vec3d hit) {
+        WireRecord victim = null;
+        double bestDistance = Double.MAX_VALUE;
+        for (WireRecord record : storage.all()) {
+            Vec3d a = WireToolMath.anchorCenter(record.a);
+            Vec3d b = WireToolMath.anchorCenter(record.b);
+            double d = pointSegmentDistance(hit, a, b);
+            double radius = 0.18;
+            WireSim sim = WireManager.get(record.id);
+            if (sim != null) {
+                radius = Math.max(radius, sim.getHalfWidth() * 1.8);
+            }
+            if (d <= radius && d < bestDistance) {
+                bestDistance = d;
+                victim = record;
+            }
+        }
+        return victim;
     }
 
     private static double clamp01(double x) {

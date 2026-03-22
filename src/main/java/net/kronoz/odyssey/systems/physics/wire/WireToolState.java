@@ -1,116 +1,127 @@
 package net.kronoz.odyssey.systems.physics.wire;
 
-import net.minecraft.block.Block;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.OverlayTexture;
+import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.render.RenderLayer;
+import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.item.ItemStack;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
+import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.UUID;
+import static net.kronoz.odyssey.init.ModItems.WIRE_TOOL;
 
 public final class WireToolState {
-    private WireToolState(){}
+    private static final double MARKER_RADIUS = 0.0625;
+    private static @Nullable WireAnchor clientPendingAnchor;
 
-    private static final List<Entry> WIRES = new ArrayList<>();
-    private static final WireDef DEF = WireDef.defaultCable(Identifier.of("odyssey","textures/effects/wire.png"));
-
-    public static Entry.Pending pending = null;
-
-    public static void setPending(BlockPos pos, Direction face, Block block){
-        pending = new Entry.Pending(pos.toImmutable(), face, block);
-    }
-    public static boolean hasPending(){ return pending != null; }
-    public static void clearPending(){ pending = null; }
-
-    public static void spawnWire(BlockPos aPos, Direction aFace, Block aBlock,
-                                 BlockPos bPos, Direction bFace, Block bBlock){
-        WIRES.add(new Entry(
-                Anchor.blockFace(aPos, aFace, aBlock),
-                Anchor.blockFace(bPos, bFace, bBlock)
-        ));
+    private WireToolState() {
     }
 
-    public static void renderAll(MatrixStack ms, VertexConsumerProvider buffers, int light){
-        var mc = MinecraftClient.getInstance();
-        if (mc==null || mc.world==null) return;
+    public static void clientSetPending(@Nullable WireAnchor anchor) {
+        clientPendingAnchor = anchor;
+    }
 
-        final double REMOVE_AFTER_SECONDS = 6.0;
-        final long now = System.currentTimeMillis();
-        Iterator<Entry> it = WIRES.iterator();
+    public static void clientClearPending() {
+        clientPendingAnchor = null;
+    }
 
-        while (it.hasNext()){
-            Entry e = it.next();
+    public static @Nullable WireAnchor clientPending() {
+        return clientPendingAnchor;
+    }
 
-            boolean aAlive = e.a.isStillSameBlock(mc.world);
-            boolean bAlive = e.b.isStillSameBlock(mc.world);
-
-            Vec3d a = e.a.world();
-            Vec3d b = e.b.world();
-
-            WireManager.ensure(e.id, DEF, a, b);
-            WireSim sim = WireManager.get(e.id);
-            if (sim != null) sim.setPinned(aAlive, bAlive);
-
-            WireManager.stepAndRender(e.id, a, aAlive, b, bAlive, ms, buffers, light, OverlayTexture.DEFAULT_UV);
-
-            if (!aAlive || !bAlive){
-                if (e.detachedAt == 0L) e.detachedAt = now;
-                if (!aAlive && !bAlive && (now - e.detachedAt) > (long)(REMOVE_AFTER_SECONDS*1000)){
-                    it.remove();
-                }
-            } else {
-                e.detachedAt = 0L;
-            }
+    public static void syncPendingFromHeldStack(ClientPlayerEntity player) {
+        if (player == null) {
+            clientPendingAnchor = null;
+            return;
+        }
+        ItemStack held = player.getMainHandStack();
+        if (held.isEmpty() || held.getItem() != WIRE_TOOL) {
+            clientPendingAnchor = null;
+            return;
+        }
+        WireAnchor fromStack = WireToolMath.readPendingAnchor(held);
+        if (fromStack != null) {
+            clientPendingAnchor = fromStack;
         }
     }
 
-    public static final class Entry {
-        public final UUID id = UUID.randomUUID();
-        public final Anchor a, b;
-        public long detachedAt = 0L;
-        public Entry(Anchor a, Anchor b){ this.a=a; this.b=b; }
+    public static @Nullable WireAnchor hoveredAnchor(MinecraftClient client) {
+        if (client == null || client.player == null) {
+            return null;
+        }
+        ItemStack held = client.player.getMainHandStack();
+        if (held.isEmpty() || held.getItem() != WIRE_TOOL) {
+            return null;
+        }
+        HitResult hit = client.crosshairTarget;
+        if (!(hit instanceof BlockHitResult bhr)) {
+            return null;
+        }
+        return WireToolMath.anchorFromHit(bhr.getBlockPos(), bhr.getSide(), bhr.getPos());
+    }
 
-        public static final class Pending {
-            public final BlockPos pos;
-            public final Direction face;
-            public final Block block;
-            public Pending(BlockPos pos, Direction face, Block block){ this.pos=pos; this.face=face; this.block=block; }
+    public static void renderPreview(MatrixStack ignored, VertexConsumerProvider.Immediate buffers) {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.world == null || client.player == null) {
+            return;
+        }
+        ItemStack held = client.player.getMainHandStack();
+        if (held.isEmpty() || held.getItem() != WIRE_TOOL) {
+            return;
+        }
+
+        syncPendingFromHeldStack(client.player);
+        WireAnchor hovered = hoveredAnchor(client);
+        Vec3d pendingPos = clientPendingAnchor != null ? WireToolMath.anchorCenter(clientPendingAnchor) : null;
+        Vec3d hoveredPos = hovered != null ? WireToolMath.anchorCenter(hovered) : null;
+
+        Vec3d cam = client.gameRenderer.getCamera().getPos();
+        MatrixStack ms = new MatrixStack();
+        ms.translate(-cam.x, -cam.y, -cam.z);
+
+        VertexConsumer lineConsumer = buffers.getBuffer(RenderLayer.getLines());
+        if (pendingPos != null) {
+            drawMarker(ms, lineConsumer, pendingPos, 0.30f, 0.90f, 1.00f, 1.00f);
+        }
+        if (hoveredPos != null) {
+            drawMarker(ms, lineConsumer, hoveredPos, 1.00f, 0.90f, 0.25f, 1.00f);
+        }
+        if (pendingPos != null && hoveredPos != null) {
+            drawLine(ms, lineConsumer, pendingPos, hoveredPos, 0.85f, 0.95f, 1.00f, 0.92f);
         }
     }
 
-    public static final class Anchor {
-        enum Kind { FREE, BLOCK_FACE }
-        final Kind kind;
-        final Vec3d point;
-        final BlockPos pos;
-        final Direction face;
-        final Block originalBlock;
+    private static void drawMarker(MatrixStack matrices, VertexConsumer consumer, Vec3d pos, float r, float g, float b, float a) {
+        Box marker = new Box(
+                pos.x - MARKER_RADIUS, pos.y - MARKER_RADIUS, pos.z - MARKER_RADIUS,
+                pos.x + MARKER_RADIUS, pos.y + MARKER_RADIUS, pos.z + MARKER_RADIUS
+        );
+        WorldRenderer.drawBox(matrices, consumer, marker, r, g, b, a);
+    }
 
-        private Anchor(Vec3d p){ kind=Kind.FREE; point=p; pos=null; face=null; originalBlock=null; }
-        private Anchor(BlockPos pos, Direction face, Block block){ kind=Kind.BLOCK_FACE; this.pos=pos; this.face=face; this.originalBlock=block; point=null; }
+    private static void drawLine(MatrixStack matrices, VertexConsumer consumer, Vec3d a, Vec3d b, float r, float g, float bl, float alpha) {
+        MatrixStack.Entry entry = matrices.peek();
+        Matrix4f pm = entry.getPositionMatrix();
 
-        public static Anchor free(Vec3d p){ return new Anchor(p); }
-        public static Anchor blockFace(BlockPos pos, Direction face, Block block){ return new Anchor(pos,face,block); }
-
-        public boolean isStillSameBlock(net.minecraft.world.World world){
-            if (kind==Kind.FREE) return true;
-            return world.getBlockState(pos).getBlock() == originalBlock;
+        Vec3d normal = b.subtract(a);
+        if (normal.lengthSquared() < 1.0E-6) {
+            normal = new Vec3d(0.0, 1.0, 0.0);
+        } else {
+            normal = normal.normalize();
         }
 
-        public Vec3d world(){
-            if (kind==Kind.FREE) return point;
-            return Vec3d.ofCenter(pos).add(
-                    face.getOffsetX()*0.501,
-                    face.getOffsetY()*0.501,
-                    face.getOffsetZ()*0.501
-            );
-        }
+        consumer.vertex(pm, (float) a.x, (float) a.y, (float) a.z);
+        consumer.color(r, g, bl, alpha);
+        consumer.normal(entry, (float) normal.x, (float) normal.y, (float) normal.z);
+        consumer.vertex(pm, (float) b.x, (float) b.y, (float) b.z);
+        consumer.color(r, g, bl, alpha);
+        consumer.normal(entry, (float) normal.x, (float) normal.y, (float) normal.z);
     }
 }

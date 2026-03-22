@@ -1,5 +1,6 @@
 package net.kronoz.odyssey.client;
 
+import com.mojang.blaze3d.platform.GlDebugInfo;
 import foundry.veil.api.client.render.VeilRenderSystem;
 import foundry.veil.api.client.render.light.data.AreaLightData;
 import foundry.veil.api.client.render.light.data.PointLightData;
@@ -11,7 +12,6 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.kronoz.odyssey.Odyssey;
 import net.kronoz.odyssey.config.OdysseyConfig;
 import net.kronoz.odyssey.light.VeilNativeOcclusionMode;
-import com.mojang.blaze3d.platform.GlDebugInfo;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
@@ -28,27 +28,34 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Shared dynamic-light coordinator:
- * - keeps all Veil lights in a valid runtime range
- * - applies native/cpu occlusion consistently for all light variants
- * - smooths near-camera behavior for very large lights
+ * Global Veil light pipeline coordinator.
+ *
+ * Architecture layers:
+ * - Light existence/registration: handled by producers and Veil handles
+ * - Runtime light state: tracked here per handle (base values + sampled visibility)
+ * - Occlusion sampling: block/entity visibility queries only
+ * - Contribution application: brightness modulation only (never destroys light handles)
  */
 public final class ClientShadows {
     private static final int MIN_SAMPLE_INTERVAL = 2;
-    private static final float MIN_POINT_FACTOR = 0.10f;
-    private static final float MIN_AREA_FACTOR = 0.12f;
-    private static final float MIN_RADIUS_SCALE = 0.32f;
-    private static final float MIN_DISTANCE = 0.45f;
     private static final float POINT_RADIUS_MIN = 0.45f;
+    private static final float AREA_DISTANCE_MIN = 0.45f;
+    private static final float MIN_VISIBILITY_FACTOR = 0.02f;
     private static final float EPSILON = 0.001f;
 
-    private static final Map<LightRenderHandle<?>, OcclusionState> OCCLUSION_STATE = new IdentityHashMap<>();
+    private static final Map<LightRenderHandle<?>, TrackedLight> TRACKED = new IdentityHashMap<>();
     private static long lastProcessedWorldTick = Long.MIN_VALUE;
     private static boolean initialized;
     private static int nativeModeFingerprint = Integer.MIN_VALUE;
 
-    private static final class OcclusionState {
+    private enum LightKind {
+        POINT,
+        AREA
+    }
+
+    private static final class TrackedLight {
         LightRenderHandle<?> handle;
+        LightKind kind;
         long lastSeenTick;
         long nextSampleTick;
 
@@ -60,8 +67,9 @@ public final class ClientShadows {
         float appliedRadius = Float.NaN;
         float appliedDistance = Float.NaN;
 
-        float pointFactor = 1.0f;
-        float beamFactor = 1.0f;
+        float visibility = 1.0f;
+        float localVisibility = 1.0f;
+        float beamVisibility = 1.0f;
     }
 
     private static final class RuntimeSettings {
@@ -105,7 +113,7 @@ public final class ClientShadows {
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> reset());
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> reset());
         ClientTickEvents.END_CLIENT_TICK.register(ClientShadows::tick);
-        Odyssey.LOGGER.info("ClientShadows dynamic-light occlusion enabled.");
+        Odyssey.LOGGER.info("ClientShadows unified light runtime enabled.");
     }
 
     public static void refreshShadowConfig() {
@@ -131,7 +139,6 @@ public final class ClientShadows {
         if (stride > 1 && (world.getTime() % stride) != 0) {
             return;
         }
-
         if (world.getTime() == lastProcessedWorldTick) {
             return;
         }
@@ -141,7 +148,6 @@ public final class ClientShadows {
         if (renderer == null) {
             return;
         }
-
         LightRenderer lightRenderer = renderer.getLightRenderer();
         if (lightRenderer == null) {
             return;
@@ -150,6 +156,7 @@ public final class ClientShadows {
         ensureNativeOcclusionMode();
         RuntimeSettings settings = currentSettings();
         Vec3d cameraPos = cameraPos(client);
+        Entity ignoredOccluder = occlusionIgnoredEntity(client);
         int sampleBudget = settings.sampleBudget;
         Set<LightRenderHandle<?>> seenHandles = Collections.newSetFromMap(new IdentityHashMap<>());
         int activeLights = 0;
@@ -159,22 +166,15 @@ public final class ClientShadows {
                 if (handle == null || !handle.isValid()) {
                     continue;
                 }
-
                 Object lightData = handle.getLightData();
-                if (!(lightData instanceof PointLightData) && !(lightData instanceof AreaLightData)) {
-                    continue;
-                }
-
-                seenHandles.add(handle);
-                activeLights++;
-                OcclusionState state = OCCLUSION_STATE.computeIfAbsent(handle, k -> new OcclusionState());
-                state.handle = handle;
-                state.lastSeenTick = world.getTime();
-
                 if (lightData instanceof PointLightData point) {
-                    sampleBudget = processPointLight(world, cameraPos, world.getTime(), point, handle, state, sampleBudget, settings);
+                    activeLights++;
+                    seenHandles.add(handle);
+                    sampleBudget = processPointLight(world, world.getTime(), cameraPos, ignoredOccluder, point, handle, sampleBudget, settings);
                 } else if (lightData instanceof AreaLightData area) {
-                    sampleBudget = processAreaLight(world, cameraPos, world.getTime(), area, handle, state, sampleBudget, settings);
+                    activeLights++;
+                    seenHandles.add(handle);
+                    sampleBudget = processAreaLight(world, world.getTime(), cameraPos, ignoredOccluder, area, handle, sampleBudget, settings);
                 }
             }
         }
@@ -183,9 +183,9 @@ public final class ClientShadows {
 
         if (OdysseyConfig.debugLightState && world.getTime() % 40L == 0L) {
             Odyssey.LOGGER.info(
-                    "ClientShadows: activeLights={}, trackedStates={}, nativeOcclusion={}, cpuRange={}",
+                    "ClientShadows runtime: activeLights={}, trackedStates={}, nativeOcclusion={}, cpuRange={}",
                     activeLights,
-                    OCCLUSION_STATE.size(),
+                    TRACKED.size(),
                     settings.nativeOcclusionEnabled,
                     (int) Math.sqrt(settings.cpuOcclusionRangeSq)
             );
@@ -193,15 +193,19 @@ public final class ClientShadows {
     }
 
     private static int processPointLight(ClientWorld world,
-                                         Vec3d cameraPos,
                                          long worldTick,
+                                         Vec3d cameraPos,
+                                         @Nullable Entity ignoredOccluder,
                                          PointLightData light,
                                          LightRenderHandle<?> handle,
-                                         OcclusionState state,
                                          int sampleBudget,
                                          RuntimeSettings settings) {
-        boolean dirty = false;
+        TrackedLight state = TRACKED.computeIfAbsent(handle, ignored -> new TrackedLight());
+        state.handle = handle;
+        state.kind = LightKind.POINT;
+        state.lastSeenTick = worldTick;
 
+        boolean dirty = false;
         float currentBrightness = sanitize(light.getBrightness(), 0.0f, settings.maxBrightness);
         float currentRadius = sanitize(light.getRadius(), POINT_RADIUS_MIN, settings.maxPointRadius);
 
@@ -213,64 +217,48 @@ public final class ClientShadows {
             light.setRadius(currentRadius);
             dirty = true;
         }
-
-        boolean nativeOcclusion = settings.occlusionEnabled && settings.nativeOcclusionEnabled;
-        if (light.isOcclusionEnabled() != nativeOcclusion) {
-            light.setOcclusionEnabled(nativeOcclusion);
+        if (light.isOcclusionEnabled() != settings.nativeOcclusionEnabled) {
+            light.setOcclusionEnabled(settings.nativeOcclusionEnabled);
             dirty = true;
         }
 
-        if (!settings.occlusionEnabled) {
+        // Base state capture: producer-owned values that should survive occlusion updates.
+        if (shouldCaptureBase(currentBrightness, state.appliedBrightness) || Float.isNaN(state.baseBrightness)) {
             state.baseBrightness = currentBrightness;
+        }
+        if (shouldCaptureBase(currentRadius, state.appliedRadius) || Float.isNaN(state.baseRadius)) {
             state.baseRadius = currentRadius;
-            state.appliedBrightness = currentBrightness;
-            state.appliedRadius = currentRadius;
-            state.pointFactor = 1.0f;
-            if (dirty) {
-                handle.markDirty();
+        }
+
+        float targetVisibility = 1.0f;
+        if (settings.occlusionEnabled) {
+            Vec3d origin = pointPosition(light);
+            double distanceSq = origin.squaredDistanceTo(cameraPos);
+            if (distanceSq <= settings.cpuOcclusionRangeSq) {
+                if (worldTick >= state.nextSampleTick && sampleBudget > 0) {
+                    float probeRadius = Math.max(1.0f, Math.min(state.baseRadius, settings.maxPointRadius));
+                    state.localVisibility = LightOcclusionHelper.pointVisibility(world, origin, probeRadius, ignoredOccluder);
+                    state.nextSampleTick = worldTick + sampleInterval(probeRadius, distanceSq, settings.quality);
+                    sampleBudget--;
+                }
+                targetVisibility = clamp01(state.localVisibility);
+            } else {
+                targetVisibility = 1.0f;
+                state.localVisibility = 1.0f;
             }
-            return sampleBudget;
+        } else {
+            state.localVisibility = 1.0f;
+            state.nextSampleTick = worldTick + 20L;
         }
 
-        if (shouldCaptureBase(currentBrightness, state.appliedBrightness)
-                || shouldCaptureBase(currentRadius, state.appliedRadius)
-                || Float.isNaN(state.baseBrightness)
-                || Float.isNaN(state.baseRadius)) {
-            state.baseBrightness = currentBrightness;
-            state.baseRadius = currentRadius;
-        }
-
-        Vec3d origin = pointPosition(light);
-        double cameraDistanceSq = origin.squaredDistanceTo(cameraPos);
-        boolean cpuOcclusionActive = cameraDistanceSq <= settings.cpuOcclusionRangeSq;
-
-        if (!cpuOcclusionActive) {
-            state.pointFactor = 1.0f;
-        } else if (worldTick >= state.nextSampleTick && sampleBudget > 0) {
-            float sampledRadius = Math.max(1.0f, Math.min(state.baseRadius, settings.maxPointRadius));
-            state.pointFactor = LightOcclusionHelper.pointVisibility(world, origin, sampledRadius, null);
-            state.nextSampleTick = worldTick + sampleInterval(sampledRadius, cameraDistanceSq, settings.quality);
-            sampleBudget--;
-        }
-
-        float factor = cpuOcclusionActive
-                ? clamp01(0.30f + 0.70f * state.pointFactor)
+        state.visibility = smoothVisibility(state.visibility, targetVisibility, settings.quality);
+        float visibilityFactor = settings.occlusionEnabled
+                ? Math.max(MIN_VISIBILITY_FACTOR, state.visibility)
                 : 1.0f;
-        factor = Math.max(MIN_POINT_FACTOR, factor);
 
-        float nearSourceDistanceSq = (state.baseRadius * state.baseRadius) * 0.09f;
-        if (cameraDistanceSq <= nearSourceDistanceSq) {
-            float nearFloor = 0.66f + (0.06f * settings.quality);
-            factor = Math.max(factor, nearFloor);
-        }
-
-        float targetBrightness = sanitize(state.baseBrightness * factor, 0.0f, settings.maxBrightness);
-        float targetRadius = sanitize(
-                state.baseRadius * lerp(MIN_RADIUS_SCALE, 1.0f, factor),
-                POINT_RADIUS_MIN,
-                settings.maxPointRadius
-        );
-        targetRadius = stabilizeNearCameraSpan(targetRadius, (float) Math.sqrt(cameraDistanceSq), settings.quality);
+        // Contribution stage: occlusion modulates brightness only.
+        float targetBrightness = sanitize(state.baseBrightness * visibilityFactor, 0.0f, settings.maxBrightness);
+        float targetRadius = sanitize(state.baseRadius, POINT_RADIUS_MIN, settings.maxPointRadius);
 
         if (Math.abs(light.getBrightness() - targetBrightness) > EPSILON) {
             light.setBrightness(targetBrightness);
@@ -284,24 +272,27 @@ public final class ClientShadows {
         if (dirty) {
             handle.markDirty();
         }
-
         state.appliedBrightness = targetBrightness;
         state.appliedRadius = targetRadius;
         return sampleBudget;
     }
 
     private static int processAreaLight(ClientWorld world,
-                                        Vec3d cameraPos,
                                         long worldTick,
+                                        Vec3d cameraPos,
+                                        @Nullable Entity ignoredOccluder,
                                         AreaLightData light,
                                         LightRenderHandle<?> handle,
-                                        OcclusionState state,
                                         int sampleBudget,
                                         RuntimeSettings settings) {
-        boolean dirty = false;
+        TrackedLight state = TRACKED.computeIfAbsent(handle, ignored -> new TrackedLight());
+        state.handle = handle;
+        state.kind = LightKind.AREA;
+        state.lastSeenTick = worldTick;
 
+        boolean dirty = false;
         float currentBrightness = sanitize(light.getBrightness(), 0.0f, settings.maxBrightness);
-        float currentDistance = sanitize(light.getDistance(), MIN_DISTANCE, settings.maxAreaDistance);
+        float currentDistance = sanitize(light.getDistance(), AREA_DISTANCE_MIN, settings.maxAreaDistance);
 
         if (Math.abs(light.getBrightness() - currentBrightness) > EPSILON) {
             light.setBrightness(currentBrightness);
@@ -311,70 +302,54 @@ public final class ClientShadows {
             light.setDistance(currentDistance);
             dirty = true;
         }
-
-        boolean nativeOcclusion = settings.occlusionEnabled && settings.nativeOcclusionEnabled;
-        if (light.isOcclusionEnabled() != nativeOcclusion) {
-            light.setOcclusionEnabled(nativeOcclusion);
+        if (light.isOcclusionEnabled() != settings.nativeOcclusionEnabled) {
+            light.setOcclusionEnabled(settings.nativeOcclusionEnabled);
             dirty = true;
         }
 
-        if (!settings.occlusionEnabled) {
+        if (shouldCaptureBase(currentBrightness, state.appliedBrightness) || Float.isNaN(state.baseBrightness)) {
             state.baseBrightness = currentBrightness;
+        }
+        if (shouldCaptureBase(currentDistance, state.appliedDistance) || Float.isNaN(state.baseDistance)) {
             state.baseDistance = currentDistance;
-            state.appliedBrightness = currentBrightness;
-            state.appliedDistance = currentDistance;
-            state.pointFactor = 1.0f;
-            state.beamFactor = 1.0f;
-            if (dirty) {
-                handle.markDirty();
+        }
+
+        float targetVisibility = 1.0f;
+        if (settings.occlusionEnabled) {
+            Vec3d origin = areaPosition(light);
+            Vec3d direction = areaDirection(light);
+            double distanceSq = origin.squaredDistanceTo(cameraPos);
+            if (distanceSq <= settings.cpuOcclusionRangeSq) {
+                if (worldTick >= state.nextSampleTick && sampleBudget > 0) {
+                    float maxDistance = Math.max(1.0f, Math.min(state.baseDistance, settings.maxAreaDistance));
+                    float beamDistance = LightOcclusionHelper.directionalDistance(world, origin, direction, maxDistance, ignoredOccluder);
+                    state.beamVisibility = clamp01(beamDistance / maxDistance);
+
+                    float localProbeRadius = Math.max(1.25f, Math.min(8.0f, maxDistance * 0.35f));
+                    state.localVisibility = LightOcclusionHelper.pointVisibility(world, origin, localProbeRadius, ignoredOccluder);
+
+                    state.nextSampleTick = worldTick + sampleInterval(localProbeRadius, distanceSq, settings.quality);
+                    sampleBudget--;
+                }
+                targetVisibility = clamp01(state.localVisibility * (0.30f + 0.70f * state.beamVisibility));
+            } else {
+                targetVisibility = 1.0f;
+                state.localVisibility = 1.0f;
+                state.beamVisibility = 1.0f;
             }
-            return sampleBudget;
+        } else {
+            state.localVisibility = 1.0f;
+            state.beamVisibility = 1.0f;
+            state.nextSampleTick = worldTick + 20L;
         }
 
-        if (shouldCaptureBase(currentBrightness, state.appliedBrightness)
-                || shouldCaptureBase(currentDistance, state.appliedDistance)
-                || Float.isNaN(state.baseBrightness)
-                || Float.isNaN(state.baseDistance)) {
-            state.baseBrightness = currentBrightness;
-            state.baseDistance = currentDistance;
-        }
-
-        Vec3d origin = areaPosition(light);
-        Vec3d direction = areaDirection(light);
-        double cameraDistanceSq = origin.squaredDistanceTo(cameraPos);
-        boolean cpuOcclusionActive = cameraDistanceSq <= settings.cpuOcclusionRangeSq;
-
-        if (!cpuOcclusionActive) {
-            state.pointFactor = 1.0f;
-            state.beamFactor = 1.0f;
-        } else if (worldTick >= state.nextSampleTick && sampleBudget > 0) {
-            float maxDistance = Math.max(1.0f, Math.min(state.baseDistance, settings.maxAreaDistance));
-            float beamDistance = LightOcclusionHelper.directionalDistance(world, origin, direction, maxDistance, null);
-            state.beamFactor = clamp01(beamDistance / maxDistance);
-            float localProbeRadius = Math.max(1.25f, Math.min(8.0f, maxDistance * 0.35f));
-            state.pointFactor = LightOcclusionHelper.pointVisibility(world, origin, localProbeRadius, null);
-            state.nextSampleTick = worldTick + sampleInterval(localProbeRadius, cameraDistanceSq, settings.quality);
-            sampleBudget--;
-        }
-
-        float factor = cpuOcclusionActive
-                ? clamp01(state.pointFactor * (0.35f + 0.65f * state.beamFactor))
+        state.visibility = smoothVisibility(state.visibility, targetVisibility, settings.quality);
+        float visibilityFactor = settings.occlusionEnabled
+                ? Math.max(MIN_VISIBILITY_FACTOR, state.visibility)
                 : 1.0f;
-        factor = Math.max(MIN_AREA_FACTOR, factor);
 
-        float nearSourceDistanceSq = (state.baseDistance * state.baseDistance) * 0.06f;
-        if (cameraDistanceSq <= nearSourceDistanceSq) {
-            float nearFloor = 0.60f + (0.07f * settings.quality);
-            factor = Math.max(factor, nearFloor);
-        }
-
-        float targetBrightness = sanitize(state.baseBrightness * factor, 0.0f, settings.maxBrightness);
-        float targetDistance = sanitize(
-                state.baseDistance * (0.25f + 0.75f * state.beamFactor),
-                MIN_DISTANCE,
-                settings.maxAreaDistance
-        );
-        targetDistance = stabilizeNearCameraSpan(targetDistance, (float) Math.sqrt(cameraDistanceSq), settings.quality);
+        float targetBrightness = sanitize(state.baseBrightness * visibilityFactor, 0.0f, settings.maxBrightness);
+        float targetDistance = sanitize(state.baseDistance, AREA_DISTANCE_MIN, settings.maxAreaDistance);
 
         if (Math.abs(light.getBrightness() - targetBrightness) > EPSILON) {
             light.setBrightness(targetBrightness);
@@ -388,7 +363,6 @@ public final class ClientShadows {
         if (dirty) {
             handle.markDirty();
         }
-
         state.appliedBrightness = targetBrightness;
         state.appliedDistance = targetDistance;
         return sampleBudget;
@@ -427,15 +401,15 @@ public final class ClientShadows {
     }
 
     private static void cleanupStaleStates(Set<LightRenderHandle<?>> seenHandles, long worldTick) {
-        Iterator<Map.Entry<LightRenderHandle<?>, OcclusionState>> iterator = OCCLUSION_STATE.entrySet().iterator();
+        Iterator<Map.Entry<LightRenderHandle<?>, TrackedLight>> iterator = TRACKED.entrySet().iterator();
         while (iterator.hasNext()) {
-            Map.Entry<LightRenderHandle<?>, OcclusionState> entry = iterator.next();
-            OcclusionState state = entry.getValue();
+            Map.Entry<LightRenderHandle<?>, TrackedLight> entry = iterator.next();
+            TrackedLight state = entry.getValue();
             boolean stale = state == null
                     || state.handle == null
                     || !state.handle.isValid()
                     || !seenHandles.contains(state.handle)
-                    || (worldTick - state.lastSeenTick) > 5L;
+                    || (worldTick - state.lastSeenTick) > 6L;
             if (stale) {
                 iterator.remove();
             }
@@ -482,36 +456,56 @@ public final class ClientShadows {
         return Vec3d.ZERO;
     }
 
+    @Nullable
+    private static Entity occlusionIgnoredEntity(MinecraftClient client) {
+        if (client == null) {
+            return null;
+        }
+        Entity cameraEntity = client.getCameraEntity();
+        if (cameraEntity != null && cameraEntity.isAlive()) {
+            return cameraEntity;
+        }
+        return client.player != null && client.player.isAlive() ? client.player : null;
+    }
+
     private static boolean shouldCaptureBase(float currentValue, float appliedValue) {
         return Float.isNaN(appliedValue) || Math.abs(currentValue - appliedValue) > 0.002f;
     }
 
     private static int sampleInterval(float radius, double cameraDistanceSq, int quality) {
         int base = switch (quality) {
-            case 0 -> 6;
-            case 1 -> 4;
+            case 0 -> 7;
+            case 1 -> 5;
             case 3 -> 2;
-            default -> 3;
+            default -> 4;
         };
-        int interval = base + (int) Math.floor(Math.sqrt(cameraDistanceSq) / 18.0);
-        if (radius > 10.0f) {
-            interval += 2;
-        }
-        if (radius > 22.0f) {
+        int interval = base + (int) Math.floor(Math.sqrt(cameraDistanceSq) / 22.0);
+        if (radius > 12.0f) {
             interval += 1;
         }
-
         int maxInterval = switch (quality) {
-            case 0 -> 18;
-            case 1 -> 14;
-            case 3 -> 10;
+            case 0 -> 20;
+            case 1 -> 16;
+            case 3 -> 8;
             default -> 12;
         };
         return Math.max(MIN_SAMPLE_INTERVAL, Math.min(interval, maxInterval));
     }
 
-    private static float lerp(float a, float b, float t) {
-        return a + (b - a) * t;
+    private static float smoothVisibility(float previous, float sampled, int quality) {
+        if (!Float.isFinite(previous)) {
+            previous = 1.0f;
+        }
+        if (!Float.isFinite(sampled)) {
+            sampled = 1.0f;
+        }
+        float blend = switch (quality) {
+            case 0 -> 0.18f;
+            case 1 -> 0.24f;
+            case 3 -> 0.42f;
+            default -> 0.30f;
+        };
+        return clamp01(previous + (sampled - previous) * blend);
     }
 
     private static float clamp01(float value) {
@@ -537,21 +531,8 @@ public final class ClientShadows {
         return value;
     }
 
-    private static float stabilizeNearCameraSpan(float span, float cameraDistance, int quality) {
-        if (!Float.isFinite(span) || !Float.isFinite(cameraDistance)) {
-            return span;
-        }
-        float safeDistance = Math.max(0.0f, cameraDistance);
-        float softLimit = safeDistance * (2.5f + quality * 0.22f) + 10.0f;
-        if (span <= softLimit) {
-            return span;
-        }
-        // Blend toward a safe near-camera bound to avoid giant-light collapse/glitching when the camera is inside.
-        return lerp(span, softLimit, 0.42f);
-    }
-
     private static void reset() {
-        OCCLUSION_STATE.clear();
+        TRACKED.clear();
         lastProcessedWorldTick = Long.MIN_VALUE;
         nativeModeFingerprint = Integer.MIN_VALUE;
     }
@@ -590,7 +571,6 @@ public final class ClientShadows {
         } else if ("off".equals(override) || "false".equals(override) || "0".equals(override)) {
             enabled = false;
         } else if ("auto_safe".equals(override)) {
-            // Kept for users who explicitly want conservative behavior on known fragile drivers.
             enabled = !(windows && nvidia);
         }
 
@@ -598,7 +578,7 @@ public final class ClientShadows {
         VeilNativeOcclusionMode.setNativeEnabled(enabled);
 
         Odyssey.LOGGER.info(
-                "ClientShadows native Veil voxel occlusion: {} (available={}, override={})",
+                "ClientShadows native Veil voxel mode: {} (available={}, override={})",
                 VeilNativeOcclusionMode.isNativeEnabled() ? "enabled" : "disabled",
                 available,
                 override

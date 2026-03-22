@@ -4,6 +4,7 @@ import foundry.veil.api.client.render.VeilRenderSystem;
 import foundry.veil.api.client.render.light.data.PointLightData;
 import foundry.veil.api.client.render.light.renderer.LightRenderHandle;
 import net.kronoz.odyssey.config.OdysseyConfig;
+import net.kronoz.odyssey.light.VeilNativeOcclusionMode;
 import net.minecraft.client.particle.*;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.particle.SimpleParticleType;
@@ -67,7 +68,7 @@ public class SentryShieldFullParticle extends SpriteBillboardParticle {
 
         this.alpha = MathHelper.lerp(lifeProgress, 1f, 0.1f);
         boolean alive = this.isAlive() && !this.dead;
-        boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
+        boolean nativeOcclusion = OdysseyConfig.occlusionEnabled && VeilNativeOcclusionMode.isNativeEnabled();
         if (alive) {
             var renderer = VeilRenderSystem.renderer();
             if (renderer == null || renderer.getLightRenderer() == null) {
@@ -128,7 +129,7 @@ public class SentryShieldFullParticle extends SpriteBillboardParticle {
 
     private void freeLight() {
         if (bodyLightHandle != null && bodyLightHandle.isValid()) {
-            bodyLightHandle.free();
+            bodyLightHandle.close();
         }
         bodyLightHandle = null;
         bodyLight = null;

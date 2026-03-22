@@ -8,14 +8,18 @@ import net.kronoz.odyssey.entity.thrasher.SliceAttackHandler;
 import net.kronoz.odyssey.movement.DashHandler;
 import net.kronoz.odyssey.net.BodyModPackets;
 import net.kronoz.odyssey.net.DashC2SPayload;
+import net.kronoz.odyssey.net.ResetFadeS2CPayload;
 import net.kronoz.odyssey.net.RollAttackC2SPayload;
 import net.kronoz.odyssey.net.SliceAttackC2SPayload;
 import net.kronoz.odyssey.systems.data.BodyPartRegistry;
+import net.kronoz.odyssey.systems.physics.wire.WireNetworking;
 import net.minecraft.entity.player.PlayerEntity;
 
 public final class ModNetworking {
     public static void init() {
+        WireNetworking.registerCommon();
         BodyModPackets.registerTypes();
+        PayloadTypeRegistry.playS2C().register(ResetFadeS2CPayload.ID, ResetFadeS2CPayload.CODEC);
 
         ServerPlayNetworking.registerGlobalReceiver(BodyModPackets.ApplyPartC2S.ID, (payload, context) -> {
             var server = context.player().getServer();

@@ -15,6 +15,7 @@ public class ModItems {
     public static final Item WIRE_TOOL = Registry.register(Registries.ITEM, Identifier.of("odyssey","wire_tool"), new WireToolItem(new Item.Settings().maxCount(1)));
     public static final Item SOUP1 = Registry.register(Registries.ITEM, Identifier.of("odyssey","soup1"), new CannedFoodItem(new Item.Settings().maxCount(8)));
     public static final Item WIRE_CUTTER_TOOL = Registry.register(Registries.ITEM, Identifier.of("odyssey","wire_cutter_tool"), new WireCutterItem(new Item.Settings().maxCount(1)));
+    public static final Item RESET_LINK_TOOL = Registry.register(Registries.ITEM, Identifier.of("odyssey","reset_link_tool"), new ResetLinkToolItem(new Item.Settings().maxCount(1)));
     public static final Item SPEAR_DASH = Registry.register(Registries.ITEM, Identifier.of("odyssey", "spear"), new SpearDashItem
             ( ToolMaterials.NETHERITE, 9, 1f, new Item.Settings().maxCount(1).maxDamage(1).fireproof().attributeModifiers(SwordItem.createAttributeModifiers(ToolMaterials.NETHERITE, 3, -3.5f))));
     public static final Item STASISPOD_ITEM = Registry.register(Registries.ITEM, Identifier.of("odyssey","stasispod"), new BlockItem(ModBlocks.STASISPOD, new Item.Settings()));

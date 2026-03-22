@@ -1,11 +1,14 @@
 package net.kronoz.odyssey.systems.physics.wire;
 
 import net.minecraft.block.ShapeContext;
+import net.minecraft.entity.Entity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.world.World;
+
+import java.util.List;
 
 public final class WireSim {
     public static final class Node {
@@ -21,6 +24,10 @@ public final class WireSim {
     private boolean pinStart = true, pinEnd = true;
 
     private static final double CONTACT_SLOP=0.0015, BAUMGARTE=0.34, DYN_FRICTION=0.30;
+    private static final double ENTITY_INFLUENCE_RADIUS = 0.26;
+    private static final double ENTITY_PUSH_GAIN = 0.24;
+    private static final double ENTITY_VEL_BLEND = 0.18;
+    private static final int ENTITY_PUSH_NODE_STRIDE = 1;
 
     public WireSim(WireDef def, Vec3d a, Vec3d b, double halfWidth) {
         this.def = def;
@@ -56,6 +63,7 @@ public final class WireSim {
 
     public void step(World world, Vec3d a, Vec3d b){
         setEndpoints(a,b);
+        List<Entity> pushEntities = queryEntityInfluence(world);
 
         double maxMove = 0.0;
         for (Node n : nodes) {
@@ -75,6 +83,9 @@ public final class WireSim {
                 bendSmoothing(def.bendK);
                 if (pinStart){ nodes[0].p=a; }
                 if (pinEnd){ nodes[nodes.length-1].p=b; }
+            }
+            if (!pushEntities.isEmpty()) {
+                pushByEntities(pushEntities);
             }
             collideBlocks(world);
         }
@@ -218,5 +229,91 @@ public final class WireSim {
 
     private static double clamp(double v,double lo,double hi){
         return v < lo ? lo : (v > hi ? hi : v);
+    }
+
+    private List<Entity> queryEntityInfluence(World world) {
+        if (world == null) {
+            return List.of();
+        }
+
+        Box bounds = wireBounds().expand(ENTITY_INFLUENCE_RADIUS + halfWidth + 0.12);
+        if (bounds.getLengthX() <= 0.0 || bounds.getLengthY() <= 0.0 || bounds.getLengthZ() <= 0.0) {
+            return List.of();
+        }
+        return world.getOtherEntities(null, bounds, entity -> entity != null
+                && entity.isAlive()
+                && !entity.isRemoved()
+                && !entity.noClip
+                && entity.isCollidable()
+        );
+    }
+
+    private Box wireBounds() {
+        double minX = Double.POSITIVE_INFINITY;
+        double minY = Double.POSITIVE_INFINITY;
+        double minZ = Double.POSITIVE_INFINITY;
+        double maxX = Double.NEGATIVE_INFINITY;
+        double maxY = Double.NEGATIVE_INFINITY;
+        double maxZ = Double.NEGATIVE_INFINITY;
+
+        for (Node node : nodes) {
+            minX = Math.min(minX, node.p.x);
+            minY = Math.min(minY, node.p.y);
+            minZ = Math.min(minZ, node.p.z);
+            maxX = Math.max(maxX, node.p.x);
+            maxY = Math.max(maxY, node.p.y);
+            maxZ = Math.max(maxZ, node.p.z);
+        }
+        if (!Double.isFinite(minX)) {
+            return new Box(0, 0, 0, 0, 0, 0);
+        }
+        return new Box(minX, minY, minZ, maxX, maxY, maxZ);
+    }
+
+    private void pushByEntities(List<Entity> entities) {
+        if (entities == null || entities.isEmpty()) {
+            return;
+        }
+
+        double radius = Math.max(ENTITY_INFLUENCE_RADIUS, halfWidth * 2.4);
+        double radiusSq = radius * radius;
+
+        for (int i = 1; i < nodes.length - 1; i += ENTITY_PUSH_NODE_STRIDE) {
+            Node node = nodes[i];
+            if (node.invM == 0f) {
+                continue;
+            }
+
+            Vec3d correction = Vec3d.ZERO;
+            for (Entity entity : entities) {
+                Box box = entity.getBoundingBox().expand(halfWidth + 0.02);
+                if (box == null || box.isNaN()) {
+                    continue;
+                }
+                double cx = clamp(node.p.x, box.minX, box.maxX);
+                double cy = clamp(node.p.y, box.minY, box.maxY);
+                double cz = clamp(node.p.z, box.minZ, box.maxZ);
+                Vec3d delta = node.p.subtract(cx, cy, cz);
+                double d2 = delta.lengthSquared();
+                if (d2 >= radiusSq) {
+                    continue;
+                }
+
+                Vec3d direction = d2 < 1.0E-7 ? new Vec3d(0.0, 1.0, 0.0) : delta.normalize();
+                double strength = 1.0 - Math.sqrt(d2) / radius;
+                correction = correction.add(direction.multiply(strength * ENTITY_PUSH_GAIN));
+
+                Vec3d entityVelocity = entity.getVelocity();
+                if (entityVelocity.lengthSquared() > 1.0E-6) {
+                    correction = correction.add(entityVelocity.multiply(ENTITY_VEL_BLEND * strength));
+                }
+            }
+
+            if (correction.lengthSquared() > 1.0E-8) {
+                node.p = node.p.add(correction);
+                // Keep the Verlet state coherent to avoid post-collision exploding on next step.
+                node.prev = node.prev.add(correction.multiply(0.55));
+            }
+        }
     }
 }

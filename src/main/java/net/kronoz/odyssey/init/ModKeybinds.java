@@ -2,6 +2,7 @@ package net.kronoz.odyssey.init;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.kronoz.odyssey.movement.DashHandler;
 import net.kronoz.odyssey.movement.MovementVisuals;
 import net.kronoz.odyssey.net.DashC2SPayload;
 import net.kronoz.odyssey.net.SliceAttackC2SPayload;
@@ -42,6 +43,7 @@ public final class ModKeybinds {
                 if (now - lastPressMs < 120) continue;
                 lastPressMs = now;
                 if (p == null) continue;
+                if (!DashHandler.hasDashUnlock(p)) continue;
 
                 var opts = MinecraftClient.getInstance().options;
                 boolean f = opts.forwardKey.isPressed();

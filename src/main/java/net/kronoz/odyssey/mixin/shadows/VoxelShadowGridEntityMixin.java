@@ -3,6 +3,7 @@ package net.kronoz.odyssey.mixin.shadows;
 import foundry.veil.impl.client.render.light.VoxelShadowGrid;
 import it.unimi.dsi.fastutil.ints.Int2ByteMap;
 import it.unimi.dsi.fastutil.ints.Int2ByteOpenHashMap;
+import net.kronoz.odyssey.client.ExtraShadowCasterRegistry;
 import net.kronoz.odyssey.config.OdysseyConfig;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
@@ -110,6 +111,17 @@ public abstract class VoxelShadowGridEntityMixin {
                 continue;
             }
             voxelBudget -= written;
+        }
+
+        if (voxelBudget > 0) {
+            int[] budgetRef = new int[]{voxelBudget};
+            ExtraShadowCasterRegistry.collect(world, gridBounds, box -> {
+                if (box == null || box.isNaN() || budgetRef[0] <= 0) {
+                    return;
+                }
+                int wrote = stampEllipsoid(boxAsVolume(box, 208), budgetRef[0]);
+                budgetRef[0] -= wrote;
+            });
         }
     }
 

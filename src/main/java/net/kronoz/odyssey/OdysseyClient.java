@@ -30,7 +30,9 @@ import net.kronoz.odyssey.entity.souls.LoveRenderer;
 import net.kronoz.odyssey.entity.thrasher.ThrasherRenderer;
 import net.kronoz.odyssey.hud.bosshud.BossHudClient;
 import net.kronoz.odyssey.hud.death.DeathUICutscene;
+import net.kronoz.odyssey.hud.death.ResetFadeClient;
 import net.kronoz.odyssey.init.*;
+import net.kronoz.odyssey.movement.MovementVisuals;
 import net.kronoz.odyssey.movement.WallRun;
 import net.kronoz.odyssey.movement.WallRunLoopSound;
 import net.kronoz.odyssey.net.BossHudClearPayload;
@@ -45,8 +47,8 @@ import net.kronoz.odyssey.systems.dialogue.client.DialogueClient;
 import net.kronoz.odyssey.systems.physics.dust.DustManager;
 import net.kronoz.odyssey.systems.physics.dust.LightDustPinger;
 import net.kronoz.odyssey.systems.physics.jetpack.JetpackSystem;
-import net.kronoz.odyssey.systems.physics.wire.WireBridge;
 import net.kronoz.odyssey.systems.physics.wire.WireClientMirror;
+import net.kronoz.odyssey.systems.physics.wire.WireNetworking;
 import net.kronoz.odyssey.systems.physics.wire.WireWorldRenderer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -81,6 +83,7 @@ public class OdysseyClient implements ClientModInitializer {
         ClientElevatorAssist.init();
         WireWorldRenderer.init();
         WireClientMirror.init();
+        WireNetworking.registerClient();
         ModKeybinds.init();
         ApostasyThemeClient.init(ModSounds.APOSTASY_THEME);
 
@@ -110,8 +113,8 @@ public class OdysseyClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.GROUND_DECAL, GroundDecalRenderer::new);
 
         DeathUICutscene.register();
+        ResetFadeClient.register();
         VeilLightCompat.initClient();
-        WireBridge.initRenderer();
 
 
         DustManager.INSTANCE.installHooks();
@@ -139,6 +142,7 @@ public class OdysseyClient implements ClientModInitializer {
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.LIGHT2, RenderLayer.getCutoutMipped());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.FACILITY_REBAR_BLOCK, RenderLayer.getCutout());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ENERGY_BARRIER, RenderLayer.getCutout());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.RESPAWN_POINT, RenderLayer.getCutout());
         BlockEntityRendererFactories.register(ModBlockEntities.STASISPOD, StasisPodBERenderer::new);
         BlockEntityRendererFactories.register(ModBlockEntities.SHELF1, Shelf1GeoBERenderer::new);
         EntityRendererRegistry.register(ModEntities.ARCANGEL, ArcangelRenderer::new);
@@ -165,7 +169,19 @@ public class OdysseyClient implements ClientModInitializer {
             fogAdded = false;
             bloomAdded = false;
             fogSyncTicks = 0;
+            MovementVisuals.reset();
+            current = null;
             syncPostProcessing(client, true);
+        });
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            fogAdded = false;
+            bloomAdded = false;
+            fogSyncTicks = 0;
+            MovementVisuals.reset();
+            if (current != null) {
+                client.getSoundManager().stop(current);
+                current = null;
+            }
         });
         BootstrapScenes.registerAll();
         CineNetworking.registerClient();

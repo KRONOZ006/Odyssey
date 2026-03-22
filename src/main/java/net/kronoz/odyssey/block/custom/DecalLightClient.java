@@ -10,6 +10,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.kronoz.odyssey.config.OdysseyConfig;
+import net.kronoz.odyssey.light.VeilNativeOcclusionMode;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
@@ -66,7 +67,7 @@ public final class DecalLightClient {
 
         PointLightData pl = DATA.get(id);
         LightRenderHandle<PointLightData> handle = HANDLES.get(id);
-        boolean nativeOcclusion = net.kronoz.odyssey.light.VeilNativeOcclusionMode.isNativeEnabled();
+        boolean nativeOcclusion = OdysseyConfig.occlusionEnabled && VeilNativeOcclusionMode.isNativeEnabled();
         float cr = sanitize(r, 0.0f, 1.0f);
         float cg = sanitize(g, 0.0f, 1.0f);
         float cb = sanitize(b, 0.0f, 1.0f);
@@ -122,10 +123,19 @@ public final class DecalLightClient {
             Entity ent = w.getEntityById(id);
             boolean dead = (ent == null) || ent.isRemoved();
 
-            if (dead || h == null || !h.isValid()) {
+            if (dead) {
                 if (h != null && h.isValid()) h.close();
                 it.remove();
                 DATA.remove(id);
+                continue;
+            }
+
+            if (h == null || !h.isValid()) {
+                PointLightData data = DATA.get(id);
+                var renderer = (VeilRenderSystem.renderer() != null) ? VeilRenderSystem.renderer().getLightRenderer() : null;
+                if (data != null && renderer != null) {
+                    e.setValue(renderer.addLight(data));
+                }
             }
         }
     }
